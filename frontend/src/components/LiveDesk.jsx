@@ -439,12 +439,3 @@ export default function LiveDesk() {
     </section>
   );
 }
- uppercase tracking-widest">
-              on the mic — listen up
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
