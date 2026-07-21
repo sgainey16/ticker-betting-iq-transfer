@@ -27,17 +27,24 @@ desk would. V1 scope: NHL only.
 ## Phase 1 — Aha moment (built 2026-02, updated 2026-02)
 - Home page **is the live desk**: cropped-clean broadcast photo of all four
   analysts, continuous ticker strip on top, live captions typing out
-  character-by-character with an on-photo speaker indicator, then a "toss a
-  topic in" input that fires back one in-character line from a randomly-chosen
-  analyst (LLM-backed, scripted fallback if the key runs out of budget).
-- Banter uses scripted rotating multi-turn transcripts (3 scripts). LLM
-  daily-generated banter is a Phase 2 swap — same `/api/banter` interface.
-- Ask Our Analyst Anything (pick analyst → SSE streaming Claude Sonnet 4.5
-  answer + stat card).
+  **synced to real ElevenLabs voice audio** (4 distinct pre-made voices — Adam
+  for Doyle, Josh for Numbers, Clyde for Kovalenko, Charlie for Marchetti).
+- Topic tabs steer the panel: `League Wide` · `Trade Deadline` · `Playoff Race`
+  · `Hot Takes` · `Leafs` · `Oilers` · `Rangers`. Click one, panel loads a
+  fresh script and starts talking.
+- Web Audio API broadcast stinger plays on topic changes for that "on air" hit.
+- Reactions/laughs (`Ha!`, `Heh.`, `Ha ha.`) baked into scripts as short lines
+  each analyst voices in-character — they laugh at each other's jokes.
+- "Turn on sound" gate respects browser autoplay policy; mute toggle available.
+- Audio pre-generated to disk (55 mp3s cached), served under `/api/audio/*`
+  so Kubernetes ingress routes it correctly.
+- "Ask the panel" input → LLM-generated in-character reply + spoken audio in
+  the responding analyst's voice.
+- Ask Our Analyst Anything screen (pick analyst → SSE streaming Claude Sonnet
+  4.5 answer + stat card).
 - Predictions dashboard (make picks, one-line reasoning, personal accuracy +
   streak, public leaderboard, admin "simulate results" fallback per spec §7).
-  **Betting lines / moneylines / O/U removed** — spec §2 excludes gambling
-  mechanics from V1.
+  **Betting lines removed** — spec §2 excludes gambling for V1.
 - **Auth is intentionally skipped for Phase 1** — display name in localStorage.
 
 ## Deferred to Phase 2 (backlog)

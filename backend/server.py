@@ -24,12 +24,14 @@ from analysts import (
     GAMES,
     TICKER_ITEMS,
     SUGGESTED_QUESTIONS,
+    TOPIC_META,
     get_analyst,
     build_stat_context,
     build_stat_card,
     pick_banter,
     quick_fallback_line,
 )
+from voice_service import ensure_audio, audio_url_for
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -111,9 +113,20 @@ async def suggested_questions():
 
 
 @api.get("/banter")
-async def banter():
-    """Return a full multi-turn desk banter script for the homepage live captions."""
-    return {"turns": pick_banter()}
+async def banter(topic: str = "league_wide"):
+    """Return a full multi-turn desk banter script for the homepage. Each turn
+    includes an audio_url (pre-generated + cached on disk via ElevenLabs)."""
+    turns = pick_banter(topic)
+    enriched = []
+    for t in turns:
+        audio_url = ensure_audio(t["speaker"], t["text"])
+        enriched.append({**t, "audio_url": audio_url})
+    return {"topic": topic, "turns": enriched}
+
+
+@api.get("/topics")
+async def topics():
+    return {"topics": TOPIC_META}
 
 
 class QuickReplyReq(BaseModel):
@@ -125,13 +138,13 @@ class QuickReplyReq(BaseModel):
 @api.post("/banter/quick-reply")
 async def quick_reply(req: QuickReplyReq):
     """After the opening banter, the user drops a word/team/player — one analyst
-    fires back a quick in-character line. Uses Claude when the key has budget,
-    otherwise falls back to a scripted line so the experience never dies."""
+    fires back a quick in-character line + voice audio."""
     import random as _r
     analyst_id = req.analyst_id if req.analyst_id in ANALYSTS else _r.choice(list(ANALYSTS.keys()))
     analyst = ANALYSTS[analyst_id]
     topic = req.topic.strip()
 
+    text = None
     if EMERGENT_LLM_KEY:
         try:
             chat = LlmChat(
@@ -145,16 +158,16 @@ async def quick_reply(req: QuickReplyReq):
                     "topic', no emoji. Land the point. Substance under the joke."
                 ),
             ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-            text = await chat.send_message(UserMessage(text=topic))
-            if not isinstance(text, str) or not text.strip():
-                text = quick_fallback_line(analyst_id, topic)
+            resp = await chat.send_message(UserMessage(text=topic))
+            if isinstance(resp, str) and resp.strip():
+                text = resp.strip()
         except Exception as e:
             logger.warning("quick_reply LLM failed: %s", e)
-            text = quick_fallback_line(analyst_id, topic)
-    else:
+    if not text:
         text = quick_fallback_line(analyst_id, topic)
 
-    return {"analyst_id": analyst_id, "text": text.strip()}
+    audio_url = ensure_audio(analyst_id, text)
+    return {"analyst_id": analyst_id, "text": text, "audio_url": audio_url}
 
 
 @api.get("/stats/players")
@@ -375,7 +388,10 @@ async def simulate_resolve():
 
 app.include_router(api)
 
-# Serve any generated static assets (e.g., avatars) if present.
+# Serve generated audio via /api/audio/* so the ingress routes it correctly
+# (Kubernetes ingress only forwards /api/* to the backend). Kept /static as
+# well for any local debugging.
+app.mount("/api/audio", StaticFiles(directory=str(STATIC_DIR / "audio")), name="api_audio")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(

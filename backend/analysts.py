@@ -157,47 +157,109 @@ GAMES = [
 ]
 
 
-# ---------- Live desk banter ----------
-# Multiple scripts so the homepage doesn't feel scripted. One is picked per load.
-# Each line: {speaker, text}. Interrupt lines are short and marked "interrupt".
-BANTER_SCRIPTS = [
-    [
-        {"speaker": "doyle", "text": "Good evening — or don't, honestly. The Leafs didn't."},
-        {"speaker": "marchetti", "text": "Ohh, here we go—", "interrupt": True},
-        {"speaker": "kovalenko", "text": "Three straight. At home."},
-        {"speaker": "lindqvist", "text": "Home ice is supposed to be an advantage. Someone forgot to tell them."},
-        {"speaker": "doyle", "text": "MacKinnon's been a problem for six straight games —"},
-        {"speaker": "marchetti", "text": "A problem? Man's basically got a restraining order on the Avs' opponents."},
-        {"speaker": "kovalenko", "text": "Heh."},
-        {"speaker": "doyle", "text": "McDavid's on pace for another Art Ross."},
-        {"speaker": "lindqvist", "text": "On pace. Like he's ever NOT on pace."},
-        {"speaker": "marchetti", "text": "Somebody get that man a hobby."},
-        {"speaker": "doyle", "text": "Alright — enough out of you three. What's on your mind tonight?"},
+# ---------- Live desk banter, grouped by topic ----------
+# Each script: list of {speaker, text, interrupt?}. Topic "league_wide" = default cold open.
+BANTER_BY_TOPIC = {
+    "league_wide": [
+        [
+            {"speaker": "doyle", "text": "Good evening — or don't, honestly. The Leafs didn't."},
+            {"speaker": "marchetti", "text": "Oh, here we go.", "interrupt": True},
+            {"speaker": "kovalenko", "text": "Heh."},
+            {"speaker": "kovalenko", "text": "Three straight. At home."},
+            {"speaker": "lindqvist", "text": "Home ice's supposed to be an advantage. Someone forgot to tell them."},
+            {"speaker": "marchetti", "text": "Ha!"},
+            {"speaker": "doyle", "text": "McDavid's on pace for another Art Ross."},
+            {"speaker": "lindqvist", "text": "On pace. Like he's ever NOT on pace."},
+            {"speaker": "marchetti", "text": "Somebody get that man a hobby."},
+            {"speaker": "kovalenko", "text": "Ha ha."},
+            {"speaker": "doyle", "text": "Alright — enough out of you three. What's on your mind tonight?"},
+        ],
     ],
-    [
-        {"speaker": "marchetti", "text": "Hellebuyck. Nine two eight. In February."},
-        {"speaker": "lindqvist", "text": "That's not a save percentage. That's a typo."},
-        {"speaker": "doyle", "text": "He's playing behind the best defensive team in the league. Not a coincidence."},
-        {"speaker": "kovalenko", "text": "Boring hockey. Winning hockey."},
-        {"speaker": "marchetti", "text": "Kovy loves a 2-1 game the way I love pasta night."},
-        {"speaker": "kovalenko", "text": "Every night is pasta night."},
-        {"speaker": "doyle", "text": "The Jets are the story nobody's telling. Yet."},
-        {"speaker": "lindqvist", "text": "They will. Probably in June."},
-        {"speaker": "doyle", "text": "So — what are we talking about?"},
+    "trade_deadline": [
+        [
+            {"speaker": "doyle", "text": "Trade deadline in three weeks. Somebody's blinking first."},
+            {"speaker": "marchetti", "text": "Rangers. It's always the Rangers."},
+            {"speaker": "lindqvist", "text": "They don't have the cap. They never do. And yet."},
+            {"speaker": "kovalenko", "text": "A team needs a top-four D, they call. That's the league."},
+            {"speaker": "marchetti", "text": "Someone's about to give up a first-round pick for two months of a rental. Watch."},
+            {"speaker": "doyle", "text": "Every February. Every year."},
+            {"speaker": "lindqvist", "text": "And every June, the analytics guys line up to explain why it was a bad deal."},
+            {"speaker": "marchetti", "text": "You're the analytics guy."},
+            {"speaker": "lindqvist", "text": "I said what I said."},
+            {"speaker": "kovalenko", "text": "Heh."},
+        ],
     ],
-    [
-        {"speaker": "doyle", "text": "Trade deadline in three weeks. Somebody's blinking first."},
-        {"speaker": "marchetti", "text": "Rangers. It's always the Rangers."},
-        {"speaker": "lindqvist", "text": "They don't have the cap. They never do. And yet."},
-        {"speaker": "kovalenko", "text": "A team needs a top-four D, they call. That's the league."},
-        {"speaker": "marchetti", "text": "Someone's about to give up a first-round pick for two months of a rental. Watch."},
-        {"speaker": "doyle", "text": "Every February. Every year."},
-        {"speaker": "lindqvist", "text": "And every June, the analytics twitter guys line up to explain why it was a bad deal."},
-        {"speaker": "marchetti", "text": "You're the analytics twitter guy."},
-        {"speaker": "lindqvist", "text": "I said what I said."},
-        {"speaker": "doyle", "text": "What's on your mind? Drop it in."},
+    "playoff_race": [
+        [
+            {"speaker": "doyle", "text": "Wild card race is a bloodbath. Six teams inside four points."},
+            {"speaker": "lindqvist", "text": "And half of them shouldn't be there. The underlying numbers are ugly."},
+            {"speaker": "marchetti", "text": "Ugly numbers, pretty standings. That's hockey, baby."},
+            {"speaker": "kovalenko", "text": "March is when you find out who wants it."},
+            {"speaker": "doyle", "text": "The Wild are one bad week away from being sellers."},
+            {"speaker": "marchetti", "text": "Kaprizov just came back. They're not selling anything."},
+            {"speaker": "lindqvist", "text": "They should be. But they won't be. They never are."},
+            {"speaker": "doyle", "text": "Somebody's fanbase is about to have a very long summer."},
+        ],
     ],
+    "leafs": [
+        [
+            {"speaker": "marchetti", "text": "The Leafs. My favorite four letters."},
+            {"speaker": "doyle", "text": "Three home losses in a row. Matthews still leads the league in goals."},
+            {"speaker": "kovalenko", "text": "One guy can't do it. Not in this league."},
+            {"speaker": "lindqvist", "text": "Their five-on-five expected goals share at home dropped ten points in December. Nobody's talking about it."},
+            {"speaker": "marchetti", "text": "We're talking about it right now, Numbers."},
+            {"speaker": "kovalenko", "text": "Heh."},
+            {"speaker": "doyle", "text": "It's a coaching problem. Or a room problem. Not a talent problem."},
+        ],
+    ],
+    "oilers": [
+        [
+            {"speaker": "doyle", "text": "Oilers penalty kill jumped to eighty-two percent since December."},
+            {"speaker": "lindqvist", "text": "That's not just McDavid and Draisaitl. That's system stuff."},
+            {"speaker": "kovalenko", "text": "Good coaching. Boring hockey."},
+            {"speaker": "marchetti", "text": "McDavid's on pace for a hundred and fifty-four points. Nobody blinks."},
+            {"speaker": "doyle", "text": "We stopped being surprised by him three years ago."},
+            {"speaker": "lindqvist", "text": "He's the story every night. The story is that nobody talks about it anymore."},
+            {"speaker": "marchetti", "text": "Ha! That's the most Numbers sentence he's ever said."},
+        ],
+    ],
+    "rangers": [
+        [
+            {"speaker": "marchetti", "text": "Shesterkin got pulled last night. Five on twenty-two."},
+            {"speaker": "doyle", "text": "That's not on him. Look at the defensive lapses."},
+            {"speaker": "lindqvist", "text": "High-danger chances against are up thirty percent since January. He's been swimming."},
+            {"speaker": "kovalenko", "text": "Nine one eight save percentage. Season's not over."},
+            {"speaker": "marchetti", "text": "The Rangers are gonna trade a first for a rental. Book it right now."},
+            {"speaker": "doyle", "text": "You said that last year."},
+            {"speaker": "marchetti", "text": "And I was right! ...ish."},
+        ],
+    ],
+    "hot_takes": [
+        [
+            {"speaker": "marchetti", "text": "Hot take. Kaprizov's a better player than Kucherov."},
+            {"speaker": "doyle", "text": "That's not a hot take. That's a cold take that hasn't warmed up."},
+            {"speaker": "lindqvist", "text": "The numbers say Kucherov. It's not close."},
+            {"speaker": "kovalenko", "text": "Kucherov's got a Cup. Two, actually."},
+            {"speaker": "marchetti", "text": "Cups aren't stats, Dozer!"},
+            {"speaker": "kovalenko", "text": "They're the only stat."},
+            {"speaker": "doyle", "text": "Ha!"},
+        ],
+    ],
+}
+
+TOPIC_META = [
+    {"id": "league_wide", "label": "League Wide"},
+    {"id": "trade_deadline", "label": "Trade Deadline"},
+    {"id": "playoff_race", "label": "Playoff Race"},
+    {"id": "hot_takes", "label": "Hot Takes"},
+    {"id": "leafs", "label": "Leafs"},
+    {"id": "oilers", "label": "Oilers"},
+    {"id": "rangers", "label": "Rangers"},
 ]
+
+
+# Legacy alias — kept for anything still importing BANTER_SCRIPTS.
+BANTER_SCRIPTS = BANTER_BY_TOPIC["league_wide"]
 
 
 # Quick fallback replies (used when the LLM key has $0 budget).
@@ -223,8 +285,9 @@ QUICK_FALLBACK = {
 import random
 
 
-def pick_banter():
-    return random.choice(BANTER_SCRIPTS)
+def pick_banter(topic: str = "league_wide"):
+    scripts = BANTER_BY_TOPIC.get(topic) or BANTER_BY_TOPIC["league_wide"]
+    return random.choice(scripts)
 
 
 def quick_fallback_line(analyst_id: str, topic: str):
