@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api, askAnalystStream } from "@/lib/api";
+import AnalystAvatar from "@/components/AnalystAvatar";
 import { Send, Sparkles } from "lucide-react";
 
 function useQueryParam(name) {
@@ -118,14 +119,9 @@ export default function AskAnalyst() {
                 }}
               >
                 <div
-                  className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0 border"
-                  style={{ borderColor: a.accent }}
+                  className="h-12 w-12 rounded-full overflow-hidden flex-shrink-0"
                 >
-                  <img
-                    src={a.image}
-                    alt={a.short}
-                    className="w-full h-full object-cover object-top"
-                  />
+                  <AnalystAvatar analystId={id} size={48} shape="circle" ring={selected} />
                 </div>
                 <div className="min-w-0">
                   <div className="font-headline text-white leading-tight truncate">
@@ -209,14 +205,9 @@ export default function AskAnalyst() {
         >
           <div className="flex items-center gap-3">
             <div
-              className="h-11 w-11 rounded-full overflow-hidden border"
-              style={{ borderColor: analyst.accent }}
+              className="h-11 w-11 rounded-full overflow-hidden flex-shrink-0"
             >
-              <img
-                src={analyst.image}
-                alt={analyst.short}
-                className="w-full h-full object-cover object-top"
-              />
+              <AnalystAvatar analystId={analystId} size={44} shape="circle" ring={true} />
             </div>
             <div>
               <div className="font-headline text-white text-lg leading-tight">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Ticker from "@/components/Ticker";
 import LiveDesk from "@/components/LiveDesk";
+import AnalystAvatar from "@/components/AnalystAvatar";
 import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api } from "@/lib/api";
 import { Mic, TrendingUp } from "lucide-react";
@@ -89,29 +90,20 @@ export default function Home() {
                   to={`/ask?analyst=${id}`}
                   key={id}
                   data-testid={TEST_IDS.home.analystCard(id)}
-                  className="card-surface p-4 flex flex-col gap-2 transition-transform duration-300 hover:-translate-y-0.5"
+                  className="card-surface p-4 flex items-center gap-3 transition-transform duration-300 hover:-translate-y-0.5"
                   style={{ borderColor: "#2d2d35" }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{
-                        background: a.accent,
-                        boxShadow: `0 0 12px ${a.accent}`,
-                      }}
-                    />
-                    <div className="font-headline text-lg text-white leading-tight">
+                  <AnalystAvatar analystId={id} size={56} shape="circle" ring={true} />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-headline text-lg text-white leading-tight truncate">
                       {a.short}
                     </div>
-                    <div className="ml-auto text-[10px] font-accent uppercase tracking-widest text-white/40">
-                      #{String(i + 1).padStart(2, "0")}
+                    <div className="text-[10px] font-accent uppercase tracking-widest text-white/50 truncate">
+                      {a.role}
                     </div>
                   </div>
-                  <div className="text-[11px] font-accent uppercase tracking-widest text-white/50">
-                    {a.role}
-                  </div>
-                  <div className="text-sm text-white/70 leading-snug">
-                    {a.tagline}
+                  <div className="text-[10px] font-accent uppercase tracking-widest text-white/40 flex-shrink-0">
+                    #{String(i + 1).padStart(2, "0")}
                   </div>
                 </Link>
               );

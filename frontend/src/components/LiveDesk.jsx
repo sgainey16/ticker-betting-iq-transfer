@@ -99,15 +99,21 @@ export default function LiveDesk() {
       if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
         audioCtxRef.current.resume();
       }
-      if (audioRef.current) {
-        audioRef.current.muted = true;
-        audioRef.current
-          .play()
-          .then(() => {
-            audioRef.current.pause();
-            audioRef.current.muted = false;
-          })
-          .catch(() => {});
+      // Prime the HTMLAudioElement inside the user gesture by playing a tiny
+      // silent data-URI mp3. Once primed, subsequent .play() calls with new
+      // src values are allowed by browser autoplay policy.
+      const el = audioRef.current;
+      if (el) {
+        // 0.1s silence WAV (data URI) — universally supported.
+        el.src =
+          "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+        const p = el.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            el.pause();
+            el.currentTime = 0;
+          }).catch(() => {});
+        }
       }
       if (audioCtxRef.current) playStinger(audioCtxRef.current, 0.14);
       setAudioUnlocked(true);
@@ -323,9 +329,9 @@ export default function LiveDesk() {
             </span>
           </div>
 
-          {/* Broadcast lower-third — floats over the bottom mask area */}
+          {/* Broadcast lower-third — speaker name only, no line text */}
           <div
-            className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-4 transition-all duration-300"
+            className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-3 transition-all duration-300 min-h-[52px]"
             style={{
               background: "rgba(11,11,16,0.85)",
               borderColor: currentSpeaker
@@ -334,21 +340,21 @@ export default function LiveDesk() {
             }}
             data-testid="desk-lower-third"
           >
-            {currentSpeaker && currentText ? (
+            {currentSpeaker ? (
               <>
+                <span
+                  className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
+                  style={{ background: ANALYSTS[currentSpeaker].accent }}
+                />
                 <div
                   className="font-headline text-base flex-shrink-0"
                   style={{ color: ANALYSTS[currentSpeaker].accent }}
                 >
                   {ANALYSTS[currentSpeaker].short.toUpperCase()}
                 </div>
-                <div
-                  className="h-6 w-px"
-                  style={{ background: `${ANALYSTS[currentSpeaker].accent}55` }}
-                />
-                <p className="text-white text-base sm:text-lg leading-snug flex-1">
-                  {currentText}
-                </p>
+                <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest">
+                  on the mic
+                </div>
               </>
             ) : (
               <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
@@ -406,20 +412,26 @@ export default function LiveDesk() {
 
         {chatResponse && (
           <div
-            className="mt-3 rounded-lg border p-4 flex gap-3"
+            className="mt-3 rounded-lg border p-4 flex items-center gap-3"
             style={{
               borderColor: ANALYSTS[chatResponse.analyst_id]?.accent + "77" || "#2d2d35",
               background: "#0b0b10",
             }}
             data-testid="desk-quick-reply"
           >
+            <span
+              className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
+              style={{ background: ANALYSTS[chatResponse.analyst_id]?.accent }}
+            />
             <div
-              className="font-headline text-sm w-24 flex-shrink-0 leading-relaxed"
+              className="font-headline text-sm flex-shrink-0"
               style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
             >
               {ANALYSTS[chatResponse.analyst_id]?.short.toUpperCase()}
             </div>
-            <p className="text-white text-base leading-relaxed">{chatResponse.text}</p>
+            <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest">
+              on the mic — listen up
+            </div>
           </div>
         )}
       </div>
