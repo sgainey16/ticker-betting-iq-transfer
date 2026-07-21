@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { ANALYSTS } from "@/lib/config";
-import { api, API } from "@/lib/api";
+import { api, BACKEND_URL } from "@/lib/api";
 import { Send, Volume2, VolumeX } from "lucide-react";
 
-// Analyst horizontal positions on the desk photo (in %, from left edge)
-// Left-to-right in the reference photo: Marchetti, Doyle, Kovalenko, Lindqvist.
+// Analyst horizontal positions on the desk photo (%, left-to-right on the reference).
 const DESK_POS = {
   marchetti: 16,
   doyle: 39,
@@ -15,18 +14,14 @@ const DESK_POS = {
 const DESK_IMAGE =
   "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
 
-// Text-typing pacing when we don't yet know audio duration.
-const FALLBACK_TYPE_MS = 22;
 const PAUSE_BETWEEN_TURNS = 220;
 
-// ---- Broadcast stinger (Web Audio API, no external files) ----
 function playStinger(audioCtx, gain = 0.12) {
   try {
     const now = audioCtx.currentTime;
-    // Two-note broadcast bump: low → high, short
     const notes = [
-      { f: 261.63, t: now + 0.0, d: 0.14 }, // C4
-      { f: 523.25, t: now + 0.12, d: 0.22 }, // C5
+      { f: 261.63, t: now + 0.0, d: 0.14 },
+      { f: 523.25, t: now + 0.12, d: 0.22 },
     ];
     for (const n of notes) {
       const osc = audioCtx.createOscillator();
@@ -49,23 +44,21 @@ export default function LiveDesk() {
   const [topics, setTopics] = useState([]);
   const [activeTopic, setActiveTopic] = useState("league_wide");
   const [turns, setTurns] = useState([]);
-  const [transcript, setTranscript] = useState([]); // {speaker, text}
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  const [typedText, setTypedText] = useState("");
+  const [currentText, setCurrentText] = useState(""); // shown as broadcast lower-third only
   const [turnIdx, setTurnIdx] = useState(0);
   const [muted, setMuted] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [topic, setTopicInput] = useState("");
+  const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [chatResponse, setChatResponse] = useState(null);
-  const scrollRef = useRef(null);
   const audioRef = useRef(null);
-  const audioCtxRef = useRef(null);
   const chatAudioRef = useRef(null);
+  const audioCtxRef = useRef(null);
   const pushedRef = useRef(new Set());
 
-  // Load topics list once.
+  // Load topics once.
   useEffect(() => {
     api
       .get("/topics")
@@ -73,37 +66,31 @@ export default function LiveDesk() {
       .catch(() => setTopics([]));
   }, []);
 
-  // Load banter whenever topic changes.
-  const loadBanter = useCallback(async (topicId, playStingerToo) => {
-    setTurns([]);
-    setTranscript([]);
-    setTurnIdx(0);
-    setTypedText("");
-    setCurrentSpeaker(null);
-    pushedRef.current = new Set();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    try {
-      const r = await api.get(`/banter`, { params: { topic: topicId } });
-      setTurns(r.data.turns || []);
-      if (playStingerToo && audioCtxRef.current) {
-        playStinger(audioCtxRef.current, muted ? 0.0001 : 0.12);
-      }
-    } catch (e) {
-      console.error("banter load failed", e);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [muted]);
-
-  // Kick off first banter after topics load.
+  // Load banter whenever the topic changes.
   useEffect(() => {
-    loadBanter(activeTopic, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let mounted = true;
+    (async () => {
+      setTurns([]);
+      setTurnIdx(0);
+      setCurrentSpeaker(null);
+      setCurrentText("");
+      pushedRef.current = new Set();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      try {
+        const r = await api.get("/banter", { params: { topic: activeTopic } });
+        if (mounted) setTurns(r.data.turns || []);
+      } catch (e) {
+        console.error("banter load failed", e);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
   }, [activeTopic]);
 
-  // First user click anywhere unlocks the audio context (browser autoplay policy).
   const unlockAudio = useCallback(() => {
     if (audioUnlocked) return;
     try {
@@ -112,107 +99,67 @@ export default function LiveDesk() {
       if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
         audioCtxRef.current.resume();
       }
-      // Prime HTMLAudioElement — some browsers need a user-gesture play() call.
       if (audioRef.current) {
         audioRef.current.muted = true;
-        audioRef.current.play().then(() => {
-          audioRef.current.pause();
-          audioRef.current.muted = false;
-        }).catch(() => {});
+        audioRef.current
+          .play()
+          .then(() => {
+            audioRef.current.pause();
+            audioRef.current.muted = false;
+          })
+          .catch(() => {});
       }
-      // Play the stinger to punctuate the moment they turn it on.
-      if (audioCtxRef.current) playStinger(audioCtxRef.current, muted ? 0.0001 : 0.14);
+      if (audioCtxRef.current) playStinger(audioCtxRef.current, 0.14);
       setAudioUnlocked(true);
     } catch (e) {
       console.warn("audio unlock failed", e);
     }
-  }, [audioUnlocked, muted]);
+  }, [audioUnlocked]);
 
-  // Type + play current turn.
+  // Play current turn.
   useEffect(() => {
     if (!turns.length) return;
     if (turnIdx >= turns.length) {
       setCurrentSpeaker(null);
+      setCurrentText("");
       setChatOpen(true);
       return;
     }
     const turn = turns[turnIdx];
     setCurrentSpeaker(turn.speaker);
-    setTypedText("");
+    setCurrentText(turn.text);
 
     let cancelled = false;
-    let typingIv = null;
     let handoff = null;
 
     const advance = () => {
       if (cancelled) return;
       if (!pushedRef.current.has(turnIdx)) {
         pushedRef.current.add(turnIdx);
-        setTranscript((t) => [...t, { speaker: turn.speaker, text: turn.text }]);
         handoff = setTimeout(() => {
           if (!cancelled) setTurnIdx((x) => x + 1);
         }, PAUSE_BETWEEN_TURNS);
       }
     };
 
-    const startTyping = (durationMs) => {
-      // If audio duration is known, pace typing to finish exactly with audio.
-      // Otherwise use a fallback ms-per-char rate.
-      const total = turn.text.length;
-      const perChar = durationMs && total > 0 ? Math.max(10, durationMs / total) : FALLBACK_TYPE_MS;
-      let i = 0;
-      typingIv = setInterval(() => {
-        if (cancelled) return clearInterval(typingIv);
-        i += 1;
-        setTypedText(turn.text.slice(0, i));
-        if (i >= total) {
-          clearInterval(typingIv);
-          typingIv = null;
-          if (!durationMs) advance(); // audio-less path
-        }
-      }, perChar);
-    };
-
-    // If we have audio, load + play; sync typing to duration.
+    // If audio available and unlocked, play it.
     if (audioUnlocked && !muted && turn.audio_url) {
       const el = audioRef.current;
       if (el) {
-        el.src = `${API}${turn.audio_url}`;
-        const onMeta = () => {
-          const dur = (el.duration && isFinite(el.duration)) ? el.duration * 1000 : null;
-          startTyping(dur);
-        };
-        const onEnd = () => {
-          if (typingIv) {
-            // finalize typing if audio finished first
-            clearInterval(typingIv);
-            typingIv = null;
-            setTypedText(turn.text);
-          }
-          advance();
-        };
-        const onErr = () => {
+        el.src = `${BACKEND_URL}${turn.audio_url}`;
+        el.onended = () => advance();
+        el.onerror = () => {
           console.warn("audio failed for", turn.audio_url);
-          startTyping(null);
+          // Estimate duration from text length as a fallback.
+          setTimeout(advance, Math.max(1200, turn.text.length * 55));
         };
-        el.onloadedmetadata = onMeta;
-        el.onended = onEnd;
-        el.onerror = onErr;
-        // Fallback timer in case metadata never resolves.
-        const metaFallback = setTimeout(() => {
-          if (!typingIv && !cancelled) startTyping(null);
-        }, 800);
-        el.play()
-          .catch((err) => {
-            console.warn("play() rejected", err);
-            startTyping(null);
-          });
+        el.play().catch((err) => {
+          console.warn("play() rejected", err);
+          setTimeout(advance, Math.max(1200, turn.text.length * 55));
+        });
         return () => {
           cancelled = true;
-          clearTimeout(metaFallback);
-          if (typingIv) clearInterval(typingIv);
           if (handoff) clearTimeout(handoff);
-          el.onloadedmetadata = null;
           el.onended = null;
           el.onerror = null;
           el.pause();
@@ -220,34 +167,27 @@ export default function LiveDesk() {
       }
     }
 
-    // Silent path — pure typed captions.
-    startTyping(null);
+    // Silent path — pace by text length.
+    const timer = setTimeout(advance, Math.max(1200, turn.text.length * 55));
     return () => {
       cancelled = true;
-      if (typingIv) clearInterval(typingIv);
+      clearTimeout(timer);
       if (handoff) clearTimeout(handoff);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turns, turnIdx, audioUnlocked, muted]);
 
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [transcript, typedText]);
-
   async function submitTopic() {
-    const t = topic.trim();
+    const t = chatInput.trim();
     if (!t || chatBusy) return;
     setChatBusy(true);
     setChatResponse(null);
     try {
       const r = await api.post("/banter/quick-reply", { topic: t });
       setChatResponse(r.data);
-      setTopicInput("");
-      // Play the reply audio.
+      setChatInput("");
       if (audioUnlocked && !muted && r.data.audio_url && chatAudioRef.current) {
-        chatAudioRef.current.src = `${API}${r.data.audio_url}`;
+        chatAudioRef.current.src = `${BACKEND_URL}${r.data.audio_url}`;
         chatAudioRef.current.play().catch(() => {});
       }
     } catch (e) {
@@ -260,16 +200,12 @@ export default function LiveDesk() {
     }
   }
 
-  const stillTyping =
-    currentSpeaker && turns[turnIdx] && typedText.length < turns[turnIdx].text.length;
-
   return (
     <section className="relative">
-      {/* Hidden audio elements */}
       <audio ref={audioRef} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
-      {/* Topic tabs */}
+      {/* Topic tabs + sound control */}
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         {topics.map((t) => {
           const active = t.id === activeTopic;
@@ -280,8 +216,7 @@ export default function LiveDesk() {
               onClick={() => {
                 unlockAudio();
                 setActiveTopic(t.id);
-                if (audioCtxRef.current)
-                  playStinger(audioCtxRef.current, muted ? 0.0001 : 0.1);
+                if (audioCtxRef.current) playStinger(audioCtxRef.current, muted ? 0.0001 : 0.1);
               }}
               className="px-3.5 py-1.5 rounded-full font-accent text-[11px] uppercase tracking-widest transition-colors"
               style={{
@@ -300,187 +235,193 @@ export default function LiveDesk() {
             <button
               onClick={unlockAudio}
               data-testid="unlock-audio-btn"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors shadow-[0_0_20px_-6px_rgba(30,93,255,0.9)]"
             >
-              <Volume2 className="w-3.5 h-3.5" />
+              <Volume2 className="w-4 h-4" />
               Turn on sound
             </button>
           ) : (
             <button
               onClick={() => setMuted((m) => !m)}
               data-testid="mute-btn"
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
             >
-              {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-              {muted ? "Muted" : "On"}
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {muted ? "Muted" : "Sound On"}
             </button>
           )}
         </div>
       </div>
 
-      {/* Desk photo hero */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0b0b10]">
+      {/* Desk photo hero — big */}
+      <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]">
         <div
-          className="w-full"
-          style={{ aspectRatio: "18 / 5", overflow: "hidden", position: "relative" }}
+          className="relative w-full"
+          style={{ aspectRatio: "16 / 8", overflow: "hidden" }}
         >
           <img
             src={DESK_IMAGE}
             alt="The Ticker desk — four analysts mid-broadcast"
             className="absolute inset-0 w-full h-full select-none"
-            style={{ objectFit: "cover", objectPosition: "center 42%" }}
+            style={{ objectFit: "cover", objectPosition: "center 46%" }}
             draggable={false}
           />
-        </div>
 
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#0d0d11] via-[#0d0d11]/70 to-transparent pointer-events-none" />
+          {/* Top mask — fully hides the mockup title area */}
+          <div
+            className="absolute inset-x-0 top-0 pointer-events-none"
+            style={{
+              height: "26%",
+              background:
+                "linear-gradient(180deg, #0d0d11 0%, #0d0d11 70%, rgba(13,13,17,0) 100%)",
+            }}
+          />
+          {/* Bottom mask — fully hides the mockup search bar + chips */}
+          <div
+            className="absolute inset-x-0 bottom-0 pointer-events-none"
+            style={{
+              height: "42%",
+              background:
+                "linear-gradient(0deg, #0d0d11 0%, #0d0d11 78%, rgba(13,13,17,0) 100%)",
+            }}
+          />
 
-        {/* Speaker indicator pill */}
-        {Object.entries(DESK_POS).map(([id, left]) => {
-          const active = currentSpeaker === id;
-          const a = ANALYSTS[id];
-          return (
-            <div
-              key={id}
-              className="absolute -translate-x-1/2 pointer-events-none transition-opacity duration-300"
-              style={{ left: `${left}%`, top: "6%", opacity: active ? 1 : 0 }}
-              data-testid={`desk-speaker-${id}`}
-            >
-              <div
-                className="px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest"
-                style={{
-                  background: a.accent,
-                  color: "#0d0d11",
-                  boxShadow: `0 0 24px ${a.accent}`,
-                }}
-              >
-                {a.short}
-              </div>
-              <div
-                className="mx-auto mt-1 h-2 w-2 rounded-full live-pulse"
-                style={{ background: a.accent }}
-              />
-            </div>
-          );
-        })}
-
-        {/* ON AIR pill */}
-        <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10">
-          <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
-          <span className="font-accent text-xs uppercase tracking-widest text-white">
-            On Air · NHL Desk
-          </span>
-        </div>
-      </div>
-
-      {/* Live captions panel */}
-      <div className="mt-5 card-surface p-5 sm:p-6" data-testid="live-captions">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
-            Live captions
-          </div>
-          <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/40">
-            {audioUnlocked && !muted ? "Voice · Real-time" : "Sound off · Tap 'Turn on sound' above"}
-          </div>
-        </div>
-
-        <div ref={scrollRef} className="max-h-64 overflow-y-auto space-y-3 pr-2">
-          {transcript.map((t, i) => {
-            const a = ANALYSTS[t.speaker];
+          {/* Speaker pill above whoever's currently talking */}
+          {Object.entries(DESK_POS).map(([id, left]) => {
+            const active = currentSpeaker === id;
+            const a = ANALYSTS[id];
             return (
-              <div key={i} className="flex gap-3">
+              <div
+                key={id}
+                className="absolute -translate-x-1/2 pointer-events-none transition-opacity duration-300"
+                style={{ left: `${left}%`, top: "10%", opacity: active ? 1 : 0 }}
+                data-testid={`desk-speaker-${id}`}
+              >
                 <div
-                  className="font-headline text-sm w-24 flex-shrink-0 leading-relaxed"
-                  style={{ color: a.accent }}
+                  className="px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest whitespace-nowrap"
+                  style={{
+                    background: a.accent,
+                    color: "#0d0d11",
+                    boxShadow: `0 0 24px ${a.accent}`,
+                  }}
                 >
-                  {a.short.toUpperCase()}
+                  {a.short}
                 </div>
-                <p className="text-white/85 text-base leading-relaxed">{t.text}</p>
+                <div
+                  className="mx-auto mt-1 h-2 w-2 rounded-full live-pulse"
+                  style={{ background: a.accent }}
+                />
               </div>
             );
           })}
 
-          {stillTyping && (
-            <div className="flex gap-3">
-              <div
-                className="font-headline text-sm w-24 flex-shrink-0 leading-relaxed"
-                style={{ color: ANALYSTS[currentSpeaker].accent }}
-              >
-                {ANALYSTS[currentSpeaker].short.toUpperCase()}
-              </div>
-              <p className="text-white text-base leading-relaxed stream-caret">
-                {typedText}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Drop-in topic input */}
-        <div
-          className={`mt-5 transition-all duration-500 ${
-            chatOpen ? "opacity-100 translate-y-0" : "opacity-50 translate-y-1"
-          }`}
-        >
-          <label className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
-            Jump in — ask the panel
-          </label>
-          <div className="mt-2 flex items-center gap-3">
-            <input
-              value={topic}
-              onChange={(e) => setTopicInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && submitTopic()}
-              placeholder={
-                chatOpen
-                  ? "e.g. What's wrong with the Leafs?"
-                  : "Desk is talking — hang on a sec…"
-              }
-              disabled={!chatOpen || chatBusy}
-              data-testid="desk-topic-input"
-              className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
-            />
-            <button
-              onClick={() => {
-                unlockAudio();
-                submitTopic();
-              }}
-              disabled={!chatOpen || chatBusy || !topic.trim()}
-              data-testid="desk-topic-submit"
-              className="h-[48px] px-5 rounded-lg bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 disabled:cursor-not-allowed text-white font-accent uppercase tracking-widest text-sm inline-flex items-center gap-2 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              Toss it in
-            </button>
+          {/* ON AIR pill */}
+          <div className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10">
+            <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
+            <span className="font-accent text-xs uppercase tracking-widest text-white">
+              On Air · NHL Desk
+            </span>
           </div>
 
-          {chatBusy && (
-            <div className="mt-3 text-white/50 text-sm font-accent uppercase tracking-widest">
-              Someone at the desk is jumping in…
-            </div>
-          )}
-
-          {chatResponse && (
-            <div
-              className="mt-3 rounded-lg border p-4 flex gap-3"
-              style={{
-                borderColor:
-                  ANALYSTS[chatResponse.analyst_id]?.accent + "77" || "#2d2d35",
-                background: "#0b0b10",
-              }}
-              data-testid="desk-quick-reply"
-            >
-              <div
-                className="font-headline text-sm w-24 flex-shrink-0 leading-relaxed"
-                style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
-              >
-                {ANALYSTS[chatResponse.analyst_id]?.short.toUpperCase()}
+          {/* Broadcast lower-third — floats over the bottom mask area */}
+          <div
+            className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-4 transition-all duration-300"
+            style={{
+              background: "rgba(11,11,16,0.85)",
+              borderColor: currentSpeaker
+                ? `${ANALYSTS[currentSpeaker].accent}66`
+                : "#1a1a22",
+            }}
+            data-testid="desk-lower-third"
+          >
+            {currentSpeaker && currentText ? (
+              <>
+                <div
+                  className="font-headline text-base flex-shrink-0"
+                  style={{ color: ANALYSTS[currentSpeaker].accent }}
+                >
+                  {ANALYSTS[currentSpeaker].short.toUpperCase()}
+                </div>
+                <div
+                  className="h-6 w-px"
+                  style={{ background: `${ANALYSTS[currentSpeaker].accent}55` }}
+                />
+                <p className="text-white text-base sm:text-lg leading-snug flex-1">
+                  {currentText}
+                </p>
+              </>
+            ) : (
+              <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
+                {audioUnlocked
+                  ? "The desk is listening…"
+                  : "Tap 'Turn on sound' to join the broadcast"}
               </div>
-              <p className="text-white text-base leading-relaxed">
-                {chatResponse.text}
-              </p>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Ask-the-panel input */}
+      <div
+        className={`mt-5 card-surface p-5 transition-all duration-500 ${
+          chatOpen ? "opacity-100" : "opacity-70"
+        }`}
+      >
+        <label className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
+          Jump in — ask the panel
+        </label>
+        <div className="mt-2 flex items-center gap-3">
+          <input
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && submitTopic()}
+            placeholder={
+              chatOpen
+                ? "e.g. What's wrong with the Leafs?"
+                : "Desk is talking — hang on a sec…"
+            }
+            disabled={!chatOpen || chatBusy}
+            data-testid="desk-topic-input"
+            className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
+          />
+          <button
+            onClick={() => {
+              unlockAudio();
+              submitTopic();
+            }}
+            disabled={!chatOpen || chatBusy || !chatInput.trim()}
+            data-testid="desk-topic-submit"
+            className="h-[48px] px-5 rounded-lg bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 disabled:cursor-not-allowed text-white font-accent uppercase tracking-widest text-sm inline-flex items-center gap-2 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+            Toss it in
+          </button>
+        </div>
+
+        {chatBusy && (
+          <div className="mt-3 text-white/50 text-sm font-accent uppercase tracking-widest">
+            Someone at the desk is jumping in…
+          </div>
+        )}
+
+        {chatResponse && (
+          <div
+            className="mt-3 rounded-lg border p-4 flex gap-3"
+            style={{
+              borderColor: ANALYSTS[chatResponse.analyst_id]?.accent + "77" || "#2d2d35",
+              background: "#0b0b10",
+            }}
+            data-testid="desk-quick-reply"
+          >
+            <div
+              className="font-headline text-sm w-24 flex-shrink-0 leading-relaxed"
+              style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
+            >
+              {ANALYSTS[chatResponse.analyst_id]?.short.toUpperCase()}
+            </div>
+            <p className="text-white text-base leading-relaxed">{chatResponse.text}</p>
+          </div>
+        )}
       </div>
     </section>
   );
