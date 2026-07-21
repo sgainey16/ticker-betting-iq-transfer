@@ -15,36 +15,45 @@ from elevenlabs import VoiceSettings
 
 logger = logging.getLogger("ticker.voice")
 
-# ElevenLabs pre-made voice IDs picked per analyst.
-# Mapping — analyst_id → (voice_id, VoiceSettings)
+# ElevenLabs pre-made voice IDs — re-picked to match each analyst's actual
+# character history (Boston Irish-American, Minnesota Scandinavian-American,
+# Ukrainian-American blue-collar, Italian-American wildcard). Lower stability
+# across the board for less robotic delivery, higher style for real character.
+# NOTE: pre-made voices don't have exact regional US accents; these are the
+# best fits from the standard library. Full accent accuracy needs voice
+# cloning (record 60s samples per analyst).
 ANALYST_VOICES = {
-    # Doyle — mid-40s Boston Irish-American anchor. "Adam" = deep, mature,
-    # authoritative American male.
+    # Doyle — mid-40s Boston Irish-American anchor. Needs authoritative
+    # broadcast weight without sounding British. "Paul" is a US-native
+    # authoritative male voice — anchor-desk cadence.
     "doyle": {
-        "voice_id": "pNInz6obpgDQGcFmaJgB",  # Adam
-        "settings": {"stability": 0.55, "similarity_boost": 0.75, "style": 0.15, "use_speaker_boost": True},
+        "voice_id": "5Q0t7uMcjvnagumLfvZi",  # Paul (American authoritative)
+        "settings": {"stability": 0.40, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True},
     },
-    # Lindqvist — late-20s Minnesota analytics kid. "Josh" = younger clear
-    # American male, animated but crisp.
+    # Lindqvist — late-20s Minnesota analytics guy. "Sam" is a young mature
+    # American male with natural conversational cadence — the closest thing
+    # to a smart Midwestern kid in the pre-made library.
     "lindqvist": {
-        "voice_id": "TxGEqnHWrfWFTfGW9XjX",  # Josh
-        "settings": {"stability": 0.45, "similarity_boost": 0.75, "style": 0.30, "use_speaker_boost": True},
-    },
-    # Kovalenko — late-40s/50s Ukrainian-American enforcer. "Clyde" = deep
-    # gravelly older male.
-    "kovalenko": {
-        "voice_id": "2EiwWnXFnvU5JabPnv8n",  # Clyde
-        "settings": {"stability": 0.7, "similarity_boost": 0.8, "style": 0.10, "use_speaker_boost": True},
-    },
-    # Marchetti — early-30s Italian-American wildcard. "Charlie" = younger,
-    # energetic, expressive.
-    "marchetti": {
-        "voice_id": "IKne3meq5aSn9XLyUdCD",  # Charlie
+        "voice_id": "yoZ06aMxZJJ28mfd3POQ",  # Sam (young mature American, natural)
         "settings": {"stability": 0.35, "similarity_boost": 0.75, "style": 0.45, "use_speaker_boost": True},
+    },
+    # Kovalenko — 50s Ukrainian-American enforcer, blue-collar Cleveland.
+    # "Clyde" is a gravelly war-veteran-style voice — deliberately slower,
+    # sincere, with weight. Higher stability so he's grounded not fidgety.
+    "kovalenko": {
+        "voice_id": "2EiwWnXFnvU5JabPnv8n",  # Clyde (gravelly older male)
+        "settings": {"stability": 0.55, "similarity_boost": 0.82, "style": 0.20, "use_speaker_boost": True},
+    },
+    # Marchetti — early-30s Italian-American wildcard. "Giovanni" is Italian-
+    # accented English — closest thing to a Northeast Italian-American vibe.
+    # Low stability + high style so the delivery is fast, chaotic, expressive.
+    "marchetti": {
+        "voice_id": "zcAOhNBS3c14rBihAFp1",  # Giovanni (Italian-accented English)
+        "settings": {"stability": 0.28, "similarity_boost": 0.75, "style": 0.60, "use_speaker_boost": True},
     },
 }
 
-MODEL_ID = "eleven_turbo_v2_5"  # fast, high quality, low latency
+MODEL_ID = "eleven_multilingual_v2"
 
 _client: Optional[ElevenLabs] = None
 _audio_dir = Path(__file__).parent / "static" / "audio"

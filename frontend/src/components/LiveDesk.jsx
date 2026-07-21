@@ -14,7 +14,8 @@ const DESK_POS = {
 const DESK_IMAGE =
   "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
 
-const PAUSE_BETWEEN_TURNS = 220;
+const PAUSE_BETWEEN_TURNS = 90; // tight desk-banter handoff
+const INTERRUPT_OVERLAP_MS = -180; // interrupts step ON the previous line
 
 function playStinger(audioCtx, gain = 0.12) {
   try {
@@ -430,6 +431,15 @@ export default function LiveDesk() {
               {ANALYSTS[chatResponse.analyst_id]?.short.toUpperCase()}
             </div>
             <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest">
+              on the mic — listen up
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+ uppercase tracking-widest">
               on the mic — listen up
             </div>
           </div>
