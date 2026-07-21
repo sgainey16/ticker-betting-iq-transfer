@@ -1,0 +1,103 @@
+{
+  "theme": "dark",
+  "typography": {
+    "fonts": {
+      "headings": "'Rajdhani', sans-serif",
+      "accents": "'Oswald', sans-serif",
+      "body": "'Inter', sans-serif"
+    },
+    "rules": {
+      "headings_transform": "uppercase",
+      "headings_weight": "bold",
+      "accents_weight": "semibold",
+      "body_weight": "regular",
+      "tracking": "tracking-tight for H1 and H2, normal for body"
+    },
+    "instructions": "Import Rajdhani, Oswald, and Inter from Google Fonts. Use Rajdhani for all headings (H1-H4) to give that high-energy sports broadcast feel. Use Oswald for small accents, labels, and stat numbers. Inter is for body text. All headings must be uppercase to match sports network aesthetics."
+  },
+  "colors": {
+    "backgrounds": {
+      "app_bg": "#0D0D11",
+      "card_bg": "#16161D",
+      "glass_bg": "rgba(22, 22, 29, 0.7)"
+    },
+    "brand": {
+      "primary": "#1E5DFF",
+      "border": "#2D2D35"
+    },
+    "analysts": {
+      "liam": "#F5A623",
+      "erik": "#00E5FF",
+      "danylo": "#E53935",
+      "anthony": "#39FF14"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#9CA3AF"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "Use backdrop-blur-xl with bg-[#16161D]/70 for sticky headers and overlay cards to simulate glass studio screens.",
+    "glow_effects": "Use drop-shadows with analyst-specific colors to create a 'neon/LED' studio lighting effect behind their avatars or stat cards.",
+    "borders": "1px solid #2D2D35 (brushed steel aesthetic) on cards and panels.",
+    "gradients": "Avoid generic gradients. Use radial gradients softly behind character avatars to highlight their signature colors."
+  },
+  "layouts": {
+    "home_page": "Top sticky ticker banner with continuous scroll. Below that, a 4-column Bento grid for the analysts panel on desktop, 1-column on mobile.",
+    "ask_analyst": "Studio-style framing. Selected analyst portrait prominent, streaming text area for the AI response, and a compact stat card next to it.",
+    "predictions": "Dashboard layout. Grid of pickable games, personal accuracy charts, and a public leaderboard.",
+    "spacing": "Generous spacing. Use p-6 or p-8 inside cards."
+  },
+  "components": {
+    "ticker": "Use `react-fast-marquee` for a continuous scrolling sports ticker at the very top of the app. It must contain live-feeling stats, news, or banter.",
+    "analyst_card": "Interactive card with hover state that brightens their signature color. Avatar, name, title, and a 'Ask' button.",
+    "stat_card": "High contrast numbers using Oswald font, arranged in a dense grid.",
+    "loader": "In-character loading states (e.g., 'Dozer is lacing up his skates...', 'Lucky is checking the prompter...') with a pulsating glow in their signature color."
+  },
+  "motion": {
+    "transitions": "Smooth transitions on hover (`transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg`).",
+    "typing_effect": "Simulate AI typing for answers to mimic live broadcasting or teleprompter feed."
+  },
+  "accessibility": {
+    "contrast": "Ensure text over glassmorphism has sufficient contrast (white on dark grey/black).",
+    "reduced_motion": "Respect prefers-reduced-motion for the ticker.",
+    "focus_states": "High contrast focus rings using #1E5DFF.",
+    "data_testid": "All interactive elements MUST have a data-testid attribute."
+  },
+  "media": {
+    "image_urls": {
+      "liam": {
+        "url": "https://images.unsplash.com/photo-1606920669741-c8ba74262a94?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODF8MHwxfHNlYXJjaHwyfHxtYWxlJTIwc3BvcnRzJTIwYW5jaG9yJTIwc3R1ZGlvJTIwbGlnaHRpbmd8ZW58MHx8fHwxNzg0NjUzOTc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Liam 'Lucky' Doyle avatar"
+      },
+      "erik": {
+        "url": "https://images.unsplash.com/photo-1752738372136-2602aaafdcb7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODF8MHwxfHNlYXJjaHw0fHx5b3VuZyUyMG1hbiUyMGdsYXNzZXMlMjB0ZWNoJTIwY2FzdWFsJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzg0NjUzOTc3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Erik 'Numbers' Lindqvist avatar"
+      },
+      "danylo": {
+        "url": "https://images.pexels.com/photos/6075675/pexels-photo-6075675.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Danylo 'Dozer' Kovalenko avatar"
+      },
+      "anthony": {
+        "url": "https://images.unsplash.com/photo-1566327011423-029eb055efb3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNTl8MHwxfHNlYXJjaHwzfHxhbmltYXRlZCUyMHlvdW5nJTIwbWFuJTIwZXhwcmVzc2l2ZSUyMHBvcnRyYWl0fGVufDB8fHx8MTc4NDY1Mzk3N3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Anthony 'Ace' Marchetti avatar"
+      },
+      "studio_bg": {
+        "url": "https://images.unsplash.com/photo-1742805382148-48e9953ad797?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwyfHxkYXJrJTIwc3BvcnRzJTIwYnJvYWRjYXN0JTIwc3R1ZGlvJTIwYmFja2dyb3VuZHxlbnwwfHx8fDE3ODQ2NTM5Nzd8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Studio background for the Ask Analyst screen"
+      },
+      "hockey_action": {
+        "url": "https://images.pexels.com/photos/30617264/pexels-photo-30617264.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Ice hockey action shot for Predictions dashboard header"
+      }
+    }
+  },
+  "libraries_and_tools": [
+    "react-fast-marquee",
+    "lucide-react",
+    "recharts (for accuracy charts in predictions)",
+    "framer-motion"
+  ],
+  "instructions_to_main_agent": "Build a premium, high-octane dark sports broadcast UI. Use #0D0D11 for the root background and #16161D for cards with a 1px solid #2D2D35 border. The top banner must be a continuous marquee ticker using react-fast-marquee. Implement 4 distinct analyst profiles on the home page. When an analyst is selected, transition to the 'Ask Analyst' view with a studio background, their portrait, their signature accent color illuminating the UI, and a simulated typing effect for the AI answer. Use Rajdhani font for ALL headings in uppercase, Oswald for numbers/accents, and Inter for standard body text. Embed character in microcopy (e.g. 'Dozer is lacing up...'). Keep it confident, funny, and insider.",
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": "Do not use generic centered layouts. Create depth with z-index and glassmorphism. Add micro-animations on all interactive elements. Do not apply universal 'transition: all'. Add data-testid to all interactive elements. Never use AI assistant emojis. Use the provided image URLs."
+}
