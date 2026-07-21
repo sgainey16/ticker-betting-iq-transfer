@@ -27,6 +27,8 @@ from analysts import (
     get_analyst,
     build_stat_context,
     build_stat_card,
+    pick_banter,
+    quick_fallback_line,
 )
 
 ROOT_DIR = Path(__file__).parent
@@ -106,6 +108,53 @@ async def ticker():
 @api.get("/suggested-questions")
 async def suggested_questions():
     return {"questions": SUGGESTED_QUESTIONS}
+
+
+@api.get("/banter")
+async def banter():
+    """Return a full multi-turn desk banter script for the homepage live captions."""
+    return {"turns": pick_banter()}
+
+
+class QuickReplyReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    topic: str = Field(min_length=1, max_length=120)
+    analyst_id: Optional[str] = None  # if None, we pick one
+
+
+@api.post("/banter/quick-reply")
+async def quick_reply(req: QuickReplyReq):
+    """After the opening banter, the user drops a word/team/player — one analyst
+    fires back a quick in-character line. Uses Claude when the key has budget,
+    otherwise falls back to a scripted line so the experience never dies."""
+    import random as _r
+    analyst_id = req.analyst_id if req.analyst_id in ANALYSTS else _r.choice(list(ANALYSTS.keys()))
+    analyst = ANALYSTS[analyst_id]
+    topic = req.topic.strip()
+
+    if EMERGENT_LLM_KEY:
+        try:
+            chat = LlmChat(
+                api_key=EMERGENT_LLM_KEY,
+                session_id=str(uuid.uuid4()),
+                system_message=(
+                    f"{analyst['system_prompt']}\n\n"
+                    "The user just walked up to the desk mid-broadcast and dropped a "
+                    "single word or short phrase — a team, a player, a topic. Fire back "
+                    "ONE quick in-character line. Max 22 words. No preamble, no 'great "
+                    "topic', no emoji. Land the point. Substance under the joke."
+                ),
+            ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+            text = await chat.send_message(UserMessage(text=topic))
+            if not isinstance(text, str) or not text.strip():
+                text = quick_fallback_line(analyst_id, topic)
+        except Exception as e:
+            logger.warning("quick_reply LLM failed: %s", e)
+            text = quick_fallback_line(analyst_id, topic)
+    else:
+        text = quick_fallback_line(analyst_id, topic)
+
+    return {"analyst_id": analyst_id, "text": text.strip()}
 
 
 @api.get("/stats/players")
@@ -313,11 +362,8 @@ async def simulate_resolve():
         game = next((g for g in GAMES if g["id"] == d["game_id"]), None)
         if not game:
             continue
-        # Home ML negative = favored. Convert to implied prob.
-        def implied(ml):
-            return abs(ml) / (abs(ml) + 100) if ml < 0 else 100 / (ml + 100)
-        p_home = implied(game["home_ml"])
-        winner = "home" if random.random() < p_home else "away"
+        # No betting lines in V1 — use a mild home-ice edge for the demo.
+        winner = "home" if random.random() < 0.55 else "away"
         correct = (d["pick"] == winner)
         await db.predictions.update_one(
             {"id": d["id"]},

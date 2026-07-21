@@ -156,7 +156,7 @@ export default function Predictions() {
                     })}
                   </div>
                   <div className="font-accent text-[11px] uppercase tracking-widest text-white/40">
-                    O/U {g.total}
+                    Pick a winner
                   </div>
                 </div>
 
@@ -177,9 +177,6 @@ export default function Predictions() {
                     <div className="font-headline text-xl text-white mt-1">
                       {teamName(g.away, teams)}
                     </div>
-                    <div className="font-accent text-sm text-white/60 mt-1">
-                      ML {g.away_ml > 0 ? `+${g.away_ml}` : g.away_ml}
-                    </div>
                   </button>
 
                   <button
@@ -197,9 +194,6 @@ export default function Predictions() {
                     </div>
                     <div className="font-headline text-xl text-white mt-1">
                       {teamName(g.home, teams)}
-                    </div>
-                    <div className="font-accent text-sm text-white/60 mt-1">
-                      ML {g.home_ml > 0 ? `+${g.home_ml}` : g.home_ml}
                     </div>
                   </button>
                 </div>

@@ -24,12 +24,21 @@ desk would. V1 scope: NHL only.
 - SSE streaming for the Ask Analyst answer flow (`POST /api/ask/stream`).
 - Mock NHL data (players, teams, games, ticker headlines) in `backend/analysts.py`.
 
-## Phase 1 — Aha moment (built 2026-02)
-- Home page with live-scrolling ticker banner + 4-analyst panel.
-- Ask Our Analyst Anything (pick analyst → in-character streaming answer + stat card).
-- Predictions dashboard (make picks, reasoning, personal accuracy + streak,
-  public leaderboard, admin "simulate results" fallback per §7).
-- **Auth is intentionally skipped for Phase 1** — display name is stored in localStorage.
+## Phase 1 — Aha moment (built 2026-02, updated 2026-02)
+- Home page **is the live desk**: cropped-clean broadcast photo of all four
+  analysts, continuous ticker strip on top, live captions typing out
+  character-by-character with an on-photo speaker indicator, then a "toss a
+  topic in" input that fires back one in-character line from a randomly-chosen
+  analyst (LLM-backed, scripted fallback if the key runs out of budget).
+- Banter uses scripted rotating multi-turn transcripts (3 scripts). LLM
+  daily-generated banter is a Phase 2 swap — same `/api/banter` interface.
+- Ask Our Analyst Anything (pick analyst → SSE streaming Claude Sonnet 4.5
+  answer + stat card).
+- Predictions dashboard (make picks, one-line reasoning, personal accuracy +
+  streak, public leaderboard, admin "simulate results" fallback per spec §7).
+  **Betting lines / moneylines / O/U removed** — spec §2 excludes gambling
+  mechanics from V1.
+- **Auth is intentionally skipped for Phase 1** — display name in localStorage.
 
 ## Deferred to Phase 2 (backlog)
 - P0: Full auth (JWT), onboarding (favorite team → players → home tabs).

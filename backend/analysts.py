@@ -147,13 +147,89 @@ TICKER_ITEMS = [
     "JETS lead the league in goals against (128) — regression coming?",
 ]
 
-# Upcoming games for predictions.
+# Upcoming games for predictions. (Betting lines removed for V1 per spec §2 —
+# no gambling mechanics in Phase 1. Kept only the matchup.)
 GAMES = [
-    {"id": "g1", "home": "EDM", "away": "COL", "start_iso": "2026-02-18T00:30:00Z", "home_ml": -110, "away_ml": -105, "total": 6.5},
-    {"id": "g2", "home": "TOR", "away": "TBL", "start_iso": "2026-02-18T00:00:00Z", "home_ml": -125, "away_ml": +115, "total": 6.5},
-    {"id": "g3", "home": "MIN", "away": "WPG", "start_iso": "2026-02-18T01:00:00Z", "home_ml": +130, "away_ml": -140, "total": 5.5},
-    {"id": "g4", "home": "NJD", "away": "NYR", "start_iso": "2026-02-18T00:00:00Z", "home_ml": +105, "away_ml": -115, "total": 6.0},
+    {"id": "g1", "home": "EDM", "away": "COL", "start_iso": "2026-02-18T00:30:00Z"},
+    {"id": "g2", "home": "TOR", "away": "TBL", "start_iso": "2026-02-18T00:00:00Z"},
+    {"id": "g3", "home": "MIN", "away": "WPG", "start_iso": "2026-02-18T01:00:00Z"},
+    {"id": "g4", "home": "NJD", "away": "NYR", "start_iso": "2026-02-18T00:00:00Z"},
 ]
+
+
+# ---------- Live desk banter ----------
+# Multiple scripts so the homepage doesn't feel scripted. One is picked per load.
+# Each line: {speaker, text}. Interrupt lines are short and marked "interrupt".
+BANTER_SCRIPTS = [
+    [
+        {"speaker": "doyle", "text": "Good evening — or don't, honestly. The Leafs didn't."},
+        {"speaker": "marchetti", "text": "Ohh, here we go—", "interrupt": True},
+        {"speaker": "kovalenko", "text": "Three straight. At home."},
+        {"speaker": "lindqvist", "text": "Home ice is supposed to be an advantage. Someone forgot to tell them."},
+        {"speaker": "doyle", "text": "MacKinnon's been a problem for six straight games —"},
+        {"speaker": "marchetti", "text": "A problem? Man's basically got a restraining order on the Avs' opponents."},
+        {"speaker": "kovalenko", "text": "Heh."},
+        {"speaker": "doyle", "text": "McDavid's on pace for another Art Ross."},
+        {"speaker": "lindqvist", "text": "On pace. Like he's ever NOT on pace."},
+        {"speaker": "marchetti", "text": "Somebody get that man a hobby."},
+        {"speaker": "doyle", "text": "Alright — enough out of you three. What's on your mind tonight?"},
+    ],
+    [
+        {"speaker": "marchetti", "text": "Hellebuyck. Nine two eight. In February."},
+        {"speaker": "lindqvist", "text": "That's not a save percentage. That's a typo."},
+        {"speaker": "doyle", "text": "He's playing behind the best defensive team in the league. Not a coincidence."},
+        {"speaker": "kovalenko", "text": "Boring hockey. Winning hockey."},
+        {"speaker": "marchetti", "text": "Kovy loves a 2-1 game the way I love pasta night."},
+        {"speaker": "kovalenko", "text": "Every night is pasta night."},
+        {"speaker": "doyle", "text": "The Jets are the story nobody's telling. Yet."},
+        {"speaker": "lindqvist", "text": "They will. Probably in June."},
+        {"speaker": "doyle", "text": "So — what are we talking about?"},
+    ],
+    [
+        {"speaker": "doyle", "text": "Trade deadline in three weeks. Somebody's blinking first."},
+        {"speaker": "marchetti", "text": "Rangers. It's always the Rangers."},
+        {"speaker": "lindqvist", "text": "They don't have the cap. They never do. And yet."},
+        {"speaker": "kovalenko", "text": "A team needs a top-four D, they call. That's the league."},
+        {"speaker": "marchetti", "text": "Someone's about to give up a first-round pick for two months of a rental. Watch."},
+        {"speaker": "doyle", "text": "Every February. Every year."},
+        {"speaker": "lindqvist", "text": "And every June, the analytics twitter guys line up to explain why it was a bad deal."},
+        {"speaker": "marchetti", "text": "You're the analytics twitter guy."},
+        {"speaker": "lindqvist", "text": "I said what I said."},
+        {"speaker": "doyle", "text": "What's on your mind? Drop it in."},
+    ],
+]
+
+
+# Quick fallback replies (used when the LLM key has $0 budget).
+QUICK_FALLBACK = {
+    "doyle": [
+        "{topic}. Fine. Show me the tape before I show you the take.",
+        "{topic}? Not the story of the night, but not nothing either.",
+    ],
+    "lindqvist": [
+        "{topic} — the underlying numbers say something different from the box score. They usually do.",
+        "{topic}? Their expected goals rate has been ugly for three weeks. Nobody's noticed.",
+    ],
+    "kovalenko": [
+        "{topic}. Good team. Play hard. Win games.",
+        "{topic}? Two-way group. That's all you need to know.",
+    ],
+    "marchetti": [
+        "{topic}?! Finally, someone asks. I've been sitting on this take for a week.",
+        "{topic} — I'll die on this hill, and I'll do it loud.",
+    ],
+}
+
+import random
+
+
+def pick_banter():
+    return random.choice(BANTER_SCRIPTS)
+
+
+def quick_fallback_line(analyst_id: str, topic: str):
+    lines = QUICK_FALLBACK.get(analyst_id) or QUICK_FALLBACK["doyle"]
+    return random.choice(lines).format(topic=topic.strip() or "That")
 
 
 def get_analyst(analyst_id: str):

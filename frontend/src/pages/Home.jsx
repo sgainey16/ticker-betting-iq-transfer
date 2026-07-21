@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Ticker from "@/components/Ticker";
-import AnalystCard from "@/components/AnalystCard";
+import LiveDesk from "@/components/LiveDesk";
 import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api } from "@/lib/api";
 import { Mic, TrendingUp } from "lucide-react";
@@ -20,101 +20,102 @@ export default function Home() {
     <div className="-mx-5 sm:-mx-8 -mt-8">
       <Ticker items={tickerItems} />
 
-      <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-10 pb-6">
-        {/* Hero */}
-        <section className="grid lg:grid-cols-12 gap-8 items-end pb-10">
-          <div className="lg:col-span-8">
-            <div className="font-accent text-xs uppercase tracking-[0.35em] text-[#1e5dff] mb-4">
-              <span className="tick-dot live-pulse inline-block mr-2 align-middle" />
-              One-on-one press conference · NHL Desk
-            </div>
-            <h1 className="font-headline text-white text-4xl sm:text-5xl lg:text-6xl leading-[0.95]">
-              Four analysts.
-              <br />
-              <span className="text-white/60">One hockey desk.</span>
-              <br />
-              <span
-                style={{
-                  background: "linear-gradient(90deg,#1e5dff,#00e5ff)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                Zero corporate answers.
-              </span>
-            </h1>
-            <p className="mt-6 text-white/70 max-w-xl leading-relaxed">
-              Ask a hockey question. Pick your analyst. Get an answer that sounds
-              like a desk, not a chatbot — backed by real stats, delivered in
-              character, live-typed on the air.
-            </p>
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-8 pb-6">
+        {/* Live desk — the whole point */}
+        <LiveDesk />
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link
-                to="/ask"
-                data-testid={TEST_IDS.home.askCta}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent uppercase tracking-widest text-sm shadow-[0_10px_30px_-10px_rgba(30,93,255,0.8)] transition-colors"
-              >
-                <Mic className="w-4 h-4" />
-                Ask the panel
-              </Link>
-              <Link
-                to="/predictions"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-[#2d2d35] hover:border-white/30 text-white/85 font-accent uppercase tracking-widest text-sm transition-colors"
-                data-testid="home-predictions-cta"
-              >
-                <TrendingUp className="w-4 h-4" />
-                Make a pick
-              </Link>
-            </div>
-          </div>
-
-          <div className="lg:col-span-4">
-            <div className="glass rounded-xl p-5">
-              <div className="font-accent text-xs uppercase tracking-[0.3em] text-white/50 mb-3">
-                Tonight{"\u2019"}s headlines
-              </div>
-              <ul className="space-y-3">
-                {(tickerItems.slice(0, 4).length
-                  ? tickerItems.slice(0, 4)
-                  : ["Warming up the desk…"]
-                ).map((t, i) => (
-                  <li key={i} className="flex gap-3 text-sm text-white/80">
-                    <span
-                      className="mt-1.5 h-1.5 w-1.5 rounded-full flex-shrink-0"
-                      style={{ background: "#1e5dff" }}
-                    />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
-
-        {/* Panel */}
-        <section>
-          <div
-            className="flex items-baseline justify-between mb-5"
-            data-testid={TEST_IDS.home.panelHeading}
+        {/* Below the fold: quick nav to the other rooms */}
+        <div className="mt-14 grid sm:grid-cols-2 gap-4">
+          <Link
+            to="/ask"
+            data-testid={TEST_IDS.home.askCta}
+            className="group card-surface p-6 flex items-center justify-between hover:-translate-y-0.5 transition-transform"
           >
             <div>
-              <div className="font-accent text-xs uppercase tracking-[0.35em] text-white/50">
+              <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-[#1e5dff]">
+                Take it further
+              </div>
+              <div className="font-headline text-2xl text-white mt-1">
+                Ask an analyst a real question
+              </div>
+              <div className="text-white/60 text-sm mt-1">
+                Pick your voice. Get a stat-backed answer, live-typed.
+              </div>
+            </div>
+            <Mic className="w-6 h-6 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+
+          <Link
+            to="/predictions"
+            data-testid="home-predictions-cta"
+            className="group card-surface p-6 flex items-center justify-between hover:-translate-y-0.5 transition-transform"
+          >
+            <div>
+              <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-[#1e5dff]">
+                Call it
+              </div>
+              <div className="font-headline text-2xl text-white mt-1">
+                Make tonight's picks
+              </div>
+              <div className="text-white/60 text-sm mt-1">
+                No wallet. No lines. Just skill + a public track record.
+              </div>
+            </div>
+            <TrendingUp className="w-6 h-6 text-white/50 group-hover:text-white transition-colors" />
+          </Link>
+        </div>
+
+        {/* Meet the desk — smaller, personality legend */}
+        <section className="mt-14" data-testid={TEST_IDS.home.panelHeading}>
+          <div className="flex items-baseline justify-between mb-4">
+            <div>
+              <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
                 Meet the desk
               </div>
-              <h2 className="font-headline text-2xl sm:text-3xl text-white mt-1">
-                The Panel
+              <h2 className="font-headline text-2xl text-white mt-1">
+                Four voices
               </h2>
             </div>
             <div className="hidden sm:block text-xs font-accent uppercase tracking-widest text-white/40">
-              4 personalities · 1 sport · no filler
+              No filler
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {ANALYST_ORDER.map((id, i) => (
-              <AnalystCard key={id} analyst={ANALYSTS[id]} index={i} />
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {ANALYST_ORDER.map((id, i) => {
+              const a = ANALYSTS[id];
+              return (
+                <Link
+                  to={`/ask?analyst=${id}`}
+                  key={id}
+                  data-testid={TEST_IDS.home.analystCard(id)}
+                  className="card-surface p-4 flex flex-col gap-2 transition-transform duration-300 hover:-translate-y-0.5"
+                  style={{ borderColor: "#2d2d35" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        background: a.accent,
+                        boxShadow: `0 0 12px ${a.accent}`,
+                      }}
+                    />
+                    <div className="font-headline text-lg text-white leading-tight">
+                      {a.short}
+                    </div>
+                    <div className="ml-auto text-[10px] font-accent uppercase tracking-widest text-white/40">
+                      #{String(i + 1).padStart(2, "0")}
+                    </div>
+                  </div>
+                  <div className="text-[11px] font-accent uppercase tracking-widest text-white/50">
+                    {a.role}
+                  </div>
+                  <div className="text-sm text-white/70 leading-snug">
+                    {a.tagline}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       </div>
