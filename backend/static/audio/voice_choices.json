@@ -1,0 +1,22 @@
+{
+  "doyle": {
+    "voice_id": "LSCwn9kS2iiBOqBoYQB4",
+    "voice_name": "Doyle",
+    "preview_index": 3
+  },
+  "lindqvist": {
+    "voice_id": "JVfspUVvbZORRlJCUaNp",
+    "voice_name": "Numbers",
+    "preview_index": 3
+  },
+  "kovalenko": {
+    "voice_id": "qm0LIHvBaL5XhqKcnozC",
+    "voice_name": "Dozer",
+    "preview_index": 3
+  },
+  "marchetti": {
+    "voice_id": "5uSBiecvz1GMSIyYpD2S",
+    "voice_name": "Ace",
+    "preview_index": 3
+  }
+}
