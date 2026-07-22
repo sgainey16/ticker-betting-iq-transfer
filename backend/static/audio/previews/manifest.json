@@ -1,0 +1,98 @@
+{
+  "doyle": {
+    "voice_name": "Doyle",
+    "description": "American male, early-to-mid 40s, thick working-class Boston accent. Gravelly, slightly raspy voice with real wear on it \u2014 sounds like a guy who's talked for a living. Fast, punchy delivery with sharp comedic timing, quick to interrupt himself for a jab or a laugh. Confident, opinionated, a little cocky but likeable \u2014 like a sports radio host who used to play the game and never lets you forget it. Warm undertone beneath the grit, not mean-spirited.",
+    "previews": [
+      {
+        "index": 1,
+        "generated_voice_id": "BmgAQaiukYozGiUJkczc",
+        "url": "/api/audio/previews/doyle_preview_1.mp3",
+        "size_bytes": 361788
+      },
+      {
+        "index": 2,
+        "generated_voice_id": "Xio8o3C5XfCUJW7lTZLZ",
+        "url": "/api/audio/previews/doyle_preview_2.mp3",
+        "size_bytes": 342980
+      },
+      {
+        "index": 3,
+        "generated_voice_id": "LSCwn9kS2iiBOqBoYQB4",
+        "url": "/api/audio/previews/doyle_preview_3.mp3",
+        "size_bytes": 296587
+      }
+    ]
+  },
+  "lindqvist": {
+    "voice_name": "Numbers",
+    "description": "American male, early 30s, light Upper Midwest (Minnesota) accent \u2014 subtle, not cartoonish. Clear, articulate, even-paced voice with a calm, almost dry confidence. Sounds smart without sounding like he's showing off \u2014 measured and precise, but with a warm, approachable undertone. Rarely raises his voice; his confidence comes from being right, not from volume. Slight deadpan wit underneath the polish.",
+    "previews": [
+      {
+        "index": 1,
+        "generated_voice_id": "D2nbmtT89FBfhyhW2h8c",
+        "url": "/api/audio/previews/lindqvist_preview_1.mp3",
+        "size_bytes": 314141
+      },
+      {
+        "index": 2,
+        "generated_voice_id": "tlqQ8QxvHzL3964RM3zh",
+        "url": "/api/audio/previews/lindqvist_preview_2.mp3",
+        "size_bytes": 301602
+      },
+      {
+        "index": 3,
+        "generated_voice_id": "JVfspUVvbZORRlJCUaNp",
+        "url": "/api/audio/previews/lindqvist_preview_3.mp3",
+        "size_bytes": 316649
+      }
+    ]
+  },
+  "kovalenko": {
+    "voice_name": "Dozer",
+    "description": "American male, late 30s, deep and gravelly voice with a subtle Eastern European family influence layered under a Midwest / Cleveland blue-collar accent. Slow, deliberate, weighty delivery \u2014 doesn't waste words. Sounds like the quiet, tough guy in the room who commands respect without needing to raise his voice. Warm and sincere underneath the toughness, genuine rather than performative.",
+    "previews": [
+      {
+        "index": 1,
+        "generated_voice_id": "daoPj9yOdDuo6xP8r4Es",
+        "url": "/api/audio/previews/kovalenko_preview_1.mp3",
+        "size_bytes": 247058
+      },
+      {
+        "index": 2,
+        "generated_voice_id": "s8xrMyh2rtPqcawo1z1V",
+        "url": "/api/audio/previews/kovalenko_preview_2.mp3",
+        "size_bytes": 266494
+      },
+      {
+        "index": 3,
+        "generated_voice_id": "qm0LIHvBaL5XhqKcnozC",
+        "url": "/api/audio/previews/kovalenko_preview_3.mp3",
+        "size_bytes": 246431
+      }
+    ]
+  },
+  "marchetti": {
+    "voice_name": "Ace",
+    "description": "American male, late 20s, thick Rhode Island Italian-American accent. Fast, loud, high-energy voice that seems to always be one beat from losing it \u2014 excitable, animated, prone to sudden bursts of volume for comedic effect. Playful and chaotic, talks with his hands even though you can't see them, constantly ready to jump in and derail the conversation with a joke or a wild take. Big personality, big laugh, never boring.",
+    "previews": [
+      {
+        "index": 1,
+        "generated_voice_id": "SagDXXycDhSPgR3kY2bB",
+        "url": "/api/audio/previews/marchetti_preview_1.mp3",
+        "size_bytes": 252701
+      },
+      {
+        "index": 2,
+        "generated_voice_id": "PQW2qBvuTLVQ46Mr3arb",
+        "url": "/api/audio/previews/marchetti_preview_2.mp3",
+        "size_bytes": 231385
+      },
+      {
+        "index": 3,
+        "generated_voice_id": "5uSBiecvz1GMSIyYpD2S",
+        "url": "/api/audio/previews/marchetti_preview_3.mp3",
+        "size_bytes": 252701
+      }
+    ]
+  }
+}

@@ -170,6 +170,81 @@ async def quick_reply(req: QuickReplyReq):
     return {"analyst_id": analyst_id, "text": text, "audio_url": audio_url}
 
 
+@api.get("/voice-lab/manifest")
+async def voice_lab_manifest():
+    """Return the generated voice-design previews (4 characters × 3 candidates)."""
+    manifest_path = STATIC_DIR / "audio" / "previews" / "manifest.json"
+    if not manifest_path.exists():
+        return {"characters": {}}
+    import json as _json
+    return {"characters": _json.loads(manifest_path.read_text())}
+
+
+class VoiceSelectReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    analyst_id: str
+    preview_index: int  # 1-based
+
+
+@api.post("/voice-lab/select")
+async def voice_lab_select(req: VoiceSelectReq):
+    """Promote a preview to a permanent ElevenLabs voice, update voice_service,
+    and clear the cached banter audio so it regenerates with the new voice."""
+    from voice_service import ANALYST_VOICES, _get_client
+    import json as _json
+
+    manifest_path = STATIC_DIR / "audio" / "previews" / "manifest.json"
+    if not manifest_path.exists():
+        raise HTTPException(status_code=404, detail="Previews not generated yet")
+    manifest = _json.loads(manifest_path.read_text())
+    char = manifest.get(req.analyst_id)
+    if not char or "previews" not in char:
+        raise HTTPException(status_code=404, detail="Analyst previews not found")
+    match = next((p for p in char["previews"] if p["index"] == req.preview_index), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="Preview index not found")
+
+    client = _get_client()
+    if client is None:
+        raise HTTPException(status_code=500, detail="ElevenLabs key not set")
+
+    # Save the preview as a real voice.
+    voice = client.text_to_voice.create_voice_from_preview(
+        voice_name=f"Ticker · {char['voice_name']}",
+        voice_description=char["description"],
+        generated_voice_id=match["generated_voice_id"],
+    )
+    new_voice_id = voice.voice_id if hasattr(voice, "voice_id") else voice.get("voice_id")
+
+    # Update in-memory config so subsequent /api/banter calls use the new voice.
+    ANALYST_VOICES[req.analyst_id]["voice_id"] = new_voice_id
+
+    # Persist the choice to a file so it survives restart.
+    choices_path = STATIC_DIR / "audio" / "voice_choices.json"
+    existing = {}
+    if choices_path.exists():
+        try:
+            existing = _json.loads(choices_path.read_text())
+        except Exception:
+            existing = {}
+    existing[req.analyst_id] = {"voice_id": new_voice_id, "voice_name": char["voice_name"]}
+    choices_path.write_text(_json.dumps(existing, indent=2))
+
+    # Clear any cached banter audio for THIS analyst so next fetch regenerates.
+    audio_dir = STATIC_DIR / "audio"
+    cleared = 0
+    for f in audio_dir.glob(f"{req.analyst_id}_*.mp3"):
+        f.unlink(missing_ok=True)
+        cleared += 1
+
+    return {
+        "analyst_id": req.analyst_id,
+        "voice_id": new_voice_id,
+        "voice_name": char["voice_name"],
+        "cleared_cache_files": cleared,
+    }
+
+
 @api.get("/stats/players")
 async def stats_players():
     return {"players": PLAYERS}

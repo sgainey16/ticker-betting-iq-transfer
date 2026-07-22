@@ -60,6 +60,26 @@ _audio_dir = Path(__file__).parent / "static" / "audio"
 _audio_dir.mkdir(parents=True, exist_ok=True)
 
 
+def _load_saved_voice_choices():
+    """On import, load any previously-selected voices from voice_choices.json
+    and update ANALYST_VOICES so they persist across backend restarts."""
+    choices_path = _audio_dir / "voice_choices.json"
+    if not choices_path.exists():
+        return
+    try:
+        import json
+        data = json.loads(choices_path.read_text())
+        for aid, cfg in data.items():
+            if aid in ANALYST_VOICES and cfg.get("voice_id"):
+                ANALYST_VOICES[aid]["voice_id"] = cfg["voice_id"]
+                logger.info("Loaded saved voice for %s: %s", aid, cfg["voice_id"])
+    except Exception as e:
+        logger.warning("Failed to load voice_choices.json: %s", e)
+
+
+_load_saved_voice_choices()
+
+
 def _get_client() -> Optional[ElevenLabs]:
     global _client
     if _client is not None:
