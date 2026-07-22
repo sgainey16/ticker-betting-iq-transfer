@@ -209,12 +209,16 @@ async def voice_lab_select(req: VoiceSelectReq):
         raise HTTPException(status_code=500, detail="ElevenLabs key not set")
 
     # Save the preview as a real voice.
-    voice = client.text_to_voice.create_voice_from_preview(
+    voice = client.text_to_voice.create(
         voice_name=f"Ticker · {char['voice_name']}",
         voice_description=char["description"],
         generated_voice_id=match["generated_voice_id"],
     )
-    new_voice_id = voice.voice_id if hasattr(voice, "voice_id") else voice.get("voice_id")
+    new_voice_id = getattr(voice, "voice_id", None)
+    if not new_voice_id and isinstance(voice, dict):
+        new_voice_id = voice.get("voice_id")
+    if not new_voice_id:
+        raise HTTPException(status_code=500, detail="ElevenLabs returned no voice_id")
 
     # Update in-memory config so subsequent /api/banter calls use the new voice.
     ANALYST_VOICES[req.analyst_id]["voice_id"] = new_voice_id

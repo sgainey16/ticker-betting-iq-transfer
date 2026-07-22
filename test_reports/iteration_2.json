@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only test of /voice-lab. Page loads correctly with 4 character sections (Doyle, Lindqvist, Kovalenko, Marchetti) x 3 candidate cards each. Play button + preview audio streaming works (200 OK on /api/audio/previews/*.mp3). HOWEVER the primary bug being verified is NOT fixed: clicking 'Pick this voice' still returns HTTP 500. Root cause (from backend logs) is a NEW 400 error from ElevenLabs -- not the previous SDK-method issue.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/voice-lab/select",
+        "issue": "Returns HTTP 500. ElevenLabs API rejects the create() call with 400: {'type':'validation_error','code':'invalid_parameters','message':\"Voice 'BmgAQaiukYozGiUJkczc' has already been created.\",'param':'generated_voice_id'}. Because generated_voice_id from the pre-generated preview manifest is a one-shot token, ElevenLabs refuses to create the same voice twice. The main agent's earlier curl test consumed doyle's generated_voice_id, so every subsequent selection for doyle now fails. Same pattern will hit every other analyst on any repeat click. Also, the endpoint does not catch ApiError and returns generic 500 with no detail — the frontend just shows 'status code 500' with no info.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {"endpoint": "POST /api/voice-lab/select", "issue": "No try/except around client.text_to_voice.create() — ElevenLabs ApiError bubbles as opaque 500. Should catch and return the ElevenLabs error body so the UI can show a real message."},
+      {"endpoint": "GET /api/voice-lab/manifest", "issue": "Response does not include which preview is currently 'chosen' per analyst. After navigating away and back, the UI has no way to restore the 'Chosen' badge — the frontend keeps `selected` in local component state only. Persistence across navigation is broken by design."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Pick this voice", "issue": "POST /api/voice-lab/select returns 500 -> red toast 'Selection failed: Request failed with status code 500'. Card border stays default, no 'Chosen' badge appears. Bug being verified is unfixed.", "affected_selectors": ["[data-testid='voice-select-doyle-1']"]},
+      {"flow": "Chosen state persistence", "issue": "After navigating away to / and back to /voice-lab, no 'Chosen' badge is shown even if a selection had succeeded, because manifest response does not carry the selected preview_index and the frontend `selected` state is component-local. Requirement #5 from the test spec cannot be satisfied by current code even if the 500 were fixed."}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In /app/backend/server.py voice_lab_select: catch elevenlabs.core.api_error.ApiError. If body.detail.message == \"Voice '<id>' has already been created.\", either (a) query ElevenLabs GET /v2/voices to find the existing voice whose generated_voice_id matches, and reuse its voice_id, or (b) parse the id from the error message and treat that as the voice_id, or (c) store the resolved voice_id in the preview manifest.json the first time and re-use on subsequent selects. Without this, every re-selection is broken.",
+    "Regenerate preview candidates (delete /app/backend/static/audio/previews/manifest.json and re-run the preview generator) so all 12 generated_voice_id tokens are fresh, THEN allow at most one create() per token. Combine with (a)/(b)/(c) above so re-clicks don't 500.",
+    "Extend /api/voice-lab/manifest to return each analyst's currently-selected preview_index (read from voice_choices.json), and have VoiceLab.jsx initialize `selected` from that. This is needed for requirement #5 (Chosen state persists across navigation).",
+    "Wrap the ElevenLabs SDK call in try/except and forward the SDK error message via HTTPException(status_code=400, detail=...) so the frontend toast is actionable."
+  ],
+  "critical_code_review_comments": [
+    "server.py voice_lab_select has no error handling around the external SDK call — bare exception becomes an opaque 500 with no logging visible to the API caller.",
+    "voice_lab_select is not idempotent: calling it twice with the same (analyst, preview_index) throws instead of returning the previously-saved voice_id.",
+    "Frontend `selected` state is not hydrated from server on mount — persistence across route changes is impossible with current API shape.",
+    "audioEl created via useState(() => new Audio()) is fine in dev, but the cleanup only pauses; consider clearing src to avoid a lingering request when component unmounts mid-play.",
+    "voice_service.ANALYST_VOICES is mutated at runtime from a request handler — race-condition-prone in a multi-worker setup. voice_choices.json is the source of truth; consider reading it per request rather than mutating module-level state."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only requested)", "frontend": "60% (page loads + play works; primary Pick flow fails end-to-end due to backend 500)"},
+  "test_credentials": "N/A - no auth on this app",
+  "seed_data_creation": "None. Picked exactly one voice (doyle candidate 1) per instructions; call failed with 500 so no ElevenLabs voice slot was consumed by this test.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The 4 analyst IDs are doyle/lindqvist/kovalenko/marchetti (display names Doyle/Numbers/Dozer/Ace). Test creds: none. When retesting Pick this voice, EACH generated_voice_id in previews/manifest.json can only be create()'d ONCE per ElevenLabs account lifetime -- if the main agent regenerates previews, the fresh tokens will each allow exactly one successful selection. To verify idempotency you must click Pick a SECOND time on the same candidate and expect a 200 with the same voice_id (not 500). Frontend selector for pick button: [data-testid='voice-select-{analyst_id}-{preview_index}']. Play button: [data-testid='voice-play-{analyst_id}-{preview_index}']. To validate requirement #5 (Chosen state persists after navigation), the /api/voice-lab/manifest response must be extended to include the previously-chosen preview_index per analyst, AND VoiceLab.jsx must seed `selected` from that. Currently neither is true.",
+  "rca of the issue": "Main agent's fix addressed only the SDK-method renaming (create_voice_from_preview -> create). The endpoint now calls the right method, but ElevenLabs returns 400 'Voice <id> has already been created' because the earlier successful curl already consumed doyle's generated_voice_id. Because voice_lab_select does not catch this ApiError and does not have a fallback path to look up / reuse the previously-created voice_id, every subsequent call (including this test's UI click) becomes an unhandled 500. Reproduction: (1) POST /api/voice-lab/select with analyst_id=doyle, preview_index=1 -> 200 first time. (2) Repeat same POST -> 500. Backend log shows ApiError body param 'generated_voice_id', message 'Voice ... has already been created.'. Mitigation options listed in action_items; the minimal fix is (b): parse the 'already created' error, resolve the existing voice_id from ElevenLabs /v2/voices, save it to voice_choices.json, return 200 with that voice_id. This makes the endpoint idempotent AND fixes the current stuck state."
+}
