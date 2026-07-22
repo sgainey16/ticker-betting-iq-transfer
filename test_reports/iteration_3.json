@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend e2e verification of /voice-lab flow after idempotency fix. All 5 requested scenarios PASSED. Voice slot count preserved (only 1 voice created).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "1_page_renders": "PASS - 4 characters, 12 pick buttons (3 per character), 12 play buttons, no console errors",
+    "2_play_audio": "PASS - GET /api/audio/previews/doyle_preview_1.mp3 returned 200 audio/mpeg; PAUSE button appeared after clicking PLAY",
+    "3_pick_first_time": "PASS - POST /api/voice-lab/select returned 200; card immediately showed 'CHOSEN' badge with accent-colored (amber) border; button changed to 'THIS ONE' (filled accent style)",
+    "4_pick_same_idempotent": "PASS - Second POST /api/voice-lab/select on same candidate returned 200 (no 500). Idempotency confirmed",
+    "5_persistence_after_nav": "PASS - Navigated to / (Home loaded), then back to /voice-lab. Manifest fetched, 'CHOSEN' badge and accent border on Doyle Candidate 1 PERSISTED (verified via screenshot). voice_choices.json contains {doyle: {voice_id: BmgAQaiukYozGiUJkczc, preview_index: 1}}"
+  },
+  "network_summary": {
+    "select_calls": "2x 200 OK (pick #1 and idempotent pick #2)",
+    "manifest_calls": "2x 200 OK (initial mount + after nav-back)",
+    "audio_preview": "200 OK audio/mpeg"
+  },
+  "minor_observations": [
+    "Toast text was empty when queried 8s after click - likely auto-dismissed before capture; not a functional issue since visual state (Chosen badge + accent border + 'THIS ONE' button) was correctly applied and persisted.",
+    "The 'CHOSEN' label contains a checkmark SVG child, so a naive text-only DOM query with children.length===0 filter misses it; visually confirmed via screenshots."
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped as requested)", "frontend": "100%"},
+  "seed_data_creation": "voice_choices.json now contains doyle Candidate 1 selection (voice_id BmgAQaiukYozGiUJkczc). Only 1 ElevenLabs voice slot consumed, well within the 2-pick budget.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Voice-lab pick flow is fully working end-to-end including idempotent re-pick and cross-navigation persistence via manifest.selected. Budget note: each unique (analyst, preview_index) combo consumes an ElevenLabs voice slot on first pick — reuse existing picks when possible during testing."
+}

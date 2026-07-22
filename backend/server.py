@@ -172,12 +172,24 @@ async def quick_reply(req: QuickReplyReq):
 
 @api.get("/voice-lab/manifest")
 async def voice_lab_manifest():
-    """Return the generated voice-design previews (4 characters × 3 candidates)."""
+    """Return the generated voice-design previews (4 characters × 3 candidates)
+    plus any previously-selected preview_index per analyst."""
     manifest_path = STATIC_DIR / "audio" / "previews" / "manifest.json"
     if not manifest_path.exists():
-        return {"characters": {}}
+        return {"characters": {}, "selected": {}}
     import json as _json
-    return {"characters": _json.loads(manifest_path.read_text())}
+    chars = _json.loads(manifest_path.read_text())
+    selected = {}
+    choices_path = STATIC_DIR / "audio" / "voice_choices.json"
+    if choices_path.exists():
+        try:
+            saved = _json.loads(choices_path.read_text())
+            for aid, cfg in saved.items():
+                if "preview_index" in cfg:
+                    selected[aid] = cfg["preview_index"]
+        except Exception:
+            pass
+    return {"characters": chars, "selected": selected}
 
 
 class VoiceSelectReq(BaseModel):
@@ -208,15 +220,30 @@ async def voice_lab_select(req: VoiceSelectReq):
     if client is None:
         raise HTTPException(status_code=500, detail="ElevenLabs key not set")
 
-    # Save the preview as a real voice.
-    voice = client.text_to_voice.create(
-        voice_name=f"Ticker · {char['voice_name']}",
-        voice_description=char["description"],
-        generated_voice_id=match["generated_voice_id"],
-    )
-    new_voice_id = getattr(voice, "voice_id", None)
-    if not new_voice_id and isinstance(voice, dict):
-        new_voice_id = voice.get("voice_id")
+    # Save the preview as a real voice. ElevenLabs generated_voice_id tokens are
+    # one-shot — calling create() a second time returns a 400. We treat that as
+    # success (the voice already exists, reuse it) so the endpoint is idempotent.
+    new_voice_id = None
+    try:
+        voice = client.text_to_voice.create(
+            voice_name=f"Ticker · {char['voice_name']}",
+            voice_description=char["description"],
+            generated_voice_id=match["generated_voice_id"],
+        )
+        new_voice_id = getattr(voice, "voice_id", None)
+        if not new_voice_id and isinstance(voice, dict):
+            new_voice_id = voice.get("voice_id")
+    except Exception as e:
+        # Detect "already been created" and fall back to the generated_voice_id
+        # (which is the same string ElevenLabs uses as the permanent voice_id).
+        msg = str(e).lower()
+        if "already been created" in msg or "already exists" in msg:
+            logger.info("Voice already created for %s, reusing", req.analyst_id)
+            new_voice_id = match["generated_voice_id"]
+        else:
+            logger.exception("ElevenLabs create voice failed")
+            raise HTTPException(status_code=400, detail=f"ElevenLabs: {e}")
+
     if not new_voice_id:
         raise HTTPException(status_code=500, detail="ElevenLabs returned no voice_id")
 
@@ -231,7 +258,11 @@ async def voice_lab_select(req: VoiceSelectReq):
             existing = _json.loads(choices_path.read_text())
         except Exception:
             existing = {}
-    existing[req.analyst_id] = {"voice_id": new_voice_id, "voice_name": char["voice_name"]}
+    existing[req.analyst_id] = {
+        "voice_id": new_voice_id,
+        "voice_name": char["voice_name"],
+        "preview_index": req.preview_index,
+    }
     choices_path.write_text(_json.dumps(existing, indent=2))
 
     # Clear any cached banter audio for THIS analyst so next fetch regenerates.

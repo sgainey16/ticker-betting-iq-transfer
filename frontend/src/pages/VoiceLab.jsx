@@ -15,7 +15,10 @@ export default function VoiceLab() {
   useEffect(() => {
     api
       .get("/voice-lab/manifest")
-      .then((r) => setManifest(r.data.characters || {}))
+      .then((r) => {
+        setManifest(r.data.characters || {});
+        setSelected(r.data.selected || {});
+      })
       .catch((e) => console.error(e))
       .finally(() => setLoading(false));
     return () => {
