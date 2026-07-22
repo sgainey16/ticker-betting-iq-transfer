@@ -1,5 +1,15 @@
 // Analyst config for The Ticker (mirrors backend/analysts.py)
 export const ANALYSTS = {
+  reggie: {
+    id: "reggie",
+    name: "Reggie Banks",
+    short: "Reggie",
+    role: "Solo Anchor",
+    accent: "#1E5DFF",
+    tagline: "Let's get real, kid.",
+    image:
+      "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/yqmg9ffo_D0025CBA-4A29-4EB4-8AC7-EA8C955C60E0.png",
+  },
   doyle: {
     id: "doyle",
     name: 'Liam "Lucky" Doyle',
@@ -42,7 +52,7 @@ export const ANALYSTS = {
   },
 };
 
-export const ANALYST_ORDER = ["doyle", "lindqvist", "kovalenko", "marchetti"];
+export const ANALYST_ORDER = ["reggie", "doyle", "lindqvist", "kovalenko", "marchetti"];
 
 export const TEST_IDS = {
   nav: {

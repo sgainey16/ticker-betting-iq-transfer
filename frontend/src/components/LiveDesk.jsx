@@ -3,16 +3,11 @@ import { ANALYSTS } from "@/lib/config";
 import { api, BACKEND_URL } from "@/lib/api";
 import { Send, Volume2, VolumeX } from "lucide-react";
 
-// Analyst horizontal positions on the desk photo (%, left-to-right on the reference).
-const DESK_POS = {
-  marchetti: 16,
-  doyle: 39,
-  kovalenko: 61,
-  lindqvist: 84,
-};
+// Reggie is solo center-frame — no per-speaker position needed.
+const DESK_POS = { reggie: 50 };
 
 const DESK_IMAGE =
-  "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
+  "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/yqmg9ffo_D0025CBA-4A29-4EB4-8AC7-EA8C955C60E0.png";
 
 const PAUSE_BETWEEN_TURNS = 0;
 const INTERRUPT_START_EARLY_MS = 1100; // hard cut-in
@@ -84,10 +79,10 @@ export default function LiveDesk() {
         audioRef.current.currentTime = 0;
       }
       try {
-        const r = await api.get("/banter", { params: { topic: activeTopic } });
+        const r = await api.get("/reggie/show");
         if (mounted) setTurns(r.data.turns || []);
       } catch (e) {
-        console.error("banter load failed", e);
+        console.error("show load failed", e);
       }
     })();
     return () => {
@@ -284,30 +279,12 @@ export default function LiveDesk() {
       <audio ref={audioRefB} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
-      {/* Topic tabs + sound control */}
+      {/* Topic tabs hidden while Reggie is solo — will return with the panel */}
       <div className="mb-4 flex items-center gap-2 flex-wrap">
-        {topics.map((t) => {
-          const active = t.id === activeTopic;
-          return (
-            <button
-              key={t.id}
-              data-testid={`topic-tab-${t.id}`}
-              onClick={() => {
-                unlockAudio();
-                setActiveTopic(t.id);
-                if (audioCtxRef.current) playStinger(audioCtxRef.current, muted ? 0.0001 : 0.1);
-              }}
-              className="px-3.5 py-1.5 rounded-full font-accent text-[11px] uppercase tracking-widest transition-colors"
-              style={{
-                background: active ? "#1e5dff" : "transparent",
-                color: active ? "#fff" : "#9ca3af",
-                border: `1px solid ${active ? "#1e5dff" : "#2d2d35"}`,
-              }}
-            >
-              {t.label}
-            </button>
-          );
-        })}
+        <div className="font-accent text-xs uppercase tracking-[0.35em] text-[#1e5dff]">
+          <span className="tick-dot live-pulse inline-block mr-2 align-middle" />
+          Live · Reggie Banks · NHL Desk
+        </div>
 
         <div className="ml-auto flex items-center gap-2">
           <button
@@ -326,32 +303,23 @@ export default function LiveDesk() {
       <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]">
         <div
           className="relative w-full"
-          style={{ aspectRatio: "16 / 8", overflow: "hidden" }}
+          style={{ aspectRatio: "3 / 2", overflow: "hidden" }}
         >
           <img
             src={DESK_IMAGE}
-            alt="The Ticker desk — four analysts mid-broadcast"
+            alt="Reggie Banks — The Ticker AI Sports Network"
             className="absolute inset-0 w-full h-full select-none"
-            style={{ objectFit: "cover", objectPosition: "center 46%" }}
+            style={{ objectFit: "cover", objectPosition: "center center" }}
             draggable={false}
           />
 
-          {/* Top mask — fully hides the mockup title area */}
-          <div
-            className="absolute inset-x-0 top-0 pointer-events-none"
-            style={{
-              height: "26%",
-              background:
-                "linear-gradient(180deg, #0d0d11 0%, #0d0d11 70%, rgba(13,13,17,0) 100%)",
-            }}
-          />
-          {/* Bottom mask — fully hides the mockup search bar + chips */}
+          {/* Light bottom gradient so the lower-third caption reads */}
           <div
             className="absolute inset-x-0 bottom-0 pointer-events-none"
             style={{
-              height: "42%",
+              height: "22%",
               background:
-                "linear-gradient(0deg, #0d0d11 0%, #0d0d11 78%, rgba(13,13,17,0) 100%)",
+                "linear-gradient(0deg, #0d0d11 0%, rgba(13,13,17,0.55) 55%, rgba(13,13,17,0) 100%)",
             }}
           />
 

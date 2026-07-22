@@ -30,6 +30,7 @@ from analysts import (
     build_stat_card,
     pick_banter,
     quick_fallback_line,
+    pick_reggie_show,
 )
 from voice_service import ensure_audio, audio_url_for
 
@@ -110,6 +111,17 @@ async def ticker():
 @api.get("/suggested-questions")
 async def suggested_questions():
     return {"questions": SUGGESTED_QUESTIONS}
+
+
+@api.get("/reggie/show")
+async def reggie_show():
+    """Reggie Banks solo show — full script with audio_url per line."""
+    turns = pick_reggie_show()
+    enriched = []
+    for t in turns:
+        audio_url = ensure_audio(t["speaker"], t["text"])
+        enriched.append({**t, "audio_url": audio_url})
+    return {"turns": enriched}
 
 
 @api.get("/banter")

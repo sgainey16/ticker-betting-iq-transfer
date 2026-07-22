@@ -26,6 +26,13 @@ ANALYST_VOICES = {
     # Doyle — mid-40s Boston Irish-American anchor. Needs authoritative
     # broadcast weight without sounding British. "Paul" is a US-native
     # authoritative male voice — anchor-desk cadence.
+    # Reggie Banks — solo lead anchor. Neutral all-American broadcast voice.
+    # voice_id starts as Paul (placeholder) — swapped when user picks a
+    # Voice-Design candidate in /voice-lab.
+    "reggie": {
+        "voice_id": "5Q0t7uMcjvnagumLfvZi",  # Paul placeholder
+        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.12},
+    },
     "doyle": {
         "voice_id": "5Q0t7uMcjvnagumLfvZi",
         "settings": {"stability": 0.40, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True, "speed": 1.15},

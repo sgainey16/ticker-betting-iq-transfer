@@ -94,5 +94,29 @@
         "size_bytes": 252701
       }
     ]
+  },
+  "reggie": {
+    "voice_name": "Reggie",
+    "description": "American male, mid-to-late 30s, neutral all-American broadcast voice \u2014 no fixed regional accent. Confident, bold, fast, sharp-witted, lippy sports-show anchor delivery. Full energy at all times, never flat, never a stats-dump. Ex-NHL player turned analyst \u2014 you hear the athlete's authority behind the mic. Warm undertone under the swagger, classy not cheesy, respected because it's earned. Quick to punch a joke, quick to praise a good play, quick to rip a bad one \u2014 all in the same energetic voice.",
+    "previews": [
+      {
+        "index": 1,
+        "generated_voice_id": "viUUNw54QvGg0iPbuUb0",
+        "url": "/api/audio/previews/reggie_preview_1.mp3",
+        "size_bytes": 405674
+      },
+      {
+        "index": 2,
+        "generated_voice_id": "QA0i6srcbm2DTBkPugjB",
+        "url": "/api/audio/previews/reggie_preview_2.mp3",
+        "size_bytes": 373073
+      },
+      {
+        "index": 3,
+        "generated_voice_id": "AcpHF6ajOOfpq0b9kfzn",
+        "url": "/api/audio/previews/reggie_preview_3.mp3",
+        "size_bytes": 361788
+      }
+    ]
   }
 }

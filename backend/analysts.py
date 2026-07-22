@@ -1,6 +1,26 @@
 """Analyst personality definitions + mock NHL data for The Ticker Phase 1."""
 
 ANALYSTS = {
+    "reggie": {
+        "id": "reggie",
+        "name": "Reggie Banks",
+        "short_name": "Reggie",
+        "role": "Solo Anchor",
+        "accent_color": "#1E5DFF",
+        "tagline": "Let's get real, kid.",
+        "loading_lines": ["Reggie is checking the tape…", "Reggie is pulling up the notes…"],
+        "system_prompt": (
+            "You are Reggie Banks. Born and raised in Dorchester, MA. 13 NHL seasons as a "
+            "center — 2x All-Star, Stanley Cup champion. Now solo anchor of The Ticker, "
+            "a hockey desk. Confident, witty, lippy, respected, classy. Broadcast-neutral "
+            "voice — no thick accent. Signature line: 'Let's get real, kid.' Runs hot, "
+            "runs fast, runs sharp. Real stories, no PR. Praise a good play, rip a bad "
+            "one, all in the same energetic voice.\n\n"
+            "RULES: 2-4 sentences unless depth asked. Never 'as an AI'. Never emoji. "
+            "Use hockey knowledge like a player, not a stats sheet. If the data can't "
+            "answer it, say so and offer the angle you'd defend on air."
+        ),
+    },
     "doyle": {
         "id": "doyle",
         "name": "Liam \"Lucky\" Doyle",
@@ -302,7 +322,31 @@ QUICK_FALLBACK = {
     ],
 }
 
+# ---------- Reggie Banks solo show ----------
+# Structured as a single-anchor broadcast: opener → segments → finisher.
+# All lines are Reggie (speaker="reggie"). Frontend plays them back-to-back.
+REGGIE_SHOWS = [
+    [
+        {"speaker": "reggie", "text": "Let's get real, kid — puck drops in three, two, one. Grab a seat, we got a lot to get through."},
+        {"speaker": "reggie", "text": "McDavid dropped ninety points in forty-eight games. Ninety. In forty-eight. Somebody get that man a hobby, because at this rate he's gonna finish the season before the rest of the league finishes brunch."},
+        {"speaker": "reggie", "text": "Alright, switching gears — the Leafs. Three straight losses at home. I've seen better positioning in a parking lot. Matthews is still leading the league in goals and it doesn't matter, because when your D-corps plays like traffic cones, the goals go the other way."},
+        {"speaker": "reggie", "text": "Now here's where it gets good — Hellebuyck. Nine-two-eight save percentage in February. That's not a save percentage, that's a typo. Winnipeg's playing boring hockey and boring hockey wins Cups. Ask me how I know."},
+        {"speaker": "reggie", "text": "Cup Check on the Rangers: are they a real contender or a first-round exit in a nice suit? I'm gonna say it — nice suit. Shesterkin's swimming, high-danger chances against are up thirty percent, and their cap is a house of cards."},
+        {"speaker": "reggie", "text": "Trade deadline in three weeks. Somebody's about to give up a first-rounder for two months of a rental. Every February, every year. And then in June the analytics guys line up to tell you it was a bad deal. Passion's cheap, kid. Production's the only thing that pays the bills."},
+        {"speaker": "reggie", "text": "Overreaction Meter of the week: the take that Kaprizov is better than Kucherov. Come on. Kucherov's got two Cups. Cups aren't stats — they're the only stat that matters when the lights come on."},
+        {"speaker": "reggie", "text": "That's the Ticker. Same time tomorrow. Keep your stick on the ice — I'm out."},
+    ],
+]
+
+
 import random
+
+
+def pick_reggie_show():
+    return random.choice(REGGIE_SHOWS)
+
+
+
 
 
 def pick_banter(topic: str = "league_wide"):
