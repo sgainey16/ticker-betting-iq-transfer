@@ -27,29 +27,20 @@ ANALYST_VOICES = {
     # broadcast weight without sounding British. "Paul" is a US-native
     # authoritative male voice — anchor-desk cadence.
     "doyle": {
-        "voice_id": "5Q0t7uMcjvnagumLfvZi",  # Paul (American authoritative)
-        "settings": {"stability": 0.40, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True},
+        "voice_id": "5Q0t7uMcjvnagumLfvZi",
+        "settings": {"stability": 0.40, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True, "speed": 1.15},
     },
-    # Lindqvist — late-20s Minnesota analytics guy. "Sam" is a young mature
-    # American male with natural conversational cadence — the closest thing
-    # to a smart Midwestern kid in the pre-made library.
     "lindqvist": {
-        "voice_id": "yoZ06aMxZJJ28mfd3POQ",  # Sam (young mature American, natural)
-        "settings": {"stability": 0.35, "similarity_boost": 0.75, "style": 0.45, "use_speaker_boost": True},
+        "voice_id": "yoZ06aMxZJJ28mfd3POQ",
+        "settings": {"stability": 0.35, "similarity_boost": 0.75, "style": 0.45, "use_speaker_boost": True, "speed": 1.15},
     },
-    # Kovalenko — 50s Ukrainian-American enforcer, blue-collar Cleveland.
-    # "Clyde" is a gravelly war-veteran-style voice — deliberately slower,
-    # sincere, with weight. Higher stability so he's grounded not fidgety.
     "kovalenko": {
-        "voice_id": "2EiwWnXFnvU5JabPnv8n",  # Clyde (gravelly older male)
-        "settings": {"stability": 0.55, "similarity_boost": 0.82, "style": 0.20, "use_speaker_boost": True},
+        "voice_id": "2EiwWnXFnvU5JabPnv8n",
+        "settings": {"stability": 0.55, "similarity_boost": 0.82, "style": 0.20, "use_speaker_boost": True, "speed": 1.08},
     },
-    # Marchetti — early-30s Italian-American wildcard. "Giovanni" is Italian-
-    # accented English — closest thing to a Northeast Italian-American vibe.
-    # Low stability + high style so the delivery is fast, chaotic, expressive.
     "marchetti": {
-        "voice_id": "zcAOhNBS3c14rBihAFp1",  # Giovanni (Italian-accented English)
-        "settings": {"stability": 0.28, "similarity_boost": 0.75, "style": 0.60, "use_speaker_boost": True},
+        "voice_id": "zcAOhNBS3c14rBihAFp1",
+        "settings": {"stability": 0.28, "similarity_boost": 0.75, "style": 0.60, "use_speaker_boost": True, "speed": 1.18},
     },
 }
 

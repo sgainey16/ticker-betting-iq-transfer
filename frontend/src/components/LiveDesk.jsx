@@ -14,8 +14,9 @@ const DESK_POS = {
 const DESK_IMAGE =
   "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
 
-const PAUSE_BETWEEN_TURNS = 15; // near-zero handoff for real banter
-const INTERRUPT_START_EARLY_MS = 550; // interrupt begins BEFORE prior line ends
+const PAUSE_BETWEEN_TURNS = 0; // no gap
+const INTERRUPT_START_EARLY_MS = 850; // hard cut-in on marked interrupts
+const NORMAL_OVERLAP_MS = 250; // even non-interrupts step on the tail slightly
 
 function playStinger(audioCtx, gain = 0.12) {
   try {
@@ -199,17 +200,18 @@ export default function LiveDesk() {
           scheduleAdvance(Math.max(1200, turn.text.length * 55));
         };
 
-        // If the NEXT turn is an interrupt, trigger advance early (before this
-        // audio ends) so the interrupt starts on the OTHER channel and OVERLAPS
-        // the tail of the current line.
+        // Fire next turn slightly before this one ends. Interrupts overlap
+        // heavily (~850ms), normal turns barely touch (~250ms) — either way
+        // we never let dead air open up between lines.
         const nextTurn = turns[turnIdx + 1];
-        if (nextTurn && nextTurn.interrupt) {
+        const earlyMs = nextTurn && nextTurn.interrupt ? INTERRUPT_START_EARLY_MS : NORMAL_OVERLAP_MS;
+        if (nextTurn) {
           el.ontimeupdate = () => {
             if (
               !advanceScheduled &&
               el.duration &&
               isFinite(el.duration) &&
-              el.duration - el.currentTime <= INTERRUPT_START_EARLY_MS / 1000
+              el.duration - el.currentTime <= earlyMs / 1000
             ) {
               scheduleAdvance(0);
             }
