@@ -14,9 +14,9 @@ const DESK_POS = {
 const DESK_IMAGE =
   "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
 
-const PAUSE_BETWEEN_TURNS = 0; // no gap
-const INTERRUPT_START_EARLY_MS = 850; // hard cut-in on marked interrupts
-const NORMAL_OVERLAP_MS = 250; // even non-interrupts step on the tail slightly
+const PAUSE_BETWEEN_TURNS = 0;
+const INTERRUPT_START_EARLY_MS = 1100; // hard cut-in
+const NORMAL_OVERLAP_MS = 500; // compensate for the mp3 lead-in silence + browser overhead
 
 function playStinger(audioCtx, gain = 0.12) {
   try {
@@ -200,10 +200,16 @@ export default function LiveDesk() {
           scheduleAdvance(Math.max(1200, turn.text.length * 55));
         };
 
-        // Fire next turn slightly before this one ends. Interrupts overlap
-        // heavily (~850ms), normal turns barely touch (~250ms) — either way
-        // we never let dead air open up between lines.
+        // PRELOAD the next line into the OTHER channel now so el.play() on
+        // it later is instantaneous (no fetch/decode gap between speakers).
         const nextTurn = turns[turnIdx + 1];
+        if (nextTurn && nextTurn.audio_url && otherEl) {
+          otherEl.src = `${BACKEND_URL}${nextTurn.audio_url}`;
+          otherEl.load();
+        }
+
+        // Fire next turn slightly before this one ends. Interrupts overlap
+        // heavily (~1100ms), normal turns still overlap (~500ms) — no dead air.
         const earlyMs = nextTurn && nextTurn.interrupt ? INTERRUPT_START_EARLY_MS : NORMAL_OVERLAP_MS;
         if (nextTurn) {
           el.ontimeupdate = () => {
