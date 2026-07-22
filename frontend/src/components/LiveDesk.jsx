@@ -58,6 +58,7 @@ export default function LiveDesk() {
   const chatAudioRef = useRef(null);
   const audioCtxRef = useRef(null);
   const pushedRef = useRef(new Set());
+  const unlockAudioRef = useRef(() => {}); // updated when unlockAudio is defined below
 
   // Load topics once.
   useEffect(() => {
@@ -92,6 +93,21 @@ export default function LiveDesk() {
     };
   }, [activeTopic]);
 
+  // Any click ANYWHERE on the page unlocks audio (browsers require a user
+  // gesture — this is the least-friction workaround).
+  useEffect(() => {
+    if (audioUnlocked) return;
+    const onFirstInteract = () => {
+      unlockAudioRef.current?.();
+    };
+    window.addEventListener("pointerdown", onFirstInteract, { once: true });
+    window.addEventListener("keydown", onFirstInteract, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", onFirstInteract);
+      window.removeEventListener("keydown", onFirstInteract);
+    };
+  }, [audioUnlocked]);
+
   const unlockAudio = useCallback(() => {
     if (audioUnlocked) return;
     try {
@@ -122,6 +138,11 @@ export default function LiveDesk() {
       console.warn("audio unlock failed", e);
     }
   }, [audioUnlocked]);
+
+  // Keep unlockAudioRef in sync with the latest unlockAudio implementation.
+  useEffect(() => {
+    unlockAudioRef.current = unlockAudio;
+  }, [unlockAudio]);
 
   // Play current turn.
   useEffect(() => {
@@ -238,25 +259,15 @@ export default function LiveDesk() {
         })}
 
         <div className="ml-auto flex items-center gap-2">
-          {!audioUnlocked ? (
-            <button
-              onClick={unlockAudio}
-              data-testid="unlock-audio-btn"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors shadow-[0_0_20px_-6px_rgba(30,93,255,0.9)]"
-            >
-              <Volume2 className="w-4 h-4" />
-              Turn on sound
-            </button>
-          ) : (
-            <button
-              onClick={() => setMuted((m) => !m)}
-              data-testid="mute-btn"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
-            >
-              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              {muted ? "Muted" : "Sound On"}
-            </button>
-          )}
+          <button
+            onClick={() => setMuted((m) => !m)}
+            data-testid="mute-btn"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
+            title={muted ? "Unmute the desk" : "Mute the desk"}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {muted ? "Muted" : "Sound On"}
+          </button>
         </div>
       </div>
 
@@ -361,7 +372,7 @@ export default function LiveDesk() {
               <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
                 {audioUnlocked
                   ? "The desk is listening…"
-                  : "Tap 'Turn on sound' to join the broadcast"}
+                  : "Tap anywhere on the desk to hear them talking"}
               </div>
             )}
           </div>
