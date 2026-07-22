@@ -14,8 +14,8 @@ const DESK_POS = {
 const DESK_IMAGE =
   "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/w55umj8m_710626E9-E6C1-45DB-8CC2-0F51791FBB4B.png";
 
-const PAUSE_BETWEEN_TURNS = 90; // tight desk-banter handoff
-const INTERRUPT_OVERLAP_MS = -180; // interrupts step ON the previous line
+const PAUSE_BETWEEN_TURNS = 15; // near-zero handoff for real banter
+const INTERRUPT_START_EARLY_MS = 550; // interrupt begins BEFORE prior line ends
 
 function playStinger(audioCtx, gain = 0.12) {
   try {
@@ -55,6 +55,7 @@ export default function LiveDesk() {
   const [chatBusy, setChatBusy] = useState(false);
   const [chatResponse, setChatResponse] = useState(null);
   const audioRef = useRef(null);
+  const audioRefB = useRef(null); // second channel so interrupts overlap prior line
   const chatAudioRef = useRef(null);
   const audioCtxRef = useRef(null);
   const pushedRef = useRef(new Set());
@@ -172,25 +173,66 @@ export default function LiveDesk() {
 
     // If audio available and unlocked, play it.
     if (audioUnlocked && !muted && turn.audio_url) {
-      const el = audioRef.current;
+      // Alternate between two audio elements: even turns → A, odd → B.
+      // This lets an interrupt on the NEXT turn play concurrently with the tail
+      // of the previous turn on the OTHER element (real cut-off feel).
+      const el = turnIdx % 2 === 0 ? audioRef.current : audioRefB.current;
+      const otherEl = turnIdx % 2 === 0 ? audioRefB.current : audioRef.current;
       if (el) {
         el.src = `${BACKEND_URL}${turn.audio_url}`;
-        el.onended = () => advance();
+        el.currentTime = 0;
+
+        let advanceScheduled = false;
+        const scheduleAdvance = (delayMs = PAUSE_BETWEEN_TURNS) => {
+          if (advanceScheduled || cancelled) return;
+          if (pushedRef.current.has(turnIdx)) return;
+          pushedRef.current.add(turnIdx);
+          advanceScheduled = true;
+          handoff = setTimeout(() => {
+            if (!cancelled) setTurnIdx((x) => x + 1);
+          }, Math.max(0, delayMs));
+        };
+
+        el.onended = () => scheduleAdvance(PAUSE_BETWEEN_TURNS);
         el.onerror = () => {
           console.warn("audio failed for", turn.audio_url);
-          // Estimate duration from text length as a fallback.
-          setTimeout(advance, Math.max(1200, turn.text.length * 55));
+          scheduleAdvance(Math.max(1200, turn.text.length * 55));
         };
+
+        // If the NEXT turn is an interrupt, trigger advance early (before this
+        // audio ends) so the interrupt starts on the OTHER channel and OVERLAPS
+        // the tail of the current line.
+        const nextTurn = turns[turnIdx + 1];
+        if (nextTurn && nextTurn.interrupt) {
+          el.ontimeupdate = () => {
+            if (
+              !advanceScheduled &&
+              el.duration &&
+              isFinite(el.duration) &&
+              el.duration - el.currentTime <= INTERRUPT_START_EARLY_MS / 1000
+            ) {
+              scheduleAdvance(0);
+            }
+          };
+        } else {
+          el.ontimeupdate = null;
+        }
+
+        // Don't stop the OTHER channel here — let its previous line finish
+        // naturally so it fades under this new voice.
         el.play().catch((err) => {
           console.warn("play() rejected", err);
-          setTimeout(advance, Math.max(1200, turn.text.length * 55));
+          scheduleAdvance(Math.max(1200, turn.text.length * 55));
         });
+
         return () => {
           cancelled = true;
           if (handoff) clearTimeout(handoff);
           el.onended = null;
           el.onerror = null;
-          el.pause();
+          el.ontimeupdate = null;
+          // NOTE: we do NOT pause the other channel — that would kill overlap.
+          // On real unmount both audio elements will GC.
         };
       }
     }
@@ -231,6 +273,7 @@ export default function LiveDesk() {
   return (
     <section className="relative">
       <audio ref={audioRef} preload="auto" playsInline />
+      <audio ref={audioRefB} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
       {/* Topic tabs + sound control */}
