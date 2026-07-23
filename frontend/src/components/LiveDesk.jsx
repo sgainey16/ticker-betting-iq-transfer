@@ -9,6 +9,24 @@ const PAUSE_BETWEEN_TURNS = 0;
 const INTERRUPT_START_EARLY_MS = 900; // hard cut-in, but less nuclear
 const NORMAL_OVERLAP_MS = 220; // relaxed pocket — no dead air, room for jokes to land
 
+// Per-turn `pace` cue → milliseconds between the current line ENDING and the
+// next one STARTING. Positive = deliberate pause (thought, joke landing).
+// Negative = overlap (early cut-in). null = default relaxed pocket.
+const PACE_MS = {
+  cutoff: -900,   // hard interrupt, punches over the last word
+  quick: 40,      // debate handoff, near-touching
+  relaxed: 220,   // default pocket
+  beat: 420,      // thoughtful pause, let a stat sink in
+  land: 680,      // joke landing, laugh space
+  breath: 950,    // reset, new topic, deep breath
+};
+
+function paceGapMs(paceKey, isInterrupt) {
+  if (isInterrupt) return -INTERRUPT_START_EARLY_MS;
+  if (paceKey && PACE_MS[paceKey] !== undefined) return PACE_MS[paceKey];
+  return -NORMAL_OVERLAP_MS; // default relaxed overlap
+}
+
 function playStinger(audioCtx, gain = 0.12) {
   // Delegated to the shared Ticker sting so every "show is on" moment sounds
   // identical — first unlock, topic change, and any future segment cue.
@@ -175,19 +193,27 @@ export default function LiveDesk() {
           otherEl.load();
         }
 
-        const earlyMs =
-          nextTurn && nextTurn.interrupt ? INTERRUPT_START_EARLY_MS : NORMAL_OVERLAP_MS;
+        // Per-turn pace: hard interrupts cut in early, other paces (beat,
+        // land, breath, quick, relaxed) drive the gap between lines and
+        // give the desk its natural rhythm.
+        const gap = nextTurn ? paceGapMs(nextTurn.pace, nextTurn.interrupt) : -NORMAL_OVERLAP_MS;
         if (nextTurn) {
-          el.ontimeupdate = () => {
-            if (
-              !advanceScheduled &&
-              el.duration &&
-              isFinite(el.duration) &&
-              el.duration - el.currentTime <= earlyMs / 1000
-            ) {
-              scheduleAdvance(0);
-            }
-          };
+          if (gap < 0) {
+            const earlyMs = Math.abs(gap);
+            el.ontimeupdate = () => {
+              if (
+                !advanceScheduled &&
+                el.duration &&
+                isFinite(el.duration) &&
+                el.duration - el.currentTime <= earlyMs / 1000
+              ) {
+                scheduleAdvance(0);
+              }
+            };
+          } else {
+            el.ontimeupdate = null;
+            el.onended = () => scheduleAdvance(gap);
+          }
         } else {
           el.ontimeupdate = null;
         }
