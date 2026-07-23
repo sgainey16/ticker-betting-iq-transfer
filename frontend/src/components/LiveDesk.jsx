@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import ReggieDisplay from "@/components/ReggieDisplay";
 import { ANALYSTS } from "@/lib/config";
 import { api, BACKEND_URL } from "@/lib/api";
 import { Send, Volume2, VolumeX } from "lucide-react";
@@ -299,66 +300,28 @@ export default function LiveDesk() {
         </div>
       </div>
 
-      {/* Desk photo hero — big */}
+      {/* Desk hero — Reggie sprite with per-line expression */}
       <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]">
-        <div
-          className="relative w-full"
-          style={{ aspectRatio: "3 / 2", overflow: "hidden" }}
-        >
-          <img
-            src={DESK_IMAGE}
-            alt="Reggie Banks — The Ticker AI Sports Network"
-            className="absolute inset-0 w-full h-full select-none"
-            style={{ objectFit: "cover", objectPosition: "center center" }}
-            draggable={false}
+        <div className="mx-auto" style={{ maxWidth: 900 }}>
+          <ReggieDisplay
+            expression={
+              currentSpeaker && turns[turnIdx]?.expression
+                ? turns[turnIdx].expression
+                : audioUnlocked
+                ? "listening"
+                : "neutral"
+            }
+            speaking={!!currentSpeaker && audioUnlocked && !muted}
           />
+        </div>
 
-          {/* Light bottom gradient so the lower-third caption reads */}
-          <div
-            className="absolute inset-x-0 bottom-0 pointer-events-none"
-            style={{
-              height: "22%",
-              background:
-                "linear-gradient(0deg, #0d0d11 0%, rgba(13,13,17,0.55) 55%, rgba(13,13,17,0) 100%)",
-            }}
-          />
-
-          {/* Speaker pill above whoever's currently talking */}
-          {Object.entries(DESK_POS).map(([id, left]) => {
-            const active = currentSpeaker === id;
-            const a = ANALYSTS[id];
-            return (
-              <div
-                key={id}
-                className="absolute -translate-x-1/2 pointer-events-none transition-opacity duration-300"
-                style={{ left: `${left}%`, top: "10%", opacity: active ? 1 : 0 }}
-                data-testid={`desk-speaker-${id}`}
-              >
-                <div
-                  className="px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest whitespace-nowrap"
-                  style={{
-                    background: a.accent,
-                    color: "#0d0d11",
-                    boxShadow: `0 0 24px ${a.accent}`,
-                  }}
-                >
-                  {a.short}
-                </div>
-                <div
-                  className="mx-auto mt-1 h-2 w-2 rounded-full live-pulse"
-                  style={{ background: a.accent }}
-                />
-              </div>
-            );
-          })}
-
-          {/* ON AIR pill */}
-          <div className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10">
-            <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
-            <span className="font-accent text-xs uppercase tracking-widest text-white">
-              On Air · NHL Desk
-            </span>
-          </div>
+        {/* ON AIR pill */}
+        <div className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10 z-20">
+          <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
+          <span className="font-accent text-xs uppercase tracking-widest text-white">
+            On Air · Reggie Banks
+          </span>
+        </div>
 
           {/* Broadcast lower-third — speaker name only, no line text */}
           <div
@@ -395,7 +358,6 @@ export default function LiveDesk() {
               </div>
             )}
           </div>
-        </div>
       </div>
 
       {/* Ask-the-panel input */}
