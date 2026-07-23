@@ -1,14 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import ReggieDisplay from "@/components/ReggieDisplay";
-import { ANALYSTS } from "@/lib/config";
+import TwoHostDesk, { resolveShot } from "@/components/TwoHostDesk";
+import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import { api, BACKEND_URL } from "@/lib/api";
 import { Send, Volume2, VolumeX } from "lucide-react";
-
-// Reggie is solo center-frame — no per-speaker position needed.
-const DESK_POS = { reggie: 50 };
-
-const DESK_IMAGE =
-  "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/yqmg9ffo_D0025CBA-4A29-4EB4-8AC7-EA8C955C60E0.png";
 
 const PAUSE_BETWEEN_TURNS = 0;
 const INTERRUPT_START_EARLY_MS = 1100; // hard cut-in
@@ -43,7 +37,7 @@ export default function LiveDesk() {
   const [activeTopic, setActiveTopic] = useState("league_wide");
   const [turns, setTurns] = useState([]);
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  const [currentText, setCurrentText] = useState(""); // shown as broadcast lower-third only
+  const [currentShot, setCurrentShot] = useState("two_neutral_open");
   const [turnIdx, setTurnIdx] = useState(0);
   const [muted, setMuted] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
@@ -52,11 +46,11 @@ export default function LiveDesk() {
   const [chatBusy, setChatBusy] = useState(false);
   const [chatResponse, setChatResponse] = useState(null);
   const audioRef = useRef(null);
-  const audioRefB = useRef(null); // second channel so interrupts overlap prior line
+  const audioRefB = useRef(null);
   const chatAudioRef = useRef(null);
   const audioCtxRef = useRef(null);
   const pushedRef = useRef(new Set());
-  const unlockAudioRef = useRef(() => {}); // updated when unlockAudio is defined below
+  const unlockAudioRef = useRef(() => {});
 
   // Load topics once.
   useEffect(() => {
@@ -73,17 +67,17 @@ export default function LiveDesk() {
       setTurns([]);
       setTurnIdx(0);
       setCurrentSpeaker(null);
-      setCurrentText("");
+      setCurrentShot("two_neutral_open");
       pushedRef.current = new Set();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
       try {
-        const r = await api.get("/reggie/show");
+        const r = await api.get(`/banter?topic=${encodeURIComponent(activeTopic)}`);
         if (mounted) setTurns(r.data.turns || []);
       } catch (e) {
-        console.error("show load failed", e);
+        console.error("banter load failed", e);
       }
     })();
     return () => {
@@ -91,8 +85,7 @@ export default function LiveDesk() {
     };
   }, [activeTopic]);
 
-  // Any click ANYWHERE on the page unlocks audio (browsers require a user
-  // gesture — this is the least-friction workaround).
+  // First interaction anywhere unlocks audio.
   useEffect(() => {
     if (audioUnlocked) return;
     const onFirstInteract = () => {
@@ -114,12 +107,8 @@ export default function LiveDesk() {
       if (audioCtxRef.current && audioCtxRef.current.state === "suspended") {
         audioCtxRef.current.resume();
       }
-      // Prime the HTMLAudioElement inside the user gesture by playing a tiny
-      // silent data-URI mp3. Once primed, subsequent .play() calls with new
-      // src values are allowed by browser autoplay policy.
       const el = audioRef.current;
       if (el) {
-        // 0.1s silence WAV (data URI) — universally supported.
         el.src =
           "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
         const p = el.play();
@@ -137,23 +126,22 @@ export default function LiveDesk() {
     }
   }, [audioUnlocked]);
 
-  // Keep unlockAudioRef in sync with the latest unlockAudio implementation.
   useEffect(() => {
     unlockAudioRef.current = unlockAudio;
   }, [unlockAudio]);
 
-  // Play current turn.
+  // Play current turn — camera cut happens BEFORE the audio starts.
   useEffect(() => {
     if (!turns.length) return;
     if (turnIdx >= turns.length) {
       setCurrentSpeaker(null);
-      setCurrentText("");
+      setCurrentShot("two_neutral_open");
       setChatOpen(true);
       return;
     }
     const turn = turns[turnIdx];
     setCurrentSpeaker(turn.speaker);
-    setCurrentText(turn.text);
+    setCurrentShot(resolveShot({ shot: turn.shot, speaker: turn.speaker }));
 
     let cancelled = false;
     let handoff = null;
@@ -168,11 +156,7 @@ export default function LiveDesk() {
       }
     };
 
-    // If audio available and unlocked, play it.
     if (audioUnlocked && !muted && turn.audio_url) {
-      // Alternate between two audio elements: even turns → A, odd → B.
-      // This lets an interrupt on the NEXT turn play concurrently with the tail
-      // of the previous turn on the OTHER element (real cut-off feel).
       const el = turnIdx % 2 === 0 ? audioRef.current : audioRefB.current;
       const otherEl = turnIdx % 2 === 0 ? audioRefB.current : audioRef.current;
       if (el) {
@@ -196,17 +180,14 @@ export default function LiveDesk() {
           scheduleAdvance(Math.max(1200, turn.text.length * 55));
         };
 
-        // PRELOAD the next line into the OTHER channel now so el.play() on
-        // it later is instantaneous (no fetch/decode gap between speakers).
         const nextTurn = turns[turnIdx + 1];
         if (nextTurn && nextTurn.audio_url && otherEl) {
           otherEl.src = `${BACKEND_URL}${nextTurn.audio_url}`;
           otherEl.load();
         }
 
-        // Fire next turn slightly before this one ends. Interrupts overlap
-        // heavily (~1100ms), normal turns still overlap (~500ms) — no dead air.
-        const earlyMs = nextTurn && nextTurn.interrupt ? INTERRUPT_START_EARLY_MS : NORMAL_OVERLAP_MS;
+        const earlyMs =
+          nextTurn && nextTurn.interrupt ? INTERRUPT_START_EARLY_MS : NORMAL_OVERLAP_MS;
         if (nextTurn) {
           el.ontimeupdate = () => {
             if (
@@ -222,8 +203,6 @@ export default function LiveDesk() {
           el.ontimeupdate = null;
         }
 
-        // Don't stop the OTHER channel here — let its previous line finish
-        // naturally so it fades under this new voice.
         el.play().catch((err) => {
           console.warn("play() rejected", err);
           scheduleAdvance(Math.max(1200, turn.text.length * 55));
@@ -235,13 +214,11 @@ export default function LiveDesk() {
           el.onended = null;
           el.onerror = null;
           el.ontimeupdate = null;
-          // NOTE: we do NOT pause the other channel — that would kill overlap.
-          // On real unmount both audio elements will GC.
         };
       }
     }
 
-    // Silent path — pace by text length.
+    // Silent path — pace by text length. Still cut cameras.
     const timer = setTimeout(advance, Math.max(1200, turn.text.length * 55));
     return () => {
       cancelled = true;
@@ -260,13 +237,15 @@ export default function LiveDesk() {
       const r = await api.post("/banter/quick-reply", { topic: t });
       setChatResponse(r.data);
       setChatInput("");
+      if (r.data.analyst_id === "reggie") setCurrentShot("reggie_pointing");
+      else if (r.data.analyst_id === "marc") setCurrentShot("marc_analyzing_stats");
       if (audioUnlocked && !muted && r.data.audio_url && chatAudioRef.current) {
         chatAudioRef.current.src = `${BACKEND_URL}${r.data.audio_url}`;
         chatAudioRef.current.play().catch(() => {});
       }
     } catch (e) {
       setChatResponse({
-        analyst_id: "doyle",
+        analyst_id: "reggie",
         text: "Signal lost from the desk. Try again.",
       });
     } finally {
@@ -274,23 +253,27 @@ export default function LiveDesk() {
     }
   }
 
+  const speakerAccent = currentSpeaker ? ANALYSTS[currentSpeaker]?.accent : "#1e5dff";
+  const speakerName = currentSpeaker ? ANALYSTS[currentSpeaker]?.short : null;
+  const speakerRole = currentSpeaker ? ANALYSTS[currentSpeaker]?.role : null;
+
   return (
     <section className="relative">
       <audio ref={audioRef} preload="auto" playsInline />
       <audio ref={audioRefB} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
-      {/* Topic tabs hidden while Reggie is solo — will return with the panel */}
+      {/* Header row: LIVE + topic tabs + mute */}
       <div className="mb-4 flex items-center gap-2 flex-wrap">
         <div className="font-accent text-xs uppercase tracking-[0.35em] text-[#1e5dff]">
           <span className="tick-dot live-pulse inline-block mr-2 align-middle" />
-          Live · Reggie Banks · NHL Desk
+          Live · Reggie &amp; Marc · NHL Desk
         </div>
 
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setMuted((m) => !m)}
-            data-testid="mute-btn"
+            data-testid={TEST_IDS.desk.muteBtn}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
             title={muted ? "Unmute the desk" : "Mute the desk"}
           >
@@ -300,64 +283,80 @@ export default function LiveDesk() {
         </div>
       </div>
 
-      {/* Desk hero — Reggie sprite with per-line expression */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]">
-        <div className="mx-auto" style={{ maxWidth: 900 }}>
-          <ReggieDisplay
-            expression={
-              currentSpeaker && turns[turnIdx]?.expression
-                ? turns[turnIdx].expression
-                : audioUnlocked
-                ? "listening"
-                : "neutral"
-            }
-            speaking={!!currentSpeaker && audioUnlocked && !muted}
-          />
+      {/* Topic tabs */}
+      {topics.length > 0 && (
+        <div className="mb-3 flex items-center gap-2 flex-wrap">
+          {topics.map((t) => {
+            const active = t.id === activeTopic;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveTopic(t.id)}
+                data-testid={`desk-topic-${t.id}`}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-accent uppercase tracking-widest transition-colors ${
+                  active
+                    ? "bg-[#1e5dff] text-white"
+                    : "border border-[#2d2d35] text-white/60 hover:border-white/40 hover:text-white"
+                }`}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
+      )}
+
+      {/* Broadcast frame */}
+      <div
+        data-testid={TEST_IDS.desk.shotFrame}
+        className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]"
+      >
+        <TwoHostDesk shot={currentShot} speaking={!!currentSpeaker && audioUnlocked && !muted} />
 
         {/* ON AIR pill */}
         <div className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10 z-20">
           <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
           <span className="font-accent text-xs uppercase tracking-widest text-white">
-            On Air · Reggie Banks
+            On Air · The Ticker
           </span>
         </div>
 
-          {/* Broadcast lower-third — speaker name only, no line text */}
-          <div
-            className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-3 transition-all duration-300 min-h-[52px]"
-            style={{
-              background: "rgba(11,11,16,0.85)",
-              borderColor: currentSpeaker
-                ? `${ANALYSTS[currentSpeaker].accent}66`
-                : "#1a1a22",
-            }}
-            data-testid="desk-lower-third"
-          >
-            {currentSpeaker ? (
-              <>
-                <span
-                  className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
-                  style={{ background: ANALYSTS[currentSpeaker].accent }}
-                />
-                <div
-                  className="font-headline text-base flex-shrink-0"
-                  style={{ color: ANALYSTS[currentSpeaker].accent }}
-                >
-                  {ANALYSTS[currentSpeaker].short.toUpperCase()}
-                </div>
-                <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest">
-                  on the mic
-                </div>
-              </>
-            ) : (
-              <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
-                {audioUnlocked
-                  ? "The desk is listening…"
-                  : "Tap anywhere on the desk to hear them talking"}
+        {/* Lower-third — swap accent + label to whoever's speaking */}
+        <div
+          className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-3 transition-all duration-300 min-h-[52px] z-20"
+          style={{
+            background: "rgba(11,11,16,0.85)",
+            borderColor: speakerAccent + "66",
+          }}
+          data-testid={TEST_IDS.desk.lowerThird}
+        >
+          {currentSpeaker ? (
+            <>
+              <span
+                className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
+                style={{ background: speakerAccent }}
+              />
+              <div
+                className="font-headline text-base flex-shrink-0"
+                style={{ color: speakerAccent }}
+              >
+                {speakerName?.toUpperCase()}
               </div>
-            )}
-          </div>
+              <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest hidden sm:block">
+                {speakerRole}
+              </div>
+              <div className="ml-auto text-white/40 font-accent text-[10px] uppercase tracking-widest hidden md:block">
+                on mic
+              </div>
+            </>
+          ) : (
+            <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
+              {audioUnlocked
+                ? "The desk is listening…"
+                : "Tap anywhere to start the broadcast"}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Ask-the-panel input */}
@@ -367,7 +366,7 @@ export default function LiveDesk() {
         }`}
       >
         <label className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
-          Jump in — ask the panel
+          Jump in — ask the desk
         </label>
         <div className="mt-2 flex items-center gap-3">
           <input
@@ -380,7 +379,7 @@ export default function LiveDesk() {
                 : "Desk is talking — hang on a sec…"
             }
             disabled={!chatOpen || chatBusy}
-            data-testid="desk-topic-input"
+            data-testid={TEST_IDS.desk.topicInput}
             className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
           />
           <button
@@ -389,7 +388,7 @@ export default function LiveDesk() {
               submitTopic();
             }}
             disabled={!chatOpen || chatBusy || !chatInput.trim()}
-            data-testid="desk-topic-submit"
+            data-testid={TEST_IDS.desk.topicSubmit}
             className="h-[48px] px-5 rounded-lg bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 disabled:cursor-not-allowed text-white font-accent uppercase tracking-widest text-sm inline-flex items-center gap-2 transition-colors"
           >
             <Send className="w-4 h-4" />
@@ -405,25 +404,27 @@ export default function LiveDesk() {
 
         {chatResponse && (
           <div
-            className="mt-3 rounded-lg border p-4 flex items-center gap-3"
+            className="mt-3 rounded-lg border p-4 flex items-start gap-3"
             style={{
-              borderColor: ANALYSTS[chatResponse.analyst_id]?.accent + "77" || "#2d2d35",
+              borderColor: (ANALYSTS[chatResponse.analyst_id]?.accent || "#2d2d35") + "77",
               background: "#0b0b10",
             }}
-            data-testid="desk-quick-reply"
+            data-testid={TEST_IDS.desk.quickReply}
           >
             <span
-              className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
+              className="h-2.5 w-2.5 mt-2 rounded-full live-pulse flex-shrink-0"
               style={{ background: ANALYSTS[chatResponse.analyst_id]?.accent }}
             />
-            <div
-              className="font-headline text-sm flex-shrink-0"
-              style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
-            >
-              {ANALYSTS[chatResponse.analyst_id]?.short.toUpperCase()}
-            </div>
-            <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest">
-              on the mic — listen up
+            <div className="flex-1 min-w-0">
+              <div
+                className="font-headline text-sm"
+                style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
+              >
+                {ANALYSTS[chatResponse.analyst_id]?.short?.toUpperCase()}
+              </div>
+              <div className="text-white/85 text-sm mt-1 leading-relaxed">
+                {chatResponse.text}
+              </div>
             </div>
           </div>
         )}

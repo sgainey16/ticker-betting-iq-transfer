@@ -13,7 +13,7 @@ function useQueryParam(name) {
 export default function AskAnalyst() {
   const preselect = useQueryParam("analyst");
   const [analystId, setAnalystId] = useState(
-    preselect && ANALYSTS[preselect] ? preselect : "doyle",
+    preselect && ANALYSTS[preselect] ? preselect : "reggie",
   );
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
@@ -41,16 +41,15 @@ export default function AskAnalyst() {
     if (!loading) return;
     // Rotate through in-character loading lines while streaming warms up.
     const lines = {
-      doyle: [
-        "Doyle is straightening his jacket…",
-        "Doyle is checking the prompter…",
+      reggie: [
+        "Reggie is checking the tape…",
+        "Reggie is pulling up the notes…",
       ],
-      lindqvist: [
-        "Numbers is pulling the xG chart…",
-        "Numbers is filtering by 5-on-5…",
+      marc: [
+        "Marc is pulling the model…",
+        "Marc is checking the trend line…",
+        "Marc is adjusting his glasses…",
       ],
-      kovalenko: ["Dozer is lacing up his skates…", "Dozer is thinking about it…"],
-      marchetti: ["Ace is workshopping a hot take…", "Ace is pulling up a clip…"],
     }[analystId] || ["The desk is going live…"];
     let i = 0;
     setLoadingLine(lines[0]);
@@ -103,7 +102,7 @@ export default function AskAnalyst() {
         <div className="font-accent text-xs uppercase tracking-[0.35em] text-white/50 mb-3">
           Pick your analyst
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {ANALYST_ORDER.map((id) => {
             const a = ANALYSTS[id];
             const selected = id === analystId;

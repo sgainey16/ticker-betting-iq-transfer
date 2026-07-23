@@ -30,7 +30,6 @@ from analysts import (
     build_stat_card,
     pick_banter,
     quick_fallback_line,
-    pick_reggie_show,
 )
 from voice_service import ensure_audio, audio_url_for
 
@@ -113,21 +112,11 @@ async def suggested_questions():
     return {"questions": SUGGESTED_QUESTIONS}
 
 
-@api.get("/reggie/show")
-async def reggie_show():
-    """Reggie Banks solo show — full script with audio_url per line."""
-    turns = pick_reggie_show()
-    enriched = []
-    for t in turns:
-        audio_url = ensure_audio(t["speaker"], t["text"])
-        enriched.append({**t, "audio_url": audio_url})
-    return {"turns": enriched}
-
-
 @api.get("/banter")
 async def banter(topic: str = "league_wide"):
-    """Return a full multi-turn desk banter script for the homepage. Each turn
-    includes an audio_url (pre-generated + cached on disk via ElevenLabs)."""
+    """Return a full multi-turn two-host banter script. Each turn includes
+    an audio_url (pre-generated + cached on disk via ElevenLabs) and a `shot`
+    cue that drives the frontend camera state machine."""
     turns = pick_banter(topic)
     enriched = []
     for t in turns:
@@ -514,6 +503,7 @@ app.include_router(api)
 # (Kubernetes ingress only forwards /api/* to the backend). Kept /static as
 # well for any local debugging.
 app.mount("/api/audio", StaticFiles(directory=str(STATIC_DIR / "audio")), name="api_audio")
+app.mount("/api/sprites", StaticFiles(directory=str(STATIC_DIR / "sprites")), name="api_sprites")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(

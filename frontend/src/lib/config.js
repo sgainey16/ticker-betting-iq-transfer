@@ -1,58 +1,27 @@
-// Analyst config for The Ticker (mirrors backend/analysts.py)
+// Two-host panel — mirrors backend/analysts.py
 export const ANALYSTS = {
   reggie: {
     id: "reggie",
     name: "Reggie Banks",
     short: "Reggie",
-    role: "Solo Anchor",
+    role: "Lead Anchor · Ex-NHL",
     accent: "#1E5DFF",
-    tagline: "Let's get real, kid.",
-    image:
-      "https://customer-assets-39nsmqrw.emergentagent.net/job_sports-broadcast-21/artifacts/yqmg9ffo_D0025CBA-4A29-4EB4-8AC7-EA8C955C60E0.png",
+    tagline: "Do the right things. Then execute.",
+    // Portrait (used for avatars in nav / meet-the-desk cards)
+    portrait: "/api/sprites/reggie_neutral.png",
   },
-  doyle: {
-    id: "doyle",
-    name: 'Liam "Lucky" Doyle',
-    short: "Doyle",
-    role: "Lead / Anchor",
-    accent: "#F5A623",
-    tagline: "Runs the desk. Not impressed.",
-    image:
-      "https://images.unsplash.com/photo-1606920669741-c8ba74262a94?crop=entropy&cs=srgb&fm=jpg&w=800&q=80",
-  },
-  lindqvist: {
-    id: "lindqvist",
-    name: 'Erik "Numbers" Lindqvist',
-    short: "Numbers",
-    role: "Analytics",
+  marc: {
+    id: "marc",
+    name: "Marc",
+    short: "Marc",
+    role: "Analytics Co-Host",
     accent: "#00E5FF",
-    tagline: "The numbers already told him.",
-    image:
-      "https://images.unsplash.com/photo-1752738372136-2602aaafdcb7?crop=entropy&cs=srgb&fm=jpg&w=800&q=80",
-  },
-  kovalenko: {
-    id: "kovalenko",
-    name: 'Danylo "Dozer" Kovalenko',
-    short: "Dozer",
-    role: "Enforcer / Heart",
-    accent: "#E53935",
-    tagline: "Says less. Means it.",
-    image:
-      "https://images.pexels.com/photos/6075675/pexels-photo-6075675.jpeg?auto=compress&cs=tinysrgb&w=800",
-  },
-  marchetti: {
-    id: "marchetti",
-    name: 'Anthony "Ace" Marchetti',
-    short: "Ace",
-    role: "Wildcard / Chaos",
-    accent: "#39FF14",
-    tagline: "The hockey 'what if' guy — at peace with it.",
-    image:
-      "https://images.unsplash.com/photo-1566327011423-029eb055efb3?crop=entropy&cs=srgb&fm=jpg&w=800&q=80",
+    tagline: "Let's look at the numbers.",
+    portrait: "/api/sprites/marc_explaining.png",
   },
 };
 
-export const ANALYST_ORDER = ["reggie", "doyle", "lindqvist", "kovalenko", "marchetti"];
+export const ANALYST_ORDER = ["reggie", "marc"];
 
 export const TEST_IDS = {
   nav: {
@@ -87,5 +56,13 @@ export const TEST_IDS = {
     leaderboard: "pred-leaderboard",
     mine: "pred-mine",
     simulate: "pred-simulate",
+  },
+  desk: {
+    shotFrame: "desk-shot-frame",
+    lowerThird: "desk-lower-third",
+    muteBtn: "mute-btn",
+    topicInput: "desk-topic-input",
+    topicSubmit: "desk-topic-submit",
+    quickReply: "desk-quick-reply",
   },
 };

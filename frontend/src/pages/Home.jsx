@@ -74,7 +74,7 @@ export default function Home() {
                 Meet the desk
               </div>
               <h2 className="font-headline text-2xl text-white mt-1">
-                Four voices
+                Two voices
               </h2>
             </div>
             <div className="hidden sm:block text-xs font-accent uppercase tracking-widest text-white/40">
@@ -82,7 +82,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {ANALYST_ORDER.map((id, i) => {
               const a = ANALYSTS[id];
               return (

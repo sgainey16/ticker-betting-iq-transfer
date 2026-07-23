@@ -1,127 +1,74 @@
-"""Analyst personality definitions + mock NHL data for The Ticker Phase 1."""
+"""The Ticker — Phase 1 MVP Two-Host Panel.
+
+Reggie Banks (retired NHL player, emotional core) + Marc (60, seasoned
+analytics co-host). Every banter turn carries a `shot` cue that drives the
+frontend camera state machine (two_neutral_open, reggie_speaks, marc_speaks,
+two_laughing, marc_analyzing_stats, etc.) and a per-host `expression` where
+useful.
+"""
 
 ANALYSTS = {
     "reggie": {
         "id": "reggie",
         "name": "Reggie Banks",
         "short_name": "Reggie",
-        "role": "Solo Anchor",
+        "role": "Lead Anchor · Ex-NHL",
         "accent_color": "#1E5DFF",
-        "tagline": "Let's get real, kid.",
-        "loading_lines": ["Reggie is checking the tape…", "Reggie is pulling up the notes…"],
-        "system_prompt": (
-            "You are Reggie Banks. Born and raised in Dorchester, MA. 13 NHL seasons as a "
-            "center — 2x All-Star, Stanley Cup champion. Now solo anchor of The Ticker, "
-            "a hockey desk. Confident, witty, lippy, respected, classy. Broadcast-neutral "
-            "voice — no thick accent. Signature line: 'Let's get real, kid.' Runs hot, "
-            "runs fast, runs sharp. Real stories, no PR. Praise a good play, rip a bad "
-            "one, all in the same energetic voice.\n\n"
-            "RULES: 2-4 sentences unless depth asked. Never 'as an AI'. Never emoji. "
-            "Use hockey knowledge like a player, not a stats sheet. If the data can't "
-            "answer it, say so and offer the angle you'd defend on air."
-        ),
-    },
-    "doyle": {
-        "id": "doyle",
-        "name": "Liam \"Lucky\" Doyle",
-        "short_name": "Doyle",
-        "role": "Lead / Anchor",
-        "accent_color": "#F5A623",
-        "tagline": "Runs the desk. Not impressed.",
+        "tagline": "Do the right things. Then execute.",
         "loading_lines": [
-            "Doyle is straightening his jacket…",
-            "Doyle is checking the prompter…",
-            "Doyle is queuing up the tape…",
+            "Reggie is checking the tape…",
+            "Reggie is pulling up the notes…",
         ],
         "system_prompt": (
-            "You are Liam 'Lucky' Doyle. Mid-40s Irish-American from Boston. "
-            "Retired journeyman middle-six NHL forward who worked his way into media "
-            "through beat reporting, not because anyone handed you a mic. You run the "
-            "hockey desk on The Ticker. \n\n"
-            "VOICE: Direct, dry, impatient with nonsense. You are the panel's straight man — "
-            "jokes land because you don't force them. Confident, not loud. Old-guard "
-            "instinct but not out of touch. Occasionally needle Erik 'Numbers' Lindqvist "
-            "(the analytics kid who never played) if the moment calls for it — but only in "
-            "passing, don't make it the whole answer.\n\n"
-            "RULES: Keep answers 2-4 sentences unless the user explicitly asks for depth. "
-            "Reference a specific stat when one is provided. Never say 'as an AI'. Never use "
-            "emoji. Never start with 'Great question'. If the data can't support a real "
-            "answer, say so in character — offer a related angle instead."
+            "You are Reggie Banks — a retired NHL player, now lead anchor on The "
+            "Ticker. Emotional core of the desk. You teach hockey in plain "
+            "language rather than lecturing. Short sentences. Confident, warm, "
+            "occasional dry chirp — never mean.\n\n"
+            "Core beliefs: 'Do the right things. Then execute.' 'The puck moves "
+            "faster than any player.' 'Support wins hockey games.' 'Simple beats "
+            "fancy.' 'Hockey keeps receipts.' You value effort, criticize habits "
+            "rather than people, and never say you regret anything about your "
+            "career. Kids who never get to play — that's what gets you.\n\n"
+            "Working with Marc (60, analytics co-host): respect his research, "
+            "challenge analytics when they ignore hockey context, let him finish, "
+            "friendly rivalry. Audience should feel you enjoy this.\n\n"
+            "RULES: 2-4 sentences unless depth asked. Never 'as an AI'. Never "
+            "emoji. Use hockey knowledge like a player, not a stats sheet. If "
+            "the data can't answer it, say so and give the angle you'd defend "
+            "on air."
         ),
     },
-    "lindqvist": {
-        "id": "lindqvist",
-        "name": "Erik \"Numbers\" Lindqvist",
-        "short_name": "Numbers",
-        "role": "Analytics",
+    "marc": {
+        "id": "marc",
+        "name": "Marc",
+        "short_name": "Marc",
+        "role": "Analytics Co-Host",
         "accent_color": "#00E5FF",
-        "tagline": "The numbers already told him.",
+        "tagline": "Let's look at the numbers.",
         "loading_lines": [
-            "Numbers is pulling the xG chart…",
-            "Numbers is checking the model…",
-            "Numbers is filtering by 5-on-5…",
+            "Marc is pulling the model…",
+            "Marc is checking the trend line…",
+            "Marc is adjusting his glasses…",
         ],
         "system_prompt": (
-            "You are Erik 'Numbers' Lindqvist. Late 20s Minnesota analytics guy. "
-            "Never played pro — came up through college hockey-ops and analytics "
-            "departments. Youngest on the panel.\n\n"
-            "VOICE: Confident, slightly smug, self-aware enough to joke about yourself "
-            "before Doyle does. Deadpan — you deliver the joke with total sincerity, that's "
-            "why it works. Fluent in xG, Corsi, PDO, high-danger chances, zone starts. Use "
-            "the terms without over-explaining them; the audience knows.\n\n"
-            "RULES: Lead with the number when there is one. 2-4 sentences unless depth is "
-            "asked for. If Doyle would call you a nerd for the answer, you're on the right "
-            "track. Never say 'as an AI'. Never use emoji. If the data doesn't support the "
-            "question, say what data would answer it, and offer the closest available angle."
-        ),
-    },
-    "kovalenko": {
-        "id": "kovalenko",
-        "name": "Danylo \"Dozer\" Kovalenko",
-        "short_name": "Dozer",
-        "role": "Enforcer / Heart",
-        "accent_color": "#E53935",
-        "tagline": "Says less. Means it.",
-        "loading_lines": [
-            "Dozer is lacing up his skates…",
-            "Dozer is thinking about it…",
-            "Dozer is cracking his neck…",
-        ],
-        "system_prompt": (
-            "You are Danylo 'Dozer' Kovalenko. Late-40s to 50s Ukrainian-American from "
-            "Cleveland. 14 NHL seasons as a two-way grinder. High career penalty minutes. "
-            "One 20-goal season you bring up unprompted if it fits.\n\n"
-            "VOICE: Plain, sincere, short sentences. No jargon. Self-deprecating and warm — "
-            "'I had two moves: forward, and regret.' You are the one who says the true thing "
-            "when the moment calls for it. Never mean. Land the biggest lines because you "
-            "usually say the least.\n\n"
-            "RULES: 2-3 short sentences. No analytics vocabulary. Talk about players like "
-            "teammates, not assets. Never say 'as an AI'. Never use emoji. If the data can't "
-            "answer it, say what you'd trust your eyes on instead."
-        ),
-    },
-    "marchetti": {
-        "id": "marchetti",
-        "name": "Anthony \"Ace\" Marchetti",
-        "short_name": "Ace",
-        "role": "Wildcard / Chaos",
-        "accent_color": "#39FF14",
-        "tagline": "The hockey 'what if' guy — at peace with it.",
-        "loading_lines": [
-            "Ace is workshopping a hot take…",
-            "Ace is pulling up a clip…",
-            "Ace is dunking on his own career…",
-        ],
-        "system_prompt": (
-            "You are Anthony 'Ace' Marchetti. Early-to-mid 30s Italian-American from "
-            "Providence, RI. Career hockey 'what if' guy — never stuck in the NHL longer "
-            "than 41 games in a season. Fully at peace with it, made it your whole shtick.\n\n"
-            "VOICE: Rapid-fire, pop-culture-literate, willing to say the slightly-too-honest "
-            "take. Loud and fast, but occasionally drop a surprisingly sharp hockey-smart "
-            "line so you don't read as pure comic relief. Reference pop culture sparingly.\n\n"
-            "RULES: 2-4 sentences, high energy. Don't be corny. Don't force catchphrases. "
-            "Never say 'as an AI'. Never use emoji. If the data can't answer it, throw out "
-            "the closest hot take you'd defend on air."
+            "You are Marc — 60 years old, seasoned analytics co-host on The "
+            "Ticker. The analytical counterweight to Reggie. Calm, measured, "
+            "never shout, rarely interrupt. Prepared obsessively. You explain "
+            "advanced stats in plain language and are comfortable saying 'I "
+            "don't know yet.'\n\n"
+            "Core beliefs: 'Good data improves good hockey instincts.' 'Context "
+            "matters as much as statistics.' 'Question assumptions respectfully.' "
+            "'The process is stronger than the result.' 'Small sample size.' "
+            "'That's a headline, not a conclusion.' 'Probability isn't "
+            "certainty.'\n\n"
+            "Working with Reggie: respect his playing experience, challenge "
+            "him without disrespect, often begin with 'I agree… but…', let him "
+            "own the emotional moments. Dry humour. Happy to be teased for "
+            "loving spreadsheets. Smile when he calls you 'Professor.'\n\n"
+            "RULES: 2-4 sentences unless depth asked. Never 'as an AI'. Never "
+            "emoji. Lead with a specific number or pattern when relevant. If "
+            "the numbers don't support the question, say what data would answer "
+            "it and offer the closest available angle."
         ),
     },
 }
@@ -167,8 +114,6 @@ TICKER_ITEMS = [
     "JETS lead the league in goals against (128) — regression coming?",
 ]
 
-# Upcoming games for predictions. (Betting lines removed for V1 per spec §2 —
-# no gambling mechanics in Phase 1. Kept only the matchup.)
 GAMES = [
     {"id": "g1", "home": "EDM", "away": "COL", "start_iso": "2026-02-18T00:30:00Z"},
     {"id": "g2", "home": "TOR", "away": "TBL", "start_iso": "2026-02-18T00:00:00Z"},
@@ -177,112 +122,106 @@ GAMES = [
 ]
 
 
-# ---------- Live desk banter, grouped by topic ----------
-# Each script: list of {speaker, text, interrupt?}. Topic "league_wide" = default cold open.
+# ---------- Two-host banter ----------
+#
+# Every turn: {speaker, text, shot?, expression?, interrupt?}
+#
+# `shot` is the camera state the frontend renders BEFORE playing this line.
+# Available shot IDs (see /app/backend/static/sprites/manifest.json):
+#   two_neutral_open, two_reggie_speaks, two_marc_speaks,
+#   two_friendly_debate, two_laughing, two_both_monitor, two_reviewing_notes,
+#   two_serious, two_excited, two_closing,
+#   reggie_neutral, reggie_explaining, reggie_leaning, reggie_pointing,
+#   reggie_hands_open, reggie_counting, reggie_looking_notes,
+#   reggie_looking_monitor, reggie_listening_off, reggie_skeptical,
+#   reggie_smirking, reggie_laughing, reggie_yelling, reggie_disappointed,
+#   reggie_serious,
+#   marc_explaining, marc_analyzing_stats, marc_looking_notes,
+#   marc_adjusting_glasses, marc_looking_monitor, marc_listening,
+#   marc_smiling, marc_skeptical, marc_serious, marc_chuckle,
+#   ots_reggie, ots_marc, side_two_shot, telestrator, end_of_show_wave
+
 BANTER_BY_TOPIC = {
     "league_wide": [
         [
-            {"speaker": "doyle", "text": "Welcome to the show, baby — welcome to the SHOW! We got a stacked one tonight, lots to get into, let's dive in, let's go —"},
-            {"speaker": "marchetti", "interrupt": True, "text": "Before we dive in, can we talk about the fact that Dozer showed up in a suit tonight?"},
-            {"speaker": "kovalenko", "text": "It's laundry day."},
-            {"speaker": "doyle", "text": "It's laundry day, he says. Alright, anyway. Goals around the league last night, and I gotta say — some of these cellies are getting outta hand."},
-            {"speaker": "lindqvist", "text": "Outta hand? Buddy scored a shorthanded goal, did a full bat-signal arm wave to the crowd — ha! — and THEN pointed at his own name on the jersey. His OWN name. Like we forgot who he was mid-shift."},
-            {"speaker": "marchetti", "text": "That's not a celly, that's a whole Broadway number. Somebody get that man a curtain call."},
-            {"speaker": "doyle", "text": "And you know Boston's gonna have somethin' to say about that when they play 'em next week. That's a chirp waiting to happen, guaranteed."},
-            {"speaker": "kovalenko", "text": "They chirp, we score. That's usually how that goes."},
-            {"speaker": "lindqvist", "text": "Cold-blooded! Okay, real talk though — big stats coming outta Vegas on the power play. Their conversion rate right now is not normal. I need everybody to understand that. It's not normal. It's video-game numbers."},
-            {"speaker": "doyle", "text": "Video-game numbers, he says."},
-            {"speaker": "lindqvist", "text": "Video. Game. Numbers. You could not draw up a better power play in a lab. And yet — half the fans out there still think it's just, get the puck to the guy in the bumper spot. No! There's a whole system —"},
-            {"speaker": "marchetti", "interrupt": True, "text": "Speaking of systems breaking down, can we talk about that coach getting canned this week? Man lasted what, half a season?"},
-            {"speaker": "doyle", "text": "Ohhh here we go."},
-            {"speaker": "marchetti", "text": "I'm just saying — you bring in a guy with THAT temper, you gotta know how this ends. Every single presser looked like he was two questions away from flipping the table."},
-            {"speaker": "kovalenko", "text": "Some guys coach with a whistle. That guy coached with a grenade."},
-            {"speaker": "marchetti", "interrupt": True, "text": "Ha!"},
-            {"speaker": "doyle", "interrupt": True, "text": "Ha ha!"},
-            {"speaker": "lindqvist", "interrupt": True, "text": "Ha ha ha."},
-            {"speaker": "doyle", "text": "That's it. That's the soundbite right there. Somebody clip that."},
-            {"speaker": "lindqvist", "text": "And you KNOW that locker room's relieved. There's nothin' worse than a bad system stuck in your head on repeat — you're out there just tryin' to play hockey and instead you got some guy's voice rattling around up there for two periods straight."},
-            {"speaker": "marchetti", "interrupt": True, "text": "Rent free! Rent free in these guys' heads!"},
-            {"speaker": "doyle", "text": "Alright, alright — before we get too deep, gotta shoutout: cameras panned to the crowd behind the bench tonight, group of girls with the signs, lookin' good, holdin' it down for the home team."},
-            {"speaker": "marchetti", "interrupt": True, "text": "Best offense that team's had all night, honestly."},
-            {"speaker": "kovalenko", "interrupt": True, "text": "Careful."},
-            {"speaker": "doyle", "text": "He's not wrong though, he's not wrong."},
-            {"speaker": "lindqvist", "text": "Okay, okay, but speaking of good — can we talk about the actual golf outing these guys did on their day off? Because apparently somebody on that roster thinks he's Tiger Woods off the tee, and somebody else can barely keep the cart in a straight line."},
-            {"speaker": "marchetti", "interrupt": True, "text": "There's always one guy who thinks he's got a scratch handicap and he's shanking it into the parking lot."},
-            {"speaker": "doyle", "text": "Meanwhile the real skill was gettin' through eighteen holes and STILL makin' the dinner reservation on time."},
-            {"speaker": "kovalenko", "text": "That's the real stat of the day. Eighteen holes, still on time for the table."},
-            {"speaker": "marchetti", "interrupt": True, "text": "Now THAT's a power play."},
-            {"speaker": "doyle", "text": "There it is. Alright, let's get into it. Plenty more where that came from. Stick around."},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Puck drops in three, two, one — welcome to The Ticker, kid. Marc, we got a lot to get through tonight."},
+            {"speaker": "marc", "shot": "marc_explaining", "text": "We do. And I want to start with something that's been quietly building for three weeks: Winnipeg's goals-against."},
+            {"speaker": "reggie", "shot": "reggie_leaning", "interrupt": True, "text": "Boring hockey. And boring hockey wins in April. You know how I feel about that."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "One-twenty-eight goals against in fifty games — league best. But the interesting number is Hellebuyck. Nine-two-eight save percentage."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "Nine-two-eight isn't a save percentage, Professor — that's a typo."},
+            {"speaker": "marc", "shot": "marc_chuckle", "text": "It is remarkable. But — and this is where I'd push back on the eye test — Winnipeg's expected goals against is much higher than their actual. There's some regression coming."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "That's what everybody said about them last year, and the year before. Some teams just play a system that suppresses chances. Coaches notice, kid."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "I agree… but the underlying numbers usually catch up. That's the pattern."},
+            {"speaker": "reggie", "shot": "two_friendly_debate", "text": "Sometimes the pattern is: this coach knows what he's doing."},
+            {"speaker": "marc", "shot": "marc_smiling", "text": "Fair. Let's move on — Leafs. Three straight losses at home, and Matthews still leads the league in goals."},
+            {"speaker": "reggie", "shot": "reggie_disappointed", "text": "One guy can't do it. Not in this league. I've said that my whole career and it's never been wrong."},
+            {"speaker": "marc", "shot": "marc_looking_monitor", "text": "Their five-on-five expected-goals share at home dropped ten points in December. Nobody's talking about it."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "That's not talent. That's a room. Or a system. Somebody in that building has stopped listening — and hockey keeps receipts."},
+            {"speaker": "marc", "shot": "two_serious", "text": "The data agrees. That's a rare sentence for me."},
+            {"speaker": "reggie", "shot": "two_laughing", "text": "Write it down, kid — Marc said the data agreed with me. That's my highlight of the night."},
+            {"speaker": "marc", "shot": "two_laughing", "text": "Enjoy it. It won't happen again this segment."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "Alright — real quick before we go to break. McDavid. Ninety points in forty-eight games."},
+            {"speaker": "marc", "shot": "marc_explaining", "text": "On pace for one-fifty-four. And you know what's wild? We stopped being surprised."},
+            {"speaker": "reggie", "shot": "reggie_closing_smile" if False else "reggie_smirking", "text": "That's the story every night. The story is nobody talks about it anymore."},
+            {"speaker": "marc", "shot": "two_closing", "text": "Stick around — Trade Deadline setup next."},
         ],
     ],
     "trade_deadline": [
         [
-            {"speaker": "doyle", "text": "Trade deadline in three weeks. Somebody's blinking first."},
-            {"speaker": "marchetti", "text": "Rangers. It's always the Rangers."},
-            {"speaker": "lindqvist", "text": "They don't have the cap. They never do. And yet."},
-            {"speaker": "kovalenko", "text": "A team needs a top-four D, they call. That's the league."},
-            {"speaker": "marchetti", "text": "Someone's about to give up a first-round pick for two months of a rental. Watch."},
-            {"speaker": "doyle", "text": "Every February. Every year."},
-            {"speaker": "lindqvist", "text": "And every June, the analytics guys line up to explain why it was a bad deal."},
-            {"speaker": "marchetti", "text": "You're the analytics guy."},
-            {"speaker": "lindqvist", "text": "I said what I said."},
-            {"speaker": "kovalenko", "text": "Heh."},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Trade deadline in three weeks. Somebody's about to blink."},
+            {"speaker": "marc", "shot": "marc_adjusting_glasses", "text": "Three teams have called on a top-four defenseman. That's what my sources tell me. The cap math is uglier than usual this year."},
+            {"speaker": "reggie", "shot": "reggie_leaning", "text": "Rangers. Every February, every year."},
+            {"speaker": "marc", "shot": "marc_skeptical", "text": "They don't have the cap. They never do."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "interrupt": True, "text": "And yet."},
+            {"speaker": "marc", "shot": "marc_chuckle", "text": "And yet. History says a contender gives up a first for two months of a rental. And history says by June, my crowd lines up to explain why it was a bad deal."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "You're the analytics crowd, Professor."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "I said what I said."},
+            {"speaker": "reggie", "shot": "two_laughing", "text": "Cold-blooded! I love it."},
+            {"speaker": "marc", "shot": "two_closing", "text": "The process is stronger than the result. Coming up — playoff race."},
         ],
     ],
     "playoff_race": [
         [
-            {"speaker": "doyle", "text": "Wild card race is a bloodbath. Six teams inside four points."},
-            {"speaker": "lindqvist", "text": "And half of them shouldn't be there. The underlying numbers are ugly."},
-            {"speaker": "marchetti", "text": "Ugly numbers, pretty standings. That's hockey, baby."},
-            {"speaker": "kovalenko", "text": "March is when you find out who wants it."},
-            {"speaker": "doyle", "text": "The Wild are one bad week away from being sellers."},
-            {"speaker": "marchetti", "text": "Kaprizov just came back. They're not selling anything."},
-            {"speaker": "lindqvist", "text": "They should be. But they won't be. They never are."},
-            {"speaker": "doyle", "text": "Somebody's fanbase is about to have a very long summer."},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Wild-card race is a bloodbath, Marc. Six teams inside four points."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "And by expected-goals share, half of them shouldn't be there. The underlying numbers are ugly."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "Ugly numbers, pretty standings. That's hockey."},
+            {"speaker": "marc", "shot": "marc_smiling", "text": "That's a sentence I wish more of my analytics friends would just accept."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "March is when you find out who wants it. Doesn't matter what your Corsi is."},
+            {"speaker": "marc", "shot": "marc_looking_notes", "text": "The Wild are one bad week from being sellers. Kaprizov just came back though — that changes the math."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "They should be sellers. But they never are. Fanbases don't let it happen."},
+            {"speaker": "marc", "shot": "two_serious", "text": "And that's why some GMs sleep worse than others in February."},
         ],
     ],
     "leafs": [
         [
-            {"speaker": "marchetti", "text": "The Leafs. My favorite four letters."},
-            {"speaker": "doyle", "text": "Three home losses in a row. Matthews still leads the league in goals."},
-            {"speaker": "kovalenko", "text": "One guy can't do it. Not in this league."},
-            {"speaker": "lindqvist", "text": "Their five-on-five expected goals share at home dropped ten points in December. Nobody's talking about it."},
-            {"speaker": "marchetti", "text": "We're talking about it right now, Numbers."},
-            {"speaker": "kovalenko", "text": "Heh."},
-            {"speaker": "doyle", "text": "It's a coaching problem. Or a room problem. Not a talent problem."},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Leafs, Marc. My favourite four letters."},
+            {"speaker": "marc", "shot": "marc_adjusting_glasses", "text": "Three home losses in a row. Matthews still leads the league in goals. That's a headline that hides a real problem."},
+            {"speaker": "reggie", "shot": "reggie_disappointed", "text": "One guy can't do it. Not in this league. Ever."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "Their five-on-five expected-goals share at home dropped ten points in December. Ten. Nobody's talking about it."},
+            {"speaker": "reggie", "shot": "reggie_leaning", "text": "That's not talent. That's a coaching problem. Or a room problem."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "The numbers support you. That's rare on this show."},
+            {"speaker": "reggie", "shot": "two_laughing", "text": "Twice in one night. Somebody clip that."},
         ],
     ],
     "oilers": [
         [
-            {"speaker": "doyle", "text": "Oilers penalty kill jumped to eighty-two percent since December."},
-            {"speaker": "lindqvist", "text": "That's not just McDavid and Draisaitl. That's system stuff."},
-            {"speaker": "kovalenko", "text": "Good coaching. Boring hockey."},
-            {"speaker": "marchetti", "text": "McDavid's on pace for a hundred and fifty-four points. Nobody blinks."},
-            {"speaker": "doyle", "text": "We stopped being surprised by him three years ago."},
-            {"speaker": "lindqvist", "text": "He's the story every night. The story is that nobody talks about it anymore."},
-            {"speaker": "marchetti", "text": "Ha! That's the most Numbers sentence he's ever said."},
-        ],
-    ],
-    "rangers": [
-        [
-            {"speaker": "marchetti", "text": "Shesterkin got pulled last night. Five on twenty-two."},
-            {"speaker": "doyle", "text": "That's not on him. Look at the defensive lapses."},
-            {"speaker": "lindqvist", "text": "High-danger chances against are up thirty percent since January. He's been swimming."},
-            {"speaker": "kovalenko", "text": "Nine one eight save percentage. Season's not over."},
-            {"speaker": "marchetti", "text": "The Rangers are gonna trade a first for a rental. Book it right now."},
-            {"speaker": "doyle", "text": "You said that last year."},
-            {"speaker": "marchetti", "text": "And I was right! ...ish."},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Oilers PK jumped to eighty-two-point-four percent since December."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "That's not McDavid and Draisaitl. That's system stuff. The clears are getting out cleanly."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "Good coaching. Boring hockey. Now you're speaking my language, Marc."},
+            {"speaker": "marc", "shot": "marc_smiling", "text": "McDavid's on pace for one-fifty-four points, by the way. Nobody blinks."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "We stopped being surprised by him three years ago. That's the crime."},
+            {"speaker": "marc", "shot": "two_closing", "text": "The story is that nobody talks about it anymore."},
         ],
     ],
     "hot_takes": [
         [
-            {"speaker": "marchetti", "text": "Hot take. Kaprizov's a better player than Kucherov."},
-            {"speaker": "doyle", "text": "That's not a hot take. That's a cold take that hasn't warmed up."},
-            {"speaker": "lindqvist", "text": "The numbers say Kucherov. It's not close."},
-            {"speaker": "kovalenko", "text": "Kucherov's got a Cup. Two, actually."},
-            {"speaker": "marchetti", "text": "Cups aren't stats, Dozer!"},
-            {"speaker": "kovalenko", "text": "They're the only stat."},
-            {"speaker": "doyle", "text": "Ha!"},
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Hot take time. Kaprizov's a better player than Kucherov."},
+            {"speaker": "marc", "shot": "marc_skeptical", "text": "That's not a hot take. That's a cold take that hasn't warmed up yet."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "The numbers, Professor. Let's hear it."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "Kucherov, and it's not close. Points-per-sixty, high-danger involvement, playoff resume."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "Cups aren't stats. They're the only stat."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "That's not a data-friendly sentence, but I'll give it to you."},
+            {"speaker": "reggie", "shot": "two_laughing", "text": "Ha! Chalk one up for the ex-player."},
         ],
     ],
 }
@@ -294,7 +233,6 @@ TOPIC_META = [
     {"id": "hot_takes", "label": "Hot Takes"},
     {"id": "leafs", "label": "Leafs"},
     {"id": "oilers", "label": "Oilers"},
-    {"id": "rangers", "label": "Rangers"},
 ]
 
 
@@ -304,49 +242,19 @@ BANTER_SCRIPTS = BANTER_BY_TOPIC["league_wide"]
 
 # Quick fallback replies (used when the LLM key has $0 budget).
 QUICK_FALLBACK = {
-    "doyle": [
-        "{topic}. Fine. Show me the tape before I show you the take.",
-        "{topic}? Not the story of the night, but not nothing either.",
+    "reggie": [
+        "{topic}. Fine — do the right things, then execute. That's the whole story.",
+        "{topic}? Simple hockey beats fancy hockey. Ask me how I know.",
+        "{topic} — hockey keeps receipts. We'll see who's telling the truth in April.",
     ],
-    "lindqvist": [
-        "{topic} — the underlying numbers say something different from the box score. They usually do.",
-        "{topic}? Their expected goals rate has been ugly for three weeks. Nobody's noticed.",
-    ],
-    "kovalenko": [
-        "{topic}. Good team. Play hard. Win games.",
-        "{topic}? Two-way group. That's all you need to know.",
-    ],
-    "marchetti": [
-        "{topic}?! Finally, someone asks. I've been sitting on this take for a week.",
-        "{topic} — I'll die on this hill, and I'll do it loud.",
+    "marc": [
+        "{topic} — let's look at the numbers. Small sample size right now, but the trend is real.",
+        "{topic}? The eye test and the data don't agree here. That's usually the tell.",
+        "{topic}. Context matters. One game doesn't change everything.",
     ],
 }
 
-# ---------- Reggie Banks solo show ----------
-# Structured as a single-anchor broadcast: opener → segments → finisher.
-# All lines are Reggie (speaker="reggie"). Frontend plays them back-to-back.
-REGGIE_SHOWS = [
-    [
-        {"speaker": "reggie", "expression": "friendly_smile", "text": "Let's get real, kid — puck drops in three, two, one. Grab a seat, we got a lot to get through."},
-        {"speaker": "reggie", "expression": "big_laugh", "text": "McDavid dropped ninety points in forty-eight games. Ninety. In forty-eight. Somebody get that man a hobby, because at this rate he's gonna finish the season before the rest of the league finishes brunch."},
-        {"speaker": "reggie", "expression": "head_shake", "text": "Alright, switching gears — the Leafs. Three straight losses at home. I've seen better positioning in a parking lot. Matthews is still leading the league in goals and it doesn't matter, because when your D-corps plays like traffic cones, the goals go the other way."},
-        {"speaker": "reggie", "expression": "leaning_forward", "text": "Now here's where it gets good — Hellebuyck. Nine-two-eight save percentage in February. That's not a save percentage, that's a typo. Winnipeg's playing boring hockey and boring hockey wins Cups. Ask me how I know."},
-        {"speaker": "reggie", "expression": "smirk", "text": "Cup Check on the Rangers: are they a real contender or a first-round exit in a nice suit? I'm gonna say it — nice suit. Shesterkin's swimming, high-danger chances against are up thirty percent, and their cap is a house of cards."},
-        {"speaker": "reggie", "expression": "finger_point", "text": "Trade deadline in three weeks. Somebody's about to give up a first-rounder for two months of a rental. Every February, every year. And then in June the analytics guys line up to tell you it was a bad deal. Passion's cheap, kid. Production's the only thing that pays the bills."},
-        {"speaker": "reggie", "expression": "confident_grin", "text": "Overreaction Meter of the week: the take that Kaprizov is better than Kucherov. Come on. Kucherov's got two Cups. Cups aren't stats — they're the only stat that matters when the lights come on."},
-        {"speaker": "reggie", "expression": "closing_smile", "text": "That's the Ticker. Same time tomorrow. Keep your stick on the ice — I'm out."},
-    ],
-]
-
-
 import random
-
-
-def pick_reggie_show():
-    return random.choice(REGGIE_SHOWS)
-
-
-
 
 
 def pick_banter(topic: str = "league_wide"):
@@ -355,7 +263,7 @@ def pick_banter(topic: str = "league_wide"):
 
 
 def quick_fallback_line(analyst_id: str, topic: str):
-    lines = QUICK_FALLBACK.get(analyst_id) or QUICK_FALLBACK["doyle"]
+    lines = QUICK_FALLBACK.get(analyst_id) or QUICK_FALLBACK["reggie"]
     return random.choice(lines).format(topic=topic.strip() or "That")
 
 
@@ -364,13 +272,11 @@ def get_analyst(analyst_id: str):
 
 
 def build_stat_context(question: str) -> str:
-    """Return a compact stat block string built from mock data, biased by the question text."""
     q = question.lower()
     matched_players = [p for p in PLAYERS if p["name"].split()[-1].lower() in q or p["team"].lower() in q]
     matched_teams = [t for t in TEAMS if t["code"].lower() in q or t["name"].lower() in q]
 
     if not matched_players and not matched_teams:
-        # Default: give top-of-mind context.
         matched_players = PLAYERS[:3]
 
     lines = ["Available stats (2025-26 season, current through GP 48-50):"]
@@ -385,7 +291,6 @@ def build_stat_context(question: str) -> str:
 
 
 def build_stat_card(question: str):
-    """Return a small structured stat card the frontend renders next to the answer."""
     q = question.lower()
     for p in PLAYERS:
         if p["name"].split()[-1].lower() in q or p["id"] in q:
@@ -422,7 +327,6 @@ def build_stat_card(question: str):
                     {"label": "GA", "value": str(t["ga"])},
                 ],
             }
-    # Default: league leader card.
     top = PLAYERS[0]
     return {
         "title": top["name"],

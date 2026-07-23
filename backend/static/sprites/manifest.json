@@ -1,0 +1,232 @@
+{
+  "two_neutral_open": {
+    "file": "/api/sprites/two_neutral_open.png",
+    "w": 462,
+    "h": 420
+  },
+  "two_reggie_speaks": {
+    "file": "/api/sprites/two_reggie_speaks.png",
+    "w": 459,
+    "h": 420
+  },
+  "two_marc_speaks": {
+    "file": "/api/sprites/two_marc_speaks.png",
+    "w": 462,
+    "h": 420
+  },
+  "two_friendly_debate": {
+    "file": "/api/sprites/two_friendly_debate.png",
+    "w": 459,
+    "h": 420
+  },
+  "two_laughing": {
+    "file": "/api/sprites/two_laughing.png",
+    "w": 462,
+    "h": 420
+  },
+  "two_both_monitor": {
+    "file": "/api/sprites/two_both_monitor.png",
+    "w": 462,
+    "h": 420
+  },
+  "two_reviewing_notes": {
+    "file": "/api/sprites/two_reviewing_notes.png",
+    "w": 459,
+    "h": 420
+  },
+  "two_serious": {
+    "file": "/api/sprites/two_serious.png",
+    "w": 462,
+    "h": 420
+  },
+  "two_excited": {
+    "file": "/api/sprites/two_excited.png",
+    "w": 459,
+    "h": 420
+  },
+  "two_closing": {
+    "file": "/api/sprites/two_closing.png",
+    "w": 462,
+    "h": 420
+  },
+  "reggie_neutral": {
+    "file": "/api/sprites/reggie_neutral.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_explaining": {
+    "file": "/api/sprites/reggie_explaining.png",
+    "w": 459,
+    "h": 339
+  },
+  "reggie_leaning": {
+    "file": "/api/sprites/reggie_leaning.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_pointing": {
+    "file": "/api/sprites/reggie_pointing.png",
+    "w": 459,
+    "h": 339
+  },
+  "reggie_hands_open": {
+    "file": "/api/sprites/reggie_hands_open.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_counting": {
+    "file": "/api/sprites/reggie_counting.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_looking_notes": {
+    "file": "/api/sprites/reggie_looking_notes.png",
+    "w": 459,
+    "h": 339
+  },
+  "reggie_looking_monitor": {
+    "file": "/api/sprites/reggie_looking_monitor.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_listening_off": {
+    "file": "/api/sprites/reggie_listening_off.png",
+    "w": 459,
+    "h": 339
+  },
+  "reggie_skeptical": {
+    "file": "/api/sprites/reggie_skeptical.png",
+    "w": 462,
+    "h": 339
+  },
+  "reggie_smirking": {
+    "file": "/api/sprites/reggie_smirking.png",
+    "w": 462,
+    "h": 330
+  },
+  "reggie_laughing": {
+    "file": "/api/sprites/reggie_laughing.png",
+    "w": 459,
+    "h": 330
+  },
+  "reggie_yelling": {
+    "file": "/api/sprites/reggie_yelling.png",
+    "w": 462,
+    "h": 330
+  },
+  "reggie_disappointed": {
+    "file": "/api/sprites/reggie_disappointed.png",
+    "w": 459,
+    "h": 330
+  },
+  "reggie_serious": {
+    "file": "/api/sprites/reggie_serious.png",
+    "w": 462,
+    "h": 330
+  },
+  "marc_explaining": {
+    "file": "/api/sprites/marc_explaining.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_analyzing_stats": {
+    "file": "/api/sprites/marc_analyzing_stats.png",
+    "w": 459,
+    "h": 324
+  },
+  "marc_looking_notes": {
+    "file": "/api/sprites/marc_looking_notes.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_adjusting_glasses": {
+    "file": "/api/sprites/marc_adjusting_glasses.png",
+    "w": 459,
+    "h": 324
+  },
+  "marc_adjusting_glasses_2": {
+    "file": "/api/sprites/marc_adjusting_glasses_2.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_looking_monitor": {
+    "file": "/api/sprites/marc_looking_monitor.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_listening": {
+    "file": "/api/sprites/marc_listening.png",
+    "w": 459,
+    "h": 324
+  },
+  "marc_smiling": {
+    "file": "/api/sprites/marc_smiling.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_skeptical": {
+    "file": "/api/sprites/marc_skeptical.png",
+    "w": 459,
+    "h": 324
+  },
+  "marc_serious": {
+    "file": "/api/sprites/marc_serious.png",
+    "w": 462,
+    "h": 324
+  },
+  "marc_chuckle": {
+    "file": "/api/sprites/marc_chuckle.png",
+    "w": 462,
+    "h": 324
+  },
+  "ots_reggie": {
+    "file": "/api/sprites/ots_reggie.png",
+    "w": 462,
+    "h": 279
+  },
+  "ots_marc": {
+    "file": "/api/sprites/ots_marc.png",
+    "w": 459,
+    "h": 279
+  },
+  "side_two_shot": {
+    "file": "/api/sprites/side_two_shot.png",
+    "w": 462,
+    "h": 279
+  },
+  "side_reggie": {
+    "file": "/api/sprites/side_reggie.png",
+    "w": 459,
+    "h": 279
+  },
+  "side_marc": {
+    "file": "/api/sprites/side_marc.png",
+    "w": 462,
+    "h": 279
+  },
+  "behind_desk_wide": {
+    "file": "/api/sprites/behind_desk_wide.png",
+    "w": 462,
+    "h": 279
+  },
+  "walking_into_set": {
+    "file": "/api/sprites/walking_into_set.png",
+    "w": 459,
+    "h": 279
+  },
+  "standing_monitor": {
+    "file": "/api/sprites/standing_monitor.png",
+    "w": 462,
+    "h": 279
+  },
+  "telestrator": {
+    "file": "/api/sprites/telestrator.png",
+    "w": 459,
+    "h": 279
+  },
+  "end_of_show_wave": {
+    "file": "/api/sprites/end_of_show_wave.png",
+    "w": 462,
+    "h": 279
+  }
+}

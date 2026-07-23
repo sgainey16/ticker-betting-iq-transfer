@@ -23,31 +23,17 @@ logger = logging.getLogger("ticker.voice")
 # best fits from the standard library. Full accent accuracy needs voice
 # cloning (record 60s samples per analyst).
 ANALYST_VOICES = {
-    # Doyle — mid-40s Boston Irish-American anchor. Needs authoritative
-    # broadcast weight without sounding British. "Paul" is a US-native
-    # authoritative male voice — anchor-desk cadence.
-    # Reggie Banks — solo lead anchor. Neutral all-American broadcast voice.
-    # voice_id starts as Paul (placeholder) — swapped when user picks a
-    # Voice-Design candidate in /voice-lab.
+    # Reggie Banks — lead anchor, ex-NHL. Confident US-broadcast baritone.
+    # voice_id may be swapped when user picks a Voice-Design candidate in /voice-lab.
     "reggie": {
         "voice_id": "5Q0t7uMcjvnagumLfvZi",  # Paul placeholder
-        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.12},
+        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.10},
     },
-    "doyle": {
-        "voice_id": "5Q0t7uMcjvnagumLfvZi",
-        "settings": {"stability": 0.40, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True, "speed": 1.15},
-    },
-    "lindqvist": {
-        "voice_id": "yoZ06aMxZJJ28mfd3POQ",
-        "settings": {"stability": 0.35, "similarity_boost": 0.75, "style": 0.45, "use_speaker_boost": True, "speed": 1.15},
-    },
-    "kovalenko": {
-        "voice_id": "2EiwWnXFnvU5JabPnv8n",
-        "settings": {"stability": 0.55, "similarity_boost": 0.82, "style": 0.20, "use_speaker_boost": True, "speed": 1.08},
-    },
-    "marchetti": {
-        "voice_id": "zcAOhNBS3c14rBihAFp1",
-        "settings": {"stability": 0.28, "similarity_boost": 0.75, "style": 0.60, "use_speaker_boost": True, "speed": 1.18},
+    # Marc — 60, analytics co-host. Calm, measured, warm. Placeholder is a
+    # mature US male voice ("Bill" from the pre-made ElevenLabs library).
+    "marc": {
+        "voice_id": "pqHfZKP75CvOlQylNhV4",  # Bill — mature, warm
+        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 1.02},
     },
 }
 

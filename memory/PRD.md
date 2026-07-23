@@ -1,65 +1,69 @@
-# THE TICKER — Product Requirements (Living Doc)
+# The Ticker — Product Requirements
 
-## Original problem statement (excerpt)
-An AI-powered hockey analyst panel — four distinct AI personalities delivering
-fantasy hockey insight, stats, banter, and predictions the way a real sports
-desk would. V1 scope: NHL only.
+## Concept
+AI-powered hockey television network MVP. Feels like a premium live TV
+broadcast (not a chatbot): natural two-host conversations, deep stats/
+analytics, predictions, and an interactive "toss it in" Q&A that the panel
+answers on air.
 
-## User personas
-- **Fantasy hockey manager** — needs fast, opinionated takes on players and matchups.
-- **Casual NHL fan** — wants entertaining commentary + basic stats, not a spreadsheet.
-- **Prediction-first user** — comes to make picks and build a public record.
+## Phase 1 MVP — Two-Host Panel (Locked)
+- **Reggie Banks** — Lead Anchor, retired NHL player. Emotional core.
+  "Do the right things. Then execute." Blue accent (#1E5DFF).
+- **Marc** — 60, Analytics Co-Host. Calm, measured, "let's look at the
+  numbers." Cyan accent (#00E5FF).
+- Every banter script carries `speaker`, `text`, and a `shot` cue
+  (production-language camera cut). Optional `interrupt: true` triggers a
+  hard cut-in overlap.
+- Silent listening shots infer automatically from speaker.
+- Zero-gap audio scheduler with 500-1100ms overlaps preserved (pre-existing
+  invariant — do not break).
 
-## Core requirements (static)
-- Four distinct AI analysts (Doyle, Lindqvist, Kovalenko, Marchetti) with
-  hard-constrained voice + visual identity (see problem statement §6).
-- Broadcast aesthetic: dark charcoal, brushed-steel borders, signature accent
-  color per analyst, live-feeling ticker.
-- In-character microcopy everywhere (loading, error, empty).
-- Free vs. premium gating (deferred to Phase 2).
+## Character Bibles (source of truth)
+Kept verbatim in `/app/memory/` conversation history:
+- Reggie Banks v1.0 — puck moves faster, support wins, hockey keeps receipts
+- Marc v1.0 — good data + good instincts, context matters, respectful challenge
 
 ## Architecture
-- Frontend: React 19 + React Router + Tailwind + shadcn/ui + react-fast-marquee.
-- Backend: FastAPI + Motor (MongoDB) + emergentintegrations (Claude Sonnet 4.5).
-- SSE streaming for the Ask Analyst answer flow (`POST /api/ask/stream`).
-- Mock NHL data (players, teams, games, ticker headlines) in `backend/analysts.py`.
+- **Backend**: FastAPI (`server.py`), Motor/MongoDB. Character system in
+  `analysts.py`. ElevenLabs TTS pipeline in `voice_service.py`. Static
+  sprite library served from `/api/sprites/*`.
+- **Frontend**: React + Tailwind + Shadcn UI. Core components:
+  - `LiveDesk.jsx` — orchestrates banter playback, shot cuts, quick reply
+  - `TwoHostDesk.jsx` — renders current shot with 480ms cross-fade
+  - `AnalystAvatar.jsx` — portrait avatar sourced from `/api/sprites/*`
+- **Sprite library**: 46 cropped shots from user's Phase-1 Asset Library
+  sheet, upscaled 3× via PIL LANCZOS. Rebuild: `python3 crop_asset_library.py`.
 
-## Phase 1 — Aha moment (built 2026-02, updated 2026-02)
-- Home page **is the live desk**: cropped-clean broadcast photo of all four
-  analysts, continuous ticker strip on top, live captions typing out
-  **synced to real ElevenLabs voice audio** (4 distinct pre-made voices — Adam
-  for Doyle, Josh for Numbers, Clyde for Kovalenko, Charlie for Marchetti).
-- Topic tabs steer the panel: `League Wide` · `Trade Deadline` · `Playoff Race`
-  · `Hot Takes` · `Leafs` · `Oilers` · `Rangers`. Click one, panel loads a
-  fresh script and starts talking.
-- Web Audio API broadcast stinger plays on topic changes for that "on air" hit.
-- Reactions/laughs (`Ha!`, `Heh.`, `Ha ha.`) baked into scripts as short lines
-  each analyst voices in-character — they laugh at each other's jokes.
-- "Turn on sound" gate respects browser autoplay policy; mute toggle available.
-- Audio pre-generated to disk (55 mp3s cached), served under `/api/audio/*`
-  so Kubernetes ingress routes it correctly.
-- "Ask the panel" input → LLM-generated in-character reply + spoken audio in
-  the responding analyst's voice.
-- Ask Our Analyst Anything screen (pick analyst → SSE streaming Claude Sonnet
-  4.5 answer + stat card).
-- Predictions dashboard (make picks, one-line reasoning, personal accuracy +
-  streak, public leaderboard, admin "simulate results" fallback per spec §7).
-  **Betting lines removed** — spec §2 excludes gambling for V1.
-- **Auth is intentionally skipped for Phase 1** — display name in localStorage.
+## What's Implemented (2026-02-23)
+- ✅ Two-host banter system (Reggie + Marc) — 6 topics, 20-turn opener
+- ✅ 46-shot camera state machine sourced from the Phase-1 sprite sheet
+- ✅ Sprite cropper (`crop_asset_library.py`) + `/api/sprites` static route
+- ✅ Overlapping audio scheduler (500-1100ms overlap) preserved
+- ✅ Ask-the-panel Q&A (Claude Sonnet 4.5 via Emergent LLM Key) — two hosts
+- ✅ Predictions module + leaderboard
+- ✅ Voice Lab UI (legacy — needs a small refresh for the 2-host lineup)
 
-## Deferred to Phase 2 (backlog)
-- P0: Full auth (JWT), onboarding (favorite team → players → home tabs).
-- P0: Stripe test-mode paywall + free/premium gating on all screens.
-- P1: Stats browser screen (player/team detail with AI insight line).
-- P1: Community feed prototype (reactions, comments on picks).
-- P1: Profile & Preferences screen (notifications, home-tab selection).
-- P2: Admin area (user mgmt, content moderation, prediction verification UI).
-- P2: Real NHL stats + results feed integration.
-- P2: Nano Banana avatar regeneration to hit character-file constraints
-      (Kovalenko biggest, Doyle stubble, etc.) — currently using stock photos
-      because Emergent Universal Key balance is $0.
+## Known blockers / status
+- **ElevenLabs quota exhausted** (21 credits left on "The ticker 2" key).
+  User is working on voices separately. Audio will backfill automatically
+  once the key is topped up — no code changes required.
 
-## Known blockers
-- **EMERGENT_LLM_KEY balance is $0** — Ask Analyst streaming returns a friendly
-  in-app error until the user tops up under Profile → Universal Key → Add Balance.
-  Everything else on the app works without an LLM call.
+## P1 Backlog
+- **Interactive Q&A ("switching gears")** — user's question interrupts the
+  current banter; panel closes the current thought then answers.
+- **Stats & Analytics pages** — clickable power play, roster, standings.
+- **Predictions upgrade** — driving-factor commentary per matchup.
+- **Marc's own voice** — pick candidate via Voice Lab once ElevenLabs
+  quota returns.
+- **Voice Lab refresh** — regenerate 3 voice-design candidates for Marc,
+  drop Doyle/Numbers/Dozer/Ace UI.
+
+## P2 Backlog
+- Expand asset library toward 150-250 shots per host.
+- City-specific hosts (Boston, Chicago, Quebec, Alberta) + Muzzy Mike.
+- Marc's own expression sprite sheet (like Reggie's).
+
+## Third-party integrations
+- **Claude Sonnet 4.5** via Emergent LLM Key (Ask + quick-reply banter)
+- **ElevenLabs** — pre-generated + disk-cached TTS
+  (`/app/backend/static/audio/*.mp3`)
