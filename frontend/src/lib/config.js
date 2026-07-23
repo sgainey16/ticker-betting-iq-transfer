@@ -9,17 +9,27 @@ export const ANALYSTS = {
     tagline: "Do the right things. Then execute.",
     // Portrait (used for avatars in nav / meet-the-desk cards)
     portrait: "/api/hosts/reggie_portrait.png",
-    hero: "/api/hosts/reggie_hero.png",
+    hero: "/api/hosts/reggie_stage.png",
+    heroCopy: {
+      kicker: "1-on-1 Press Conference",
+      headline: "Ask Reggie any stat.",
+      sub: "Straight from a guy who played it.",
+    },
   },
   marc: {
     id: "marc",
-    name: "Marc",
+    name: "Marc Collins",
     short: "Marc",
     role: "Analytics Co-Host",
     accent: "#00E5FF",
-    tagline: "Let's look at the numbers.",
+    tagline: "Show me the numbers or show me the door.",
     portrait: "/api/hosts/marc_portrait.png",
-    hero: "/api/hosts/marc_hero.png",
+    hero: "/api/hosts/marc_stage.png",
+    heroCopy: {
+      kicker: "1-on-1 Press Conference",
+      headline: "Ask Marc about your favourite team.",
+      sub: "The numbers know more than the headlines.",
+    },
   },
 };
 
