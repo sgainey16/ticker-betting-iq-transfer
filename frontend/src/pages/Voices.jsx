@@ -63,7 +63,7 @@ export default function Voices() {
     setSwitching(key);
     try {
       const r = await api.post("/voices/set-active", { host, voice_id });
-      toast.success(`${ANALYSTS[host]?.short} now voiced by ${voiceLabelFor(voice_id, host)}`, {
+      toast.success(`${ANALYSTS[host]?.role} now voiced by ${voiceLabelFor(voice_id, host)}`, {
         description: `Cleared ${r.data.cleared_cache} old lines — the desk will regenerate on next play.`,
       });
       await load();
@@ -133,13 +133,13 @@ function HostColumn({ host, candidates, playing, switching, pending, onPlay, onP
         <AnalystAvatar analystId={host} size={56} ring />
         <div className="min-w-0 flex-1">
           <div
-            className="font-headline text-xl"
+            className="font-headline text-lg uppercase tracking-widest"
             style={{ color: a.accent }}
           >
-            {a.name?.toUpperCase()}
-          </div>
-          <div className="font-accent text-[11px] uppercase tracking-widest text-white/50 truncate">
             {a.role}
+          </div>
+          <div className="font-accent text-[11px] uppercase tracking-widest text-white/50 truncate mt-1 italic normal-case tracking-normal">
+            "{a.tagline}"
           </div>
         </div>
       </div>

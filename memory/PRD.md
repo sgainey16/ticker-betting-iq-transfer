@@ -1,69 +1,74 @@
-# The Ticker — Product Requirements
+# THE TICKER — PRD
 
 ## Concept
-AI-powered hockey television network MVP. Feels like a premium live TV
-broadcast (not a chatbot): natural two-host conversations, deep stats/
-analytics, predictions, and an interactive "toss it in" Q&A that the panel
-answers on air.
+AI Sports Network (not an app, not a chatbot). Every fan walks into their own
+studio where Reggie Banks + Marc Collins are already talking. Phase 1 = NHL
+hockey. Success = fans wonder "*what does Reggie think about that trade?*"
 
-## Phase 1 MVP — Two-Host Panel (Locked)
-- **Reggie Banks** — Lead Anchor, retired NHL player. Emotional core.
-  "Do the right things. Then execute." Blue accent (#1E5DFF).
-- **Marc** — 60, Analytics Co-Host. Calm, measured, "let's look at the
-  numbers." Cyan accent (#00E5FF).
-- Every banter script carries `speaker`, `text`, and a `shot` cue
-  (production-language camera cut). Optional `interrupt: true` triggers a
-  hard cut-in overlap.
-- Silent listening shots infer automatically from speaker.
-- Zero-gap audio scheduler with 500-1100ms overlaps preserved (pre-existing
-  invariant — do not break).
+Canonical bibles: `/app/memory/product_bible.md` (v1.0 — full network vision),
+`/app/memory/bible_notes_v0.md` (earlier notes, superseded where they conflict).
 
-## Character Bibles (source of truth)
-Kept verbatim in `/app/memory/` conversation history:
-- Reggie Banks v1.0 — puck moves faster, support wins, hockey keeps receipts
-- Marc v1.0 — good data + good instincts, context matters, respectful challenge
+## Locked Phase 1 direction
+- **Reggie Banks** — Chicago, blue collar, master chirper. Main host.
+- **Marc Collins** — 60, calming presence, still enjoys the fun. Analytics
+  co-host. Support voice.
+- **No names anywhere in the UI** — users learn them through the banter,
+  the way you learn TV hosts.
+- **Wide studio two-shot** (Fox Sports 1 vibe) — both hosts visible on
+  first load, monitor-wall backdrop, lit desk edge, THE TICKER on desk front.
+- Intimate press-conference hero shots are reserved for the Ask / 1-on-1
+  Press Conference feature (Phase 2 preview).
 
-## Architecture
-- **Backend**: FastAPI (`server.py`), Motor/MongoDB. Character system in
-  `analysts.py`. ElevenLabs TTS pipeline in `voice_service.py`. Static
-  sprite library served from `/api/sprites/*`.
-- **Frontend**: React + Tailwind + Shadcn UI. Core components:
-  - `LiveDesk.jsx` — orchestrates banter playback, shot cuts, quick reply
-  - `TwoHostDesk.jsx` — renders current shot with 480ms cross-fade
-  - `AnalystAvatar.jsx` — portrait avatar sourced from `/api/sprites/*`
-- **Sprite library**: 46 cropped shots from user's Phase-1 Asset Library
-  sheet, upscaled 3× via PIL LANCZOS. Rebuild: `python3 crop_asset_library.py`.
+## What's live (2026-02-23)
+- ✅ Two-host banter engine: 6 topic scripts, real cross-talk, interrupts
+- ✅ ElevenLabs TTS working — 58 lines cached across all topics
+- ✅ Wide 22:10 CSS studio: monitor-wall backdrop, lit desk edge, THE TICKER
+  wordmark on desk front, ambient blue/cyan side glow
+- ✅ Signature 2-second broadcast sting (`/app/frontend/src/lib/sting.js`) —
+  fires on first audio unlock + on every topic switch
+- ✅ Voice Picker at `/voices` — 6 candidates for Reggie, 5 for Marc,
+  in-character preview clip per candidate, tap "Use this voice" to swap live
+- ✅ Names removed from Home, Ask Analyst, Voices, lower-third
+- ✅ Nav shows THE TICKER · SPORTS NETWORK (no "AI · HOCKEY DESK")
+- ✅ Character portraits + hero images saved at `/api/hosts/*`
+- ✅ Backend: /api/banter, /api/voices/picker, /api/voices/set-active,
+  /api/voices/preview, /api/hosts static, /api/sprites static
+- ✅ Reggie hometown updated to Chicago in bible
 
-## What's Implemented (2026-02-23)
-- ✅ Two-host banter system (Reggie + Marc) — 6 topics, 20-turn opener
-- ✅ 46-shot camera state machine sourced from the Phase-1 sprite sheet
-- ✅ Sprite cropper (`crop_asset_library.py`) + `/api/sprites` static route
-- ✅ Overlapping audio scheduler (500-1100ms overlap) preserved
-- ✅ Ask-the-panel Q&A (Claude Sonnet 4.5 via Emergent LLM Key) — two hosts
-- ✅ Predictions module + leaderboard
-- ✅ Voice Lab UI (legacy — needs a small refresh for the 2-host lineup)
+## Currently blocked / waiting on user
+- **Voice audition** — user has one Voice Design draft plugged in as
+  Reggie candidate #1 (`QFNlGyAI98kVm40cB3ik`). Waiting for user to audition
+  the roster and lock final picks.
+- **Real NHL data (SportsData.io + NHL Stats API)** — not started; user
+  agreed panel-polish comes first, then real data.
+- **Character bibles v2** — user planning to expand personas; current
+  bibles are the working prompts (calming Marc, feisty Reggie).
 
-## Known blockers / status
-- **ElevenLabs quota exhausted** (21 credits left on "The ticker 2" key).
-  User is working on voices separately. Audio will backfill automatically
-  once the key is topped up — no code changes required.
+## P1 backlog (after voice lock-in)
+- Real NHL data pipeline (SportsData.io + NHL Stats API)
+- Fantasy Assistant lite (start/sit Q&A with roster context)
+- Betting Insights lite (xG, rest days, back-to-backs)
+- Press Conference / Ask flow polish (uses intimate hero shots)
+- Subscription-ready Stripe plumbing (gated features, free during MVP)
 
-## P1 Backlog
-- **Interactive Q&A ("switching gears")** — user's question interrupts the
-  current banter; panel closes the current thought then answers.
-- **Stats & Analytics pages** — clickable power play, roster, standings.
-- **Predictions upgrade** — driving-factor commentary per matchup.
-- **Marc's own voice** — pick candidate via Voice Lab once ElevenLabs
-  quota returns.
-- **Voice Lab refresh** — regenerate 3 voice-design candidates for Marc,
-  drop Doyle/Numbers/Dozer/Ace UI.
-
-## P2 Backlog
-- Expand asset library toward 150-250 shots per host.
-- City-specific hosts (Boston, Chicago, Quebec, Alberta) + Muzzy Mike.
-- Marc's own expression sprite sheet (like Reggie's).
+## P2 backlog
+- Tank / Lou / Cody characters (rotating roster)
+- Community forums, user profiles, following
+- Prize / games / trivia layer
+- Multi-sport, real-time highlights, VR
+- 20+ expression sprites per host
 
 ## Third-party integrations
-- **Claude Sonnet 4.5** via Emergent LLM Key (Ask + quick-reply banter)
-- **ElevenLabs** — pre-generated + disk-cached TTS
-  (`/app/backend/static/audio/*.mp3`)
+- **Claude Sonnet 4.5** via Emergent LLM Key — Ask + quick-reply banter
+- **ElevenLabs** — TTS, disk-cached at `/app/backend/static/audio/*.mp3`.
+  API key is restricted (TTS-only scope) — voice list not readable, but
+  generation works fine.
+
+## Key files
+- `frontend/src/components/TwoHostDesk.jsx` — studio scene
+- `frontend/src/components/LiveDesk.jsx` — banter engine + audio scheduler
+- `frontend/src/lib/sting.js` — signature broadcast sting
+- `frontend/src/pages/Voices.jsx` — voice picker
+- `backend/analysts.py` — character bibles + banter scripts
+- `backend/voice_picker.py` — candidate voice roster
+- `backend/voice_service.py` — TTS + cache

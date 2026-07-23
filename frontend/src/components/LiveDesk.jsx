@@ -3,33 +3,16 @@ import TwoHostDesk, { resolveShot } from "@/components/TwoHostDesk";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import { api, BACKEND_URL } from "@/lib/api";
 import { Send, Volume2, VolumeX } from "lucide-react";
+import { playTickerSting } from "@/lib/sting";
 
 const PAUSE_BETWEEN_TURNS = 0;
 const INTERRUPT_START_EARLY_MS = 1100; // hard cut-in
 const NORMAL_OVERLAP_MS = 500; // compensate for the mp3 lead-in silence + browser overhead
 
 function playStinger(audioCtx, gain = 0.12) {
-  try {
-    const now = audioCtx.currentTime;
-    const notes = [
-      { f: 261.63, t: now + 0.0, d: 0.14 },
-      { f: 523.25, t: now + 0.12, d: 0.22 },
-    ];
-    for (const n of notes) {
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = n.f;
-      g.gain.setValueAtTime(0.0001, n.t);
-      g.gain.exponentialRampToValueAtTime(gain, n.t + 0.02);
-      g.gain.exponentialRampToValueAtTime(0.0001, n.t + n.d);
-      osc.connect(g).connect(audioCtx.destination);
-      osc.start(n.t);
-      osc.stop(n.t + n.d + 0.02);
-    }
-  } catch (e) {
-    console.warn("stinger failed", e);
-  }
+  // Delegated to the shared Ticker sting so every "show is on" moment sounds
+  // identical — first unlock, topic change, and any future segment cue.
+  playTickerSting(audioCtx, gain);
 }
 
 export default function LiveDesk() {
@@ -67,11 +50,16 @@ export default function LiveDesk() {
       setTurns([]);
       setTurnIdx(0);
       setCurrentSpeaker(null);
-      setCurrentShot("two_neutral_open");
+      setCurrentShot("side_two_shot");
       pushedRef.current = new Set();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+      }
+      // Fire the signature sting on every segment transition (once audio is
+      // unlocked). Skips silently before first click.
+      if (audioUnlocked && !muted && audioCtxRef.current) {
+        playStinger(audioCtxRef.current, 0.38);
       }
       try {
         const r = await api.get(`/banter?topic=${encodeURIComponent(activeTopic)}`);
@@ -83,6 +71,7 @@ export default function LiveDesk() {
     return () => {
       mounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTopic]);
 
   // First interaction anywhere unlocks audio.
@@ -119,7 +108,7 @@ export default function LiveDesk() {
           }).catch(() => {});
         }
       }
-      if (audioCtxRef.current) playStinger(audioCtxRef.current, 0.14);
+      if (audioCtxRef.current) playStinger(audioCtxRef.current, 0.42);
       setAudioUnlocked(true);
     } catch (e) {
       console.warn("audio unlock failed", e);
