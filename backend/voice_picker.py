@@ -100,12 +100,6 @@ CANDIDATES = {
             "vibe": "Orator — measured with gravitas",
             "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.30, "use_speaker_boost": True, "speed": 1.02},
         },
-        {
-            "voice_id": "onwK4e9ZLuTAKqWW03F9",
-            "name": "Daniel",
-            "vibe": "British authoritative — dry wit",
-            "settings": {"stability": 0.50, "similarity_boost": 0.78, "style": 0.35, "use_speaker_boost": True, "speed": 1.05},
-        },
     ],
 }
 
