@@ -123,11 +123,14 @@ export default function AskAnalyst() {
                   <AnalystAvatar analystId={id} size={48} shape="circle" ring={selected} />
                 </div>
                 <div className="min-w-0">
-                  <div className="font-headline text-white leading-tight truncate">
-                    {a.short}
-                  </div>
-                  <div className="text-[11px] font-accent uppercase tracking-widest text-white/50 truncate">
+                  <div
+                    className="font-headline text-sm leading-tight uppercase tracking-widest"
+                    style={{ color: a.accent }}
+                  >
                     {a.role}
+                  </div>
+                  <div className="text-[11px] text-white/50 truncate mt-1 italic">
+                    "{a.tagline}"
                   </div>
                 </div>
               </button>
@@ -146,7 +149,7 @@ export default function AskAnalyst() {
             htmlFor="ask-input"
             className="font-accent text-xs uppercase tracking-[0.3em] text-white/50"
           >
-            Ask {analyst.short}
+            Ask the desk
           </label>
           <div className="mt-2 flex items-start gap-3">
             <textarea
@@ -161,7 +164,7 @@ export default function AskAnalyst() {
                 }
               }}
               rows={2}
-              placeholder={`Ask ${analyst.short} anything about the NHL…`}
+              placeholder="Ask anything about the NHL…"
               className="flex-1 bg-[#0b0b10] text-white placeholder:text-white/30 rounded-lg border border-[#2d2d35] focus:border-[#1e5dff] focus:outline-none px-4 py-3 text-base font-inter resize-none"
             />
             <button
@@ -209,11 +212,14 @@ export default function AskAnalyst() {
               <AnalystAvatar analystId={analystId} size={44} shape="circle" ring={true} />
             </div>
             <div>
-              <div className="font-headline text-white text-lg leading-tight">
-                {analyst.short}
+              <div
+                className="font-headline text-sm uppercase tracking-widest leading-tight"
+                style={{ color: analyst.accent }}
+              >
+                {analyst.role}
               </div>
-              <div className="text-[11px] font-accent uppercase tracking-widest text-white/50">
-                {analyst.role} · Live from the desk
+              <div className="text-[11px] font-accent uppercase tracking-widest text-white/50 mt-1">
+                Live from the desk
               </div>
             </div>
             <div className="ml-auto flex items-center gap-2 text-[10px] font-accent uppercase tracking-widest text-white/50">

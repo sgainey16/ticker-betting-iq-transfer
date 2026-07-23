@@ -320,17 +320,20 @@ export default function LiveDesk() {
                 className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
                 style={{ background: speakerAccent }}
               />
-              <div
-                className="font-headline text-base flex-shrink-0"
-                style={{ color: speakerAccent }}
-              >
-                {speakerName?.toUpperCase()}
+              <div className="text-white/80 font-accent text-[11px] uppercase tracking-widest">
+                On Mic
               </div>
-              <div className="text-white/50 font-accent text-[11px] uppercase tracking-widest hidden sm:block">
-                {speakerRole}
-              </div>
-              <div className="ml-auto text-white/40 font-accent text-[10px] uppercase tracking-widest hidden md:block">
-                on mic
+              <div className="ml-auto flex items-center gap-1.5">
+                {["reggie", "marc"].map((id) => (
+                  <span
+                    key={id}
+                    className="h-1.5 w-6 rounded-full transition-all"
+                    style={{
+                      background:
+                        currentSpeaker === id ? ANALYSTS[id].accent : "#2d2d35",
+                    }}
+                  />
+                ))}
               </div>
             </>
           ) : (
@@ -401,10 +404,10 @@ export default function LiveDesk() {
             />
             <div className="flex-1 min-w-0">
               <div
-                className="font-headline text-sm"
+                className="font-accent text-[11px] uppercase tracking-widest"
                 style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
               >
-                {ANALYSTS[chatResponse.analyst_id]?.short?.toUpperCase()}
+                {ANALYSTS[chatResponse.analyst_id]?.role}
               </div>
               <div className="text-white/85 text-sm mt-1 leading-relaxed">
                 {chatResponse.text}

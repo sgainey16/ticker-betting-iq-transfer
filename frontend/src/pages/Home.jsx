@@ -66,19 +66,19 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Meet the desk — smaller, personality legend */}
+        {/* Meet the desk — no names; users get to know them through the banter */}
         <section className="mt-14" data-testid={TEST_IDS.home.panelHeading}>
           <div className="flex items-baseline justify-between mb-4">
             <div>
               <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
-                Meet the desk
+                On the desk
               </div>
               <h2 className="font-headline text-2xl text-white mt-1">
-                Two voices
+                Two voices. No filler.
               </h2>
             </div>
             <div className="hidden sm:block text-xs font-accent uppercase tracking-widest text-white/40">
-              No filler
+              Get to know them on air
             </div>
           </div>
 
@@ -90,20 +90,23 @@ export default function Home() {
                   to={`/ask?analyst=${id}`}
                   key={id}
                   data-testid={TEST_IDS.home.analystCard(id)}
-                  className="card-surface p-4 flex items-center gap-3 transition-transform duration-300 hover:-translate-y-0.5"
+                  className="card-surface p-4 flex items-center gap-3 transition-transform duration-300 hover:-translate-y-0.5 group"
                   style={{ borderColor: "#2d2d35" }}
                 >
-                  <AnalystAvatar analystId={id} size={56} shape="circle" ring={true} />
+                  <AnalystAvatar analystId={id} size={64} shape="circle" ring={true} />
                   <div className="min-w-0 flex-1">
-                    <div className="font-headline text-lg text-white leading-tight truncate">
-                      {a.short}
-                    </div>
-                    <div className="text-[10px] font-accent uppercase tracking-widest text-white/50 truncate">
+                    <div
+                      className="font-headline text-base leading-tight uppercase tracking-widest"
+                      style={{ color: a.accent }}
+                    >
                       {a.role}
                     </div>
+                    <div className="text-sm text-white/60 mt-1 truncate italic">
+                      "{a.tagline}"
+                    </div>
                   </div>
-                  <div className="text-[10px] font-accent uppercase tracking-widest text-white/40 flex-shrink-0">
-                    #{String(i + 1).padStart(2, "0")}
+                  <div className="text-[10px] font-accent uppercase tracking-widest text-white/40 flex-shrink-0 group-hover:text-white/70 transition-colors">
+                    Ask
                   </div>
                 </Link>
               );
