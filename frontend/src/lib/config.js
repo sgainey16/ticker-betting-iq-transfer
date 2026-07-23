@@ -8,7 +8,8 @@ export const ANALYSTS = {
     accent: "#1E5DFF",
     tagline: "Do the right things. Then execute.",
     // Portrait (used for avatars in nav / meet-the-desk cards)
-    portrait: "/api/sprites/reggie_neutral.png",
+    portrait: "/api/hosts/reggie_portrait.png",
+    hero: "/api/hosts/reggie_hero.png",
   },
   marc: {
     id: "marc",
@@ -17,7 +18,8 @@ export const ANALYSTS = {
     role: "Analytics Co-Host",
     accent: "#00E5FF",
     tagline: "Let's look at the numbers.",
-    portrait: "/api/sprites/marc_explaining.png",
+    portrait: "/api/hosts/marc_portrait.png",
+    hero: "/api/hosts/marc_hero.png",
   },
 };
 

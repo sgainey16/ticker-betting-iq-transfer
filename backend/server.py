@@ -504,6 +504,7 @@ app.include_router(api)
 # well for any local debugging.
 app.mount("/api/audio", StaticFiles(directory=str(STATIC_DIR / "audio")), name="api_audio")
 app.mount("/api/sprites", StaticFiles(directory=str(STATIC_DIR / "sprites")), name="api_sprites")
+app.mount("/api/hosts", StaticFiles(directory=str(STATIC_DIR / "hosts")), name="api_hosts")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(
