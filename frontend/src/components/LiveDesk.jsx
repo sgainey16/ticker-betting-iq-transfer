@@ -294,6 +294,38 @@ export default function LiveDesk() {
       >
         <TwoHostDesk shot={currentShot} speaker={currentSpeaker} speaking={!!currentSpeaker && audioUnlocked && !muted} />
 
+        {/* Full-frame "TAP TO START" overlay — browsers block autoplay
+            without a user gesture; this makes that one tap unmissable. */}
+        {!audioUnlocked && (
+          <button
+            type="button"
+            onClick={() => unlockAudio()}
+            data-testid="tap-to-start"
+            className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer group"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 50%, rgba(5,7,15,0.65) 0%, rgba(5,7,15,0.92) 100%)",
+              backdropFilter: "blur(4px)",
+            }}
+          >
+            <div className="flex flex-col items-center gap-3 text-center transition-transform duration-500 group-hover:scale-105">
+              <div className="flex items-center gap-2 font-accent text-xs uppercase tracking-[0.4em] text-white/60">
+                <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
+                On Air
+              </div>
+              <h2
+                className="font-headline text-4xl sm:text-5xl lg:text-6xl text-white"
+                style={{ textShadow: "0 0 40px rgba(30,93,255,0.7)" }}
+              >
+                Tap to join<br />the broadcast.
+              </h2>
+              <div className="mt-2 font-accent text-[11px] uppercase tracking-[0.3em] text-white/45">
+                Sound comes on. Reggie & Marc are already talking.
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* Lower-third — sits above the desk bar so nothing overlaps */}
         <div
           className="absolute left-5 right-5 sm:left-8 sm:right-8 rounded-lg backdrop-blur-sm border px-4 py-2.5 flex items-center gap-3 transition-all duration-300 min-h-[46px] z-20"
