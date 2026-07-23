@@ -305,11 +305,12 @@ export default function LiveDesk() {
       >
         <TwoHostDesk shot={currentShot} speaker={currentSpeaker} speaking={!!currentSpeaker && audioUnlocked && !muted} />
 
-        {/* Lower-third — swap accent + label to whoever's speaking */}
+        {/* Lower-third — sits above the desk bar so nothing overlaps */}
         <div
-          className="absolute left-5 right-5 sm:left-8 sm:right-8 bottom-6 rounded-lg backdrop-blur-sm border px-4 py-3 flex items-center gap-3 transition-all duration-300 min-h-[52px] z-20"
+          className="absolute left-5 right-5 sm:left-8 sm:right-8 rounded-lg backdrop-blur-sm border px-4 py-2.5 flex items-center gap-3 transition-all duration-300 min-h-[46px] z-20"
           style={{
-            background: "rgba(11,11,16,0.85)",
+            bottom: "26%",
+            background: "rgba(11,11,16,0.75)",
             borderColor: speakerAccent + "66",
           }}
           data-testid={TEST_IDS.desk.lowerThird}

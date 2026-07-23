@@ -1,11 +1,10 @@
-// TwoHostDesk — split-screen two-shot. Both hosts are ALWAYS visible so it
-// feels like the show is already on when the app opens. The active speaker
-// gets accent glow + full brightness; the listener dims slightly, stays
-// present, and keeps small idle motion via the CSS speak-pulse fallback.
+// TwoHostDesk — Fox-Sports-1-style wide studio two-shot. Built entirely in
+// CSS so there is one shared studio (monitor-wall + desk + THE TICKER lit
+// logo bar) around BOTH hosts. The two hosts sit inside their own panes as
+// smaller, framed subjects; studio air surrounds them so the frame feels
+// like a real broadcast wide.
 //
-// Shot cues can request a solo close-up (reggie_* / marc_*) — the frame
-// gently zooms and pans so that side takes over the canvas, then returns to
-// the equal two-shot when the cue clears.
+// A shot cue (reggie_* / marc_*) pushes one pane wider for a soft camera cut.
 import { useMemo } from "react";
 import { BACKEND_URL } from "@/lib/api";
 import { ANALYSTS } from "@/lib/config";
@@ -29,116 +28,141 @@ export function resolveShot({ shot, speaker }) {
   return "side_two_shot";
 }
 
-// Which host does the given shot cue focus on? null = equal two-shot.
 function focusFor(shot) {
   if (!shot) return null;
   if (shot.startsWith("reggie_")) return "reggie";
   if (shot.startsWith("marc_")) return "marc";
-  return null; // any "two_*" or "side_two_shot" stays equal
+  return null;
 }
 
 export default function TwoHostDesk({ shot, speaker, speaking }) {
   const focus = useMemo(() => focusFor(shot), [shot]);
 
-  const reggieStyle = paneStyle("reggie", { focus, speaker, speaking });
-  const marcStyle = paneStyle("marc", { focus, speaker, speaking });
-
   return (
     <div
-      className="relative w-full overflow-hidden flex"
-      style={{ aspectRatio: "16 / 8", background: "#0a0a0e" }}
+      className="relative w-full overflow-hidden"
+      style={{ aspectRatio: "22 / 10", background: "#050510" }}
     >
-      <div className="relative flex-1 transition-all duration-700 ease-out" style={reggieStyle.wrap}>
-        <div className="absolute inset-0" style={reggieStyle.img} />
-        <div className="absolute inset-0 pointer-events-none" style={reggieStyle.tint} />
-        {speaking && speaker === "reggie" && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              boxShadow: `inset 0 0 240px -40px ${ANALYSTS.reggie.accent}55`,
-              animation: "reggieSpeakPulse 2.4s ease-in-out infinite",
-            }}
-          />
-        )}
+      {/* --- Layer 1: monitor wall / studio backdrop --- */}
+      <div className="absolute inset-0" style={monitorWallStyle} />
+      <div className="absolute inset-0" style={monitorWallOverlayStyle} />
+      {/* Studio ambient glow left/right */}
+      <div className="absolute inset-y-0 left-0 w-1/3 pointer-events-none" style={{ background: "radial-gradient(circle at 0% 50%, rgba(30,93,255,0.16), transparent 60%)" }} />
+      <div className="absolute inset-y-0 right-0 w-1/3 pointer-events-none" style={{ background: "radial-gradient(circle at 100% 50%, rgba(0,229,255,0.12), transparent 60%)" }} />
+
+      {/* --- Layer 2: both hosts, sized to leave studio air around them --- */}
+      <div className="absolute inset-x-0 top-0" style={{ bottom: "22%" }}>
+        <div className="w-full h-full flex">
+          <HostPane host="reggie" focus={focus} speaker={speaker} speaking={speaking} align="right" />
+          <HostPane host="marc" focus={focus} speaker={speaker} speaking={speaking} align="left" />
+        </div>
       </div>
 
-      {/* Vertical seam blend between the two panes */}
-      <div
-        className="w-px flex-shrink-0 self-stretch pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.10) 30%, rgba(255,255,255,0.10) 70%, transparent 100%)",
-        }}
-      />
-
-      <div className="relative flex-1 transition-all duration-700 ease-out" style={marcStyle.wrap}>
-        <div className="absolute inset-0" style={marcStyle.img} />
-        <div className="absolute inset-0 pointer-events-none" style={marcStyle.tint} />
-        {speaking && speaker === "marc" && (
+      {/* --- Layer 3: desk-front with THE TICKER logo strip --- */}
+      <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20" style={{ height: "22%" }}>
+        {/* desk plane */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(5,5,16,0) 0%, rgba(5,5,16,0.85) 12%, rgba(8,10,26,0.98) 45%, #05070f 100%)",
+          }}
+        />
+        {/* thin lit rim across the desk edge */}
+        <div
+          className="absolute inset-x-0 top-0"
+          style={{
+            height: "3px",
+            background:
+              "linear-gradient(90deg, transparent 0%, #1e5dff88 22%, #1e5dff 46%, #00e5ff 54%, #00e5ffaa 78%, transparent 100%)",
+            boxShadow: "0 0 24px 4px rgba(30,93,255,0.55)",
+          }}
+        />
+        {/* THE TICKER wordmark carved into the desk front, centered */}
+        <div className="absolute inset-0 flex items-center justify-center">
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="font-headline text-white/80 tracking-[0.35em]"
             style={{
-              boxShadow: `inset 0 0 240px -40px ${ANALYSTS.marc.accent}55`,
-              animation: "reggieSpeakPulse 2.4s ease-in-out infinite",
+              fontSize: "clamp(16px, 2.2vw, 28px)",
+              textShadow:
+                "0 0 18px rgba(30,93,255,0.7), 0 1px 0 rgba(0,0,0,0.6)",
             }}
-          />
-        )}
+          >
+            THE&nbsp;TICKER
+          </div>
+        </div>
       </div>
 
-      {/* Vignette so the lower-third overlays sit cleanly */}
+      {/* Vignette so the lower-third overlays stay readable */}
       <div
-        className="absolute inset-x-0 bottom-0 pointer-events-none z-10"
+        className="absolute inset-0 pointer-events-none z-10"
         style={{
-          height: "32%",
-          background:
-            "linear-gradient(to bottom, rgba(10,10,14,0) 0%, rgba(10,10,14,0.55) 55%, rgba(10,10,14,0.95) 100%)",
+          boxShadow: "inset 0 0 160px 20px rgba(0,0,0,0.55)",
         }}
       />
     </div>
   );
 }
 
-// Compute the per-pane style: flex-grow, image position (which side of its
-// crop to show), and dim/highlight tint based on speaker/focus.
-function paneStyle(host, { focus, speaker, speaking }) {
+function HostPane({ host, focus, speaker, speaking, align }) {
   const a = ANALYSTS[host] || {};
   const src = a.hero ? `${BACKEND_URL}${a.hero}` : "";
 
-  // flex-grow: focused side takes 2/3, other 1/3. Equal when no focus.
-  const grow = focus === host ? 2.2 : focus ? 0.55 : 1;
-
-  // Both stage images are cropped tight to the character. Position them so
-  // the person is anchored toward the "outer" edge of their own pane — Reggie
-  // sits toward the right of his pane so his gesture reads into the middle;
-  // Marc sits toward the left of his pane for the mirror effect.
-  const bgPos = host === "reggie" ? "center right" : "center left";
-
+  const grow = focus === host ? 1.8 : focus ? 0.7 : 1;
   const isSpeaker = speaker === host && speaking;
   const isListening = speaker && speaker !== host;
 
-  return {
-    wrap: {
-      flexGrow: grow,
-      flexBasis: 0,
-      minWidth: 0,
-    },
-    img: {
-      backgroundImage: src ? `url(${src})` : undefined,
-      backgroundSize: "cover",
-      backgroundPosition: bgPos,
-      backgroundRepeat: "no-repeat",
-      filter: isSpeaker
-        ? "brightness(1.05) saturate(1.1)"
-        : isListening
-        ? "brightness(0.62) saturate(0.85)"
-        : "brightness(0.92)",
-      transition: "filter 400ms ease-out",
-    },
-    tint: {
-      background: isSpeaker
-        ? `linear-gradient(180deg, ${a.accent}00 40%, ${a.accent}22 100%)`
-        : "transparent",
-      transition: "background 400ms ease-out",
-    },
-  };
+  // Give the character breathing room: sit them at ~68% of pane height so
+  // the studio backdrop reads above them, and the desk bar shows below.
+  return (
+    <div
+      className="relative transition-all duration-700 ease-out"
+      style={{ flexGrow: grow, flexBasis: 0, minWidth: 0 }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: src ? `url(${src})` : undefined,
+          backgroundSize: "auto 92%",
+          backgroundPosition: `${align === "right" ? "72%" : "28%"} 26%`,
+          backgroundRepeat: "no-repeat",
+          filter: isSpeaker
+            ? "brightness(1.05) saturate(1.08) contrast(1.02)"
+            : isListening
+            ? "brightness(0.55) saturate(0.75)"
+            : "brightness(0.88)",
+          transition: "filter 400ms ease-out, background-position 700ms ease-out",
+        }}
+      />
+      {isSpeaker && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            boxShadow: `inset 0 -180px 120px -80px ${a.accent}55`,
+            animation: "reggieSpeakPulse 2.6s ease-in-out infinite",
+          }}
+        />
+      )}
+    </div>
+  );
 }
+
+// ---- Studio backdrop (CSS "monitor wall") ----
+const monitorWallStyle = {
+  background:
+    "linear-gradient(180deg, #0a0f22 0%, #060814 60%, #04060f 100%)",
+};
+
+// A tiled dim monitor pattern — subtle rectangles suggesting a wall of
+// video screens without competing with the hosts for attention.
+const monitorWallOverlayStyle = {
+  backgroundImage: [
+    // horizontal scan lines
+    "repeating-linear-gradient(0deg, rgba(30,93,255,0.045) 0 1px, transparent 1px 4px)",
+    // monitor tiles
+    "repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 78px, rgba(30,93,255,0.05) 78px 82px)",
+    "repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 44px, rgba(0,229,255,0.04) 44px 48px)",
+  ].join(","),
+  mixBlendMode: "screen",
+  opacity: 0.75,
+};
