@@ -39,13 +39,13 @@ export default function TwoHostDesk({ shot, speaker, speaking }) {
   return (
     <div
       className="relative w-full overflow-hidden"
-      style={{ aspectRatio: "24 / 10", background: "#050510" }}
+      style={{ aspectRatio: "1129 / 646", background: "#050510" }}
     >
       {/* Base studio composition */}
       <div
         className="absolute inset-0 transition-transform duration-1000 ease-out"
         style={{
-          backgroundImage: `url(${BACKEND_URL}/api/hosts/studio.png)`,
+          backgroundImage: `url(${BACKEND_URL}/api/hosts/studio_v2.png)`,
           backgroundSize: "cover",
           backgroundPosition: "center 30%",
           backgroundRepeat: "no-repeat",

@@ -33,6 +33,7 @@ from analysts import (
 )
 from voice_service import ensure_audio, audio_url_for
 from voice_picker import get_picker_state, set_active as picker_set_active, ensure_preview, CANDIDATES
+import nhl_data
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -105,7 +106,26 @@ async def list_analysts():
 
 @api.get("/ticker")
 async def ticker():
-    return {"items": TICKER_ITEMS}
+    """Merge live NHL headlines from SportsData.io with the durable mock
+    lines so the banner always feels alive."""
+    live = nhl_data.ticker_headlines(limit=6)
+    combined = live + TICKER_ITEMS if live else TICKER_ITEMS
+    return {"items": combined, "live": bool(live)}
+
+
+@api.get("/nhl/standings")
+async def nhl_standings():
+    """Live NHL standings from SportsData.io (5-min cached). Empty list
+    if the trial key is missing or the upstream returns nothing."""
+    data = nhl_data.standings() or []
+    return {"season": nhl_data.CURRENT_SEASON, "teams": data, "live": nhl_data.is_available()}
+
+
+@api.get("/nhl/games")
+async def nhl_games():
+    """Today's scheduled/live NHL games (SportsData.io, 5-min cached)."""
+    data = nhl_data.today_games() or []
+    return {"games": data, "live": nhl_data.is_available()}
 
 
 @api.get("/suggested-questions")
@@ -154,10 +174,12 @@ async def quick_reply(req: QuickReplyReq):
                 session_id=str(uuid.uuid4()),
                 system_message=(
                     f"{analyst['system_prompt']}\n\n"
+                    f"--- LIVE NHL DATA ---\n{nhl_data.league_leaders_context()}\n\n"
                     "The user just walked up to the desk mid-broadcast and dropped a "
                     "single word or short phrase — a team, a player, a topic. Fire back "
                     "ONE quick in-character line. Max 22 words. No preamble, no 'great "
-                    "topic', no emoji. Land the point. Substance under the joke."
+                    "topic', no emoji. Land the point. Substance under the joke. Cite "
+                    "live standings when relevant."
                 ),
             ).with_model("anthropic", "claude-sonnet-4-5-20250929")
             resp = await chat.send_message(UserMessage(text=topic))
@@ -345,14 +367,17 @@ async def ask_stream(req: AskRequest):
 
     stat_context = build_stat_context(req.question)
     stat_card = build_stat_card(req.question)
+    live_context = nhl_data.league_leaders_context()
     session_id = req.session_id or str(uuid.uuid4())
 
     system_message = (
         f"{analyst['system_prompt']}\n\n"
         f"You are answering a viewer question live on The Ticker (NHL desk).\n\n"
-        f"{stat_context}\n\n"
-        "Use these stats when relevant. If the numbers don't support a direct answer, "
-        "acknowledge that in character and offer the closest angle you would defend on air."
+        f"--- LIVE DATA (SportsData.io, updated live) ---\n{live_context}\n\n"
+        f"--- REFERENCE STATS ---\n{stat_context}\n\n"
+        "Use the LIVE data first when relevant — it's from tonight. Use the reference stats "
+        "for player-level context. If the numbers don't support a direct answer, acknowledge "
+        "that in character and offer the closest angle you'd defend on air."
     )
 
     chat = LlmChat(
