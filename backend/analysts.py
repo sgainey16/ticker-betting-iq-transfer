@@ -165,7 +165,7 @@ BANTER_BY_TOPIC = {
             {"speaker": "marc", "shot": "two_laughing", "text": "Enjoy it. It won't happen again this segment."},
             {"speaker": "reggie", "shot": "reggie_hands_open", "text": "Alright — real quick before we go to break. McDavid. Ninety points in forty-eight games."},
             {"speaker": "marc", "shot": "marc_explaining", "text": "On pace for one-fifty-four. And you know what's wild? We stopped being surprised."},
-            {"speaker": "reggie", "shot": "reggie_closing_smile" if False else "reggie_smirking", "text": "That's the story every night. The story is nobody talks about it anymore."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "That's the story every night. The story is nobody talks about it anymore."},
             {"speaker": "marc", "shot": "two_closing", "text": "Stick around — Trade Deadline setup next."},
         ],
     ],
