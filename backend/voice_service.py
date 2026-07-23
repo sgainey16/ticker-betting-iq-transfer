@@ -26,7 +26,7 @@ ANALYST_VOICES = {
     # Reggie Banks — lead anchor, ex-NHL. Confident US-broadcast baritone.
     # voice_id may be swapped when user picks a Voice-Design candidate in /voice-lab.
     "reggie": {
-        "voice_id": "5Q0t7uMcjvnagumLfvZi",  # Paul placeholder
+        "voice_id": "QFNlGyAI98kVm40cB3ik",  # user's Voice Design draft #1
         "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.10},
     },
     # Marc — 60, analytics co-host. Calm, measured, warm. Placeholder is a

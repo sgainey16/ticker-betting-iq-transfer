@@ -263,63 +263,47 @@ export default function LiveDesk() {
       <audio ref={audioRefB} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
-      {/* Header row: LIVE + topic tabs + mute */}
-      <div className="mb-4 flex items-center gap-2 flex-wrap">
-        <div className="font-accent text-xs uppercase tracking-[0.35em] text-[#1e5dff]">
-          <span className="tick-dot live-pulse inline-block mr-2 align-middle" />
-          Live · Reggie &amp; Marc · NHL Desk
-        </div>
+      {/* Header row: mute + topic tabs (LIVE label is baked into the hero) */}
+      <div className="mb-3 flex items-center gap-2 flex-wrap">
+        {topics.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap flex-1">
+            {topics.map((t) => {
+              const active = t.id === activeTopic;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setActiveTopic(t.id)}
+                  data-testid={`desk-topic-${t.id}`}
+                  className={`px-4 py-2.5 rounded-full text-xs font-accent uppercase tracking-widest transition-all ${
+                    active
+                      ? "bg-[#1e5dff] text-white shadow-[0_0_20px_-4px_rgba(30,93,255,0.7)] scale-105"
+                      : "border border-[#2d2d35] text-white/60 hover:border-[#1e5dff]/60 hover:text-white"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setMuted((m) => !m)}
-            data-testid={TEST_IDS.desk.muteBtn}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
-            title={muted ? "Unmute the desk" : "Mute the desk"}
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            {muted ? "Muted" : "Sound On"}
-          </button>
-        </div>
+        <button
+          onClick={() => setMuted((m) => !m)}
+          data-testid={TEST_IDS.desk.muteBtn}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors ml-auto"
+          title={muted ? "Unmute the desk" : "Mute the desk"}
+        >
+          {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {muted ? "Muted" : "Sound On"}
+        </button>
       </div>
-
-      {/* Topic tabs */}
-      {topics.length > 0 && (
-        <div className="mb-3 flex items-center gap-2 flex-wrap">
-          {topics.map((t) => {
-            const active = t.id === activeTopic;
-            return (
-              <button
-                key={t.id}
-                onClick={() => setActiveTopic(t.id)}
-                data-testid={`desk-topic-${t.id}`}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-accent uppercase tracking-widest transition-colors ${
-                  active
-                    ? "bg-[#1e5dff] text-white"
-                    : "border border-[#2d2d35] text-white/60 hover:border-white/40 hover:text-white"
-                }`}
-              >
-                {t.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* Broadcast frame */}
       <div
         data-testid={TEST_IDS.desk.shotFrame}
         className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]"
       >
-        <TwoHostDesk shot={currentShot} speaking={!!currentSpeaker && audioUnlocked && !muted} />
-
-        {/* ON AIR pill */}
-        <div className="absolute top-5 left-5 flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur border border-white/10 z-20">
-          <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
-          <span className="font-accent text-xs uppercase tracking-widest text-white">
-            On Air · The Ticker
-          </span>
-        </div>
+        <TwoHostDesk shot={currentShot} speaker={currentSpeaker} speaking={!!currentSpeaker && audioUnlocked && !muted} />
 
         {/* Lower-third — swap accent + label to whoever's speaking */}
         <div
@@ -353,7 +337,7 @@ export default function LiveDesk() {
             <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
               {audioUnlocked
                 ? "The desk is listening…"
-                : "Tap anywhere to start the broadcast"}
+                : "Tap a topic to start the broadcast"}
             </div>
           )}
         </div>

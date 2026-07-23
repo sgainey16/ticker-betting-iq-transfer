@@ -32,6 +32,7 @@ from analysts import (
     quick_fallback_line,
 )
 from voice_service import ensure_audio, audio_url_for
+from voice_picker import get_picker_state, set_active as picker_set_active, ensure_preview, CANDIDATES
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -289,6 +290,46 @@ async def stats_players():
 @api.get("/stats/teams")
 async def stats_teams():
     return {"teams": TEAMS}
+
+
+# ---------- Voice Picker (2-host: Reggie + Marc) ----------
+@api.get("/voices/picker")
+async def voices_picker():
+    """Return the candidate voice roster for each host. Preview MP3s are
+    generated lazily on the first /voices/preview call — this endpoint stays
+    fast so the page opens instantly."""
+    return {"hosts": get_picker_state(pregenerate=False)}
+
+
+@api.post("/voices/preview/{host}/{voice_id}")
+async def voices_preview(host: str, voice_id: str):
+    """Force-generate the preview clip for a specific candidate (or return
+    the cached URL if it already exists)."""
+    if host not in CANDIDATES:
+        raise HTTPException(status_code=404, detail="unknown host")
+    match = next((c for c in CANDIDATES[host] if c["voice_id"] == voice_id), None)
+    if not match:
+        raise HTTPException(status_code=404, detail="voice_id not a candidate for this host")
+    url = ensure_preview(host, match)
+    if not url:
+        raise HTTPException(status_code=500, detail="preview generation failed (check ElevenLabs quota)")
+    return {"preview_url": url}
+
+
+class VoicePickReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    host: str
+    voice_id: str
+
+
+@api.post("/voices/set-active")
+async def voices_set_active(req: VoicePickReq):
+    """Make this candidate the active voice for the host + wipe the cached
+    banter mp3s so they regenerate with the new voice."""
+    try:
+        return picker_set_active(req.host, req.voice_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ---------- Ask Our Analyst Anything ----------

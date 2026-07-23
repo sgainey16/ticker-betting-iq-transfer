@@ -5,6 +5,7 @@ import Home from "@/pages/Home";
 import AskAnalyst from "@/pages/AskAnalyst";
 import Predictions from "@/pages/Predictions";
 import VoiceLab from "@/pages/VoiceLab";
+import Voices from "@/pages/Voices";
 import { Toaster } from "sonner";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
             <Route path="/ask" element={<AskAnalyst />} />
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
+            <Route path="/voices" element={<Voices />} />
           </Routes>
         </Layout>
         <Toaster theme="dark" richColors position="bottom-right" />

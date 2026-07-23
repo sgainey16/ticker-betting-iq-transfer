@@ -26,7 +26,7 @@ export default function Layout({ children }) {
             <div className="leading-tight">
               <div className="font-headline text-lg text-white">THE TICKER</div>
               <div className="font-accent text-[10px] text-white/50 tracking-[0.3em]">
-                AI · HOCKEY DESK
+                SPORTS NETWORK
               </div>
             </div>
           </Link>
@@ -60,12 +60,20 @@ export default function Layout({ children }) {
             >
               Predictions
             </NavLink>
+            <NavLink
+              to="/voices"
+              data-testid="nav-voices"
+              className={({ isActive }) =>
+                `${linkBase} ${isActive ? active : inactive}`
+              }
+            >
+              Voices
+            </NavLink>
           </nav>
 
           <div className="hidden sm:flex items-center gap-2 text-xs font-accent uppercase tracking-widest">
-            <Radio className="w-4 h-4 text-[#1e5dff]" />
-            <span className="text-white/70">On Air</span>
-            <span className="tick-dot live-pulse ml-1" />
+            <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
+            <span className="text-[#1e5dff]">Live</span>
           </div>
         </div>
       </header>
