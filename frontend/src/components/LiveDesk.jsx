@@ -6,8 +6,8 @@ import { Send, Volume2, VolumeX } from "lucide-react";
 import { playTickerSting } from "@/lib/sting";
 
 const PAUSE_BETWEEN_TURNS = 0;
-const INTERRUPT_START_EARLY_MS = 1100; // hard cut-in
-const NORMAL_OVERLAP_MS = 500; // compensate for the mp3 lead-in silence + browser overhead
+const INTERRUPT_START_EARLY_MS = 900; // hard cut-in, but less nuclear
+const NORMAL_OVERLAP_MS = 220; // relaxed pocket — no dead air, room for jokes to land
 
 function playStinger(audioCtx, gain = 0.12) {
   // Delegated to the shared Ticker sting so every "show is on" moment sounds
