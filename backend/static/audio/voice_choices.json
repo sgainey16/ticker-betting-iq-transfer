@@ -18,5 +18,15 @@
     "voice_id": "5uSBiecvz1GMSIyYpD2S",
     "voice_name": "Ace",
     "preview_index": 3
+  },
+  "marc": {
+    "voice_id": "3Mpc52HLMolH3B7bOzgW",
+    "settings": {
+      "stability": 0.55,
+      "similarity_boost": 0.78,
+      "style": 0.3,
+      "use_speaker_boost": true,
+      "speed": 1.02
+    }
   }
 }

@@ -77,9 +77,15 @@ CANDIDATES = {
     ],
     "marc": [
         {
+            "voice_id": "3Mpc52HLMolH3B7bOzgW",
+            "name": "Your Voice Design #1",
+            "vibe": "Calming 60-year-old with dry wit — your own draft",
+            "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.30, "use_speaker_boost": True, "speed": 1.02},
+        },
+        {
             "voice_id": "pqHfZKP75CvOlQylNhV4",
             "name": "Bill",
-            "vibe": "Mature warm — current pick",
+            "vibe": "Mature warm — earlier pick",
             "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 1.02},
         },
         {
