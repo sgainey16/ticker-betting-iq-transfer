@@ -12,6 +12,7 @@ const NAV = [
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/fantasy", label: "Fantasy", testid: TEST_IDS.nav.fantasy },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
+  { to: "/back-office", label: "Back Office", testid: TEST_IDS.nav.backOffice },
   { to: "/login", label: "Login", testid: TEST_IDS.nav.login },
 ];
 

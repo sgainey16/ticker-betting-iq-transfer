@@ -45,6 +45,7 @@ export const TEST_IDS = {
     stats: "nav-stats",
     login: "nav-login",
     predictions: "nav-predictions",
+    backOffice: "nav-back-office",
   },
   home: {
     tickerBanner: "ticker-banner",
@@ -98,5 +99,22 @@ export const TEST_IDS = {
     topicInput: "desk-topic-input",
     topicSubmit: "desk-topic-submit",
     quickReply: "desk-quick-reply",
+  },
+  backOffice: {
+    pageRoot: "back-office-page",
+    tab: (id) => `back-office-tab-${id}`,
+    picksTable: "back-office-picks-table",
+    edgeScoreValue: "back-office-edge-score-value",
+    fantasyDeepLink: "back-office-fantasy-deep-link",
+    socialProfile: "back-office-social-profile",
+    avatarUnlockBar: "back-office-avatar-unlock-bar",
+    prefsFavTeams: "back-office-prefs-fav-teams",
+    prefsPaceSlider: "back-office-prefs-pace-slider",
+    membershipPlan: "back-office-membership-plan",
+  },
+  presser: {
+    subnavDeepDive: "presser-subnav-deep-dive",
+    subnavAnalytics: "presser-subnav-analytics",
+    subnavGames: "presser-subnav-games",
   },
 };

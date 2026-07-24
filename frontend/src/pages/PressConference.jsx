@@ -135,8 +135,34 @@ export default function PressConference() {
         )}
       </div>
 
+      {/* Sticky sub-nav — Presser is locked to 3 sections: Deep Dive · Analytics · Games */}
+      <div className="sticky top-16 z-30 -mx-5 sm:-mx-8 px-5 sm:px-8 py-2 bg-[#05050f]/85 backdrop-blur-md border-b border-[#2d2d35]">
+        <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          {[
+            { id: "deep-dive", label: "Deep Dive", testid: TEST_IDS.presser.subnavDeepDive },
+            { id: "analytics", label: "Analytics", testid: TEST_IDS.presser.subnavAnalytics },
+            { id: "games",     label: "Games",     testid: TEST_IDS.presser.subnavGames },
+          ].map((s) => (
+            <a
+              key={s.id}
+              href={`#presser-${s.id}`}
+              data-testid={s.testid}
+              onClick={(e) => {
+                e.preventDefault();
+                document
+                  .getElementById(`presser-${s.id}`)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+              className="px-3 py-1.5 rounded-md font-accent text-[11px] uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap"
+            >
+              {s.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+
       {/* Big hero + controls */}
-      <div className="grid lg:grid-cols-12 gap-6">
+      <div id="presser-deep-dive" className="grid lg:grid-cols-12 gap-6 scroll-mt-32">
         {/* Hero photo */}
         <div className="lg:col-span-5 relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d13] min-h-[360px] sm:min-h-[440px]">
           <div
@@ -325,11 +351,11 @@ export default function PressConference() {
         </div>
       </div>
 
-      {/* Deep Dive Analytics tabs */}
-      <section>
+      {/* Analytics tabs */}
+      <section id="presser-analytics" className="scroll-mt-32">
         <div className="flex items-center gap-2 mb-3">
           <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-white/60">
-            Deep Dive Analytics
+            Analytics
           </div>
           <div className="flex-1 h-px bg-[#2d2d35]" />
         </div>
@@ -360,7 +386,7 @@ export default function PressConference() {
       </section>
 
       {/* Games tabs */}
-      <section>
+      <section id="presser-games" className="scroll-mt-32">
         <div className="flex items-center gap-2 mb-3">
           <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-white/60">
             Games · your record shows here

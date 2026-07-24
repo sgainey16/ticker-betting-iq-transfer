@@ -9,6 +9,7 @@ import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
 import Fantasy from "@/pages/Fantasy";
 import Login from "@/pages/Login";
+import BackOffice from "@/pages/BackOffice";
 import DeskPreview from "@/pages/DeskPreview";
 import ComingSoon from "@/pages/ComingSoon";
 import { Toaster } from "sonner";
@@ -25,6 +26,7 @@ function App() {
             <Route path="/ask" element={<Navigate to="/press-conference" replace />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/fantasy" element={<Fantasy />} />
+            <Route path="/back-office" element={<BackOffice />} />
             <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
