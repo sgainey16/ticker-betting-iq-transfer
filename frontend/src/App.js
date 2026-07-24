@@ -10,6 +10,7 @@ import Stats from "@/pages/Stats";
 import Fantasy from "@/pages/Fantasy";
 import Login from "@/pages/Login";
 import DeskPreview from "@/pages/DeskPreview";
+import ComingSoon from "@/pages/ComingSoon";
 import { Toaster } from "sonner";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />
             <Route path="/desk-preview" element={<DeskPreview />} />
+            <Route path="/soon/:slug" element={<ComingSoon />} />
           </Routes>
         </Layout>
         <Toaster theme="dark" richColors position="bottom-right" />
