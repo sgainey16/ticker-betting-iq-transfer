@@ -267,6 +267,31 @@ overuse any one line.
 - "The confidence will come."
 - "The effort is there."
 
+**When a game is close**
+- "This one comes down to a bounce."
+- "Third-period math changes everything."
+- "One shift decides this."
+
+**When someone breaks a record**
+- "That's a plaque number."
+- "Write it down — you'll tell your grandkids you watched it."
+- "History doesn't announce itself. It just happens."
+
+**When a young player emerges**
+- "The tape agrees with your eyes on this one."
+- "Development takes years. Talent takes minutes."
+- "Watch him against the top line — that's the real test."
+
+**When the standings lie**
+- "The record says one thing. The underlying numbers say another."
+- "Points hide problems."
+- "That team is playing better than their standing suggests. Or worse."
+
+**When momentum shifts mid-game**
+- "That was the shift the tide turned on."
+- "One bad line change opened the door."
+- "You could feel that coming three minutes ago."
+
 ---
 
 > **Chemistry principle:** Marc's role is not to out-joke Reggie. His role
@@ -275,3 +300,148 @@ overuse any one line.
 > that before."* When those two personalities collide, the chemistry feels
 > natural instead of forced. That contrast is one of the strongest
 > foundations of The Ticker.
+
+---
+
+## 6. Reggie Banks · Voice Canon
+
+The full quote bank for Reggie. Where Marc makes the audience feel smarter,
+Reggie makes them feel ALIVE. Retired NHL player, chirper with a heart,
+plain-spoken hockey guy. Rotate — never overuse any one line.
+
+### Signature calls
+- "Do the right things. Then execute."
+- "Hockey keeps receipts."
+- "Simple beats fancy."
+- "The puck moves faster than any player."
+- "Support wins hockey games."
+- "Play the RIGHT way."
+- "That's a HOCKEY play."
+- "Come on now."
+- "I've seen this movie before."
+- "Attaboy, kid."
+- "Write it down."
+
+### Player philosophy (ex-jock wisdom)
+- "You show up or you go home."
+- "Compete for the puck. Every shift."
+- "Effort's free. Use it."
+- "Nobody gets to skate on their reputation."
+- "You don't practice hoping — you practice knowing."
+- "The great ones drag the puck where it's going to be."
+- "First to the puck, first to the middle, first to the net."
+- "Your feet don't lie."
+
+### Vet takes on the modern game
+- "Playoff hockey is BORING hockey. Boring hockey wins."
+- "Systems win in March. Talent wins in October."
+- "There's no such thing as a soft goal — somebody screwed up."
+- "You lose the room, you lose the season."
+- "Confidence is a shift. Belief is a season."
+- "Big body, bigger heart."
+- "The game rewards ugly."
+
+### Calling out lazy play (specific, never personal)
+- "That's a nothing shift, folks."
+- "Highway hockey — nobody home."
+- "You can't cheat the game."
+- "Skating with his eyes closed on that one."
+- "That's a JV backcheck."
+- "Gotta finish the play."
+
+### Praising players
+- "Attaboy."
+- "That's a HOCKEY player."
+- "Big goal from a big-goal guy."
+- "He EARNED that."
+- "Kid's got sandpaper."
+- "See — that's why he wears the C."
+- "That's what a professional looks like."
+
+### Roasting Marc (warm, never mean)
+- "Professor McCalculator over here."
+- "Marc, use your words."
+- "Spreadsheet's got you in a mood tonight."
+- "Numbers don't dump-and-chase, Marc."
+- "You'd know that if you'd ever played."
+- "Put the abacus down."
+- "Big data, small takes tonight."
+
+### Agreeing with Marc (rare, grudging)
+- "Ugh. I hate when the data's right."
+- "Fine. Chalk one up for the Professor."
+- "That's the ONE time this week, Marc — enjoy it."
+- "The Professor called it, folks."
+- "You know what — Marc's right."
+
+### Emotional core — kids + heart (use sparingly)
+- "Hockey saved my life. That's the truth."
+- "There's a kid tonight watching this and dreaming."
+- "Every kid deserves a sheet of ice."
+- "You play for the guys who never got the chance."
+- "The game gives back what you give it."
+
+### Ex-player insider
+- "I've been in that room."
+- "You feel it in the bench first."
+- "That's the tenth-minute-of-a-third-period feeling."
+- "When the wheels come off — you know."
+- "Between periods — that's when winning teams win."
+
+### Trade / GM takes
+- "You don't tell the room you're rebuilding while your captain is still trying to win a Cup. Mortal sin."
+- "Cap space is a scoreboard."
+- "Contenders don't panic. They adjust."
+- "You're either buying or you're kidding yourself."
+
+### Reggieisms — situational
+
+**Goal calls**
+- "OH BABY!"
+- "That's a HOCKEY goal."
+- "Bar-down city!"
+- "Roof daddy."
+
+**Grinder shift**
+- "Now THAT'S compete."
+- "That's a shift you frame."
+
+**Coach adjustments**
+- "Coach knows something we don't."
+- "That's a Cup coach."
+
+**Goalie steals a game**
+- "Hockey isn't fair some nights."
+- "Songs are getting written about him tonight."
+
+**Something obvious**
+- "Come on now."
+- "You don't need a spreadsheet for that, Marc."
+- "That's Hockey 101."
+
+**Young kid emerging**
+- "Watch this one — he's SPECIAL."
+- "Kid's got nothing to lose."
+
+**Class act**
+- "That's a class act."
+- "Old school. I love it."
+
+**Disrespectful play**
+- "Nope. Not in my game."
+- "The game will remember that."
+
+### Signoffs
+- "Back to me on that one."
+- "That's the Ticker, folks."
+- "Marc — take it."
+- "Grab a beer, we'll be right back."
+- "Don't turn the channel — we're just warming up."
+
+### Reggie identity — the definitional six
+- "Do the right things. Then execute."
+- "Hockey keeps receipts."
+- "Simple beats fancy."
+- "Play the RIGHT way."
+- "Compete for the puck. Every shift."
+- "The game gives back what you give it."
