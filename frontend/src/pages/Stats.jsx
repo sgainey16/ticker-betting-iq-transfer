@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TEST_IDS } from "@/lib/config";
-import { LineChart, Trophy, Shield, Calendar, Mic, Crown, ArrowRight } from "lucide-react";
+import { LineChart, Trophy, Shield, Calendar, Mic, Crown, ArrowRight, X } from "lucide-react";
 
 const TABS = [
   { id: "skaters",  label: "Skaters",   icon: LineChart, testid: TEST_IDS.stats.tabSkaters },
