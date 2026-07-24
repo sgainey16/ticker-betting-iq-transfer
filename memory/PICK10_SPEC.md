@@ -1,5 +1,5 @@
 # The Ticker — "Pick 10" Daily Prop Game: Build Spec
-Companion to the analytics handoff doc (`MATCHUP_ANALYTICS_SPEC.md`). That doc defines the Player Prop Engine — this doc defines the daily game built on top of it.
+Companion to the analytics handoff doc (`ticker-analytics-handoff.md`). That doc defines the Player Prop Engine — this doc defines the daily game built on top of it.
 
 ---
 
@@ -39,7 +39,7 @@ A daily, low-friction prediction game: pick 10 outcomes, come back tomorrow to s
 - Perfect-10 count as its own ranking stat (may add as a secondary badge later)
 
 ## 7. Dependencies
-- Requires the Player Prop Engine (see `MATCHUP_ANALYTICS_SPEC.md`, section 6) to be generating daily prop predictions with confidence scores — Pick 10's question board is pulled directly from that output.
+- Requires the Player Prop Engine (see `ticker-analytics-handoff.md`, section 6) to be generating daily prop predictions with confidence scores — Pick 10's question board is pulled directly from that output.
 - Requires push notification infrastructure for the next-day results loop.
 
 ## 8. Brand reference
