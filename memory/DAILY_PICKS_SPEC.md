@@ -34,3 +34,15 @@ A simple daily win/loss prediction game, designed as an easy, launchable phase-1
 - A user-pick record: user ID, game ID, pick, whether it matched Reggie's pick (agree/fade flag), actual outcome, timestamp
 - A rolling win-percentage calculation per user, updated as game outcomes are confirmed
 - A rolling win-percentage / accuracy record for Reggie's picks specifically, for the "how'd the picks hold up" recap segment
+
+---
+
+## Sibling feature — Pick 10 daily prop game
+
+The Daily Picks game (this doc) tracks *game-outcome* accuracy — win/loss per game, one call per game Reggie covers, badge at 60%.
+
+A separate daily game — **Pick 10** — runs on top of the Player Prop Engine and tracks *prop-prediction* accuracy on a fixed 10-question daily board. See `PICK10_SPEC.md`.
+
+**Scoring is deliberately independent:** the two games have their own daily result, their own lifetime hit-rate, and their own badges/leaderboards. Never combined. This keeps each game's credibility clean and gives users two distinct achievements to chase.
+
+**Dependency order:** Daily Picks can ship in Phase 1 (only needs schedules + winner outcomes — free). Pick 10 waits for the Player Prop Engine to be online.
