@@ -12,10 +12,10 @@ function useQueryParam(name) {
 }
 
 export default function PressConference() {
+  // MVP: Reggie-only Presser. Future: 10-character selector will re-enable
+  // the preselect logic + host toggle UI. State kept as setter for that future.
   const preselect = useQueryParam("analyst");
-  const [analystId, setAnalystId] = useState(
-    preselect && ANALYSTS[preselect] ? preselect : "reggie",
-  );
+  const [analystId, setAnalystId] = useState("reggie");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [statCard, setStatCard] = useState(null);
@@ -32,7 +32,9 @@ export default function PressConference() {
   const analyst = ANALYSTS[analystId];
 
   useEffect(() => {
-    if (preselect && ANALYSTS[preselect]) setAnalystId(preselect);
+    // MVP: preselect intentionally ignored. Presser is Reggie-only.
+    // Re-enable when multi-character selector ships.
+    void preselect;
   }, [preselect]);
 
   useEffect(() => {
@@ -207,23 +209,9 @@ export default function PressConference() {
             </div>
           </div>
 
-          {/* Host toggle pinned top-right */}
-          <div className="absolute top-4 right-4 flex gap-1.5 rounded-full backdrop-blur-md p-1 border border-white/15 bg-black/40">
-            {ANALYST_ORDER.map((id) => (
-              <button
-                key={id}
-                onClick={() => setAnalystId(id)}
-                data-testid={TEST_IDS.ask.analystPick(id)}
-                className={`px-3 py-1 rounded-full font-accent text-[10px] uppercase tracking-widest transition-colors ${
-                  id === analystId
-                    ? "bg-white text-black"
-                    : "text-white/70 hover:text-white"
-                }`}
-              >
-                {ANALYSTS[id].short || ANALYSTS[id].role.split(" ")[0]}
-              </button>
-            ))}
-          </div>
+          {/* Host toggle — MVP is Reggie-only. Future: expand to ~10 characters.
+              Multi-analyst plumbing (setAnalystId, ANALYST_ORDER) kept intact
+              so future re-enable is a UI toggle change, not a rebuild. */}
         </div>
 
         {/* Controls column */}

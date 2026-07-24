@@ -1,5 +1,31 @@
 # The Ticker — PRD (Product Requirements Document)
 
+## Product Law — LOCKED 2026-02-25
+
+### Freemium mechanic (the value ratchet)
+- **Visits 1–10 (Trial Window)**: Full show + full picks + full Presser
+  - 3 free game picks per **day** (not lifetime — habit needs runway)
+  - 1 free Pick 10 attempt per day
+- **Visit 11+ (Non-subscriber wall)**: Show reduced to snippets/jokes only, no picks, no Presser streaming
+- **All Founding Member benefits**: full show + unlimited picks + Presser + Analytics + Fantasy AI + Back Office tracking
+
+### Pricing (two-tier — matches the two-audience split)
+- **$3.99/mo — "The Show Pass"** — full show + banter + character canon (casual/humor audience)
+- **$14.99–24.99/mo — "The Edge"** — everything above + picks + analytics + fantasy AI + Back Office (bettor/analytics audience)
+- **Founding Member locked-in-for-life at $3.99/mo** — first 5,000 users only (creates launch urgency)
+- **Annual option**: 17% off (~2 months free)
+
+### Product loop (the daily engine)
+1. User opens app at 5pm → **Show** (Reggie + Marc analyze tonight's slate)
+2. Show ends with **"Make Your Picks →"** CTA
+3. User makes **Game Picks** + tries **Pick 10**
+4. Tomorrow: user sees their W/L vs. Reggie → drives return
+5. Streaks + Edge Score + leaderboard → drives social sharing
+
+### Presser scope (MVP)
+- **Reggie-only** for MVP. Marc plumbing kept intact for future re-enable.
+- Post-MVP: expand to ~10 characters (Tank, Lou, Cody, Marc, etc.)
+
 ## Vision
 AI-powered NHL broadcast MVP with a two-host panel (Reggie Banks + Marc
 Collins). TV-quality feel, real NHL data, ElevenLabs-voiced audio,
@@ -54,6 +80,8 @@ fantasy back-office, subscription foundation with affiliate rails.
 - 3D/video avatars — deferred (budget protection)
 
 ## Change Log
+- **2026-02-25** — Presser locked to Reggie-only for MVP; analyst switcher UI removed; `?analyst=marc` URL trick disabled; multi-analyst state plumbing kept intact for future 10-character expansion. Product Law section added to PRD locking freemium mechanic (3 picks/day + 10-visit taper), two-tier pricing ($3.99 Show Pass / $14.99-24.99 The Edge), Founding Member 5,000-seat cap.
+- **2026-02-25** — Presser empty-state data card replaced with Back Office mini-ticker (Accuracy · Banners · Top Team), each row deep-links to `/back-office`; graceful hand-off to real stat card when a question is asked.
 - **2026-02-25** — Reggie Banks voice canon fully expanded — 12 categories baked into `system_prompt` (signature calls · player philosophy · vet takes · lazy play calls · praising · roasting Marc · agreeing with Marc · emotional/kids core · ex-player insider · trade/GM takes · situational Reggieisms · signoffs); `/app/memory/CHARACTER_STYLE_GUIDE.md` § 6 added. Marc canon extended with 5 new situational categories (close games · records · young players · standings-lie · momentum shifts). Live smoke test confirmed both hosts speaking authentically in-character.
 - **2026-02-25** — Back Office page shipped at `/back-office` — 6 tabs (Picks · Edge Score · Fantasy · Social · Preferences · Membership); Presser locked to 3-section layout with sticky sub-nav (Deep Dive · Analytics · Games); "Deep Dive Analytics" section renamed to "Analytics"
 - **2026-02-25** — Marc Collins voice canon locked in (patient, curious, wise — the audience-smartener); expanded `system_prompt` in `analysts.py`, added full Marcism quote bank to `CHARACTER_STYLE_GUIDE.md`, updated tagline + loading lines + fallback replies; daily ElevenLabs character-budget alarm live at `/api/tts/budget` (75k chars/day, ELEVENLABS_API_KEY refreshed, audio pipeline verified end-to-end)
