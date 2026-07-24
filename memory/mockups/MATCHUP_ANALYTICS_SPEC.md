@@ -30,7 +30,7 @@ This is the target architecture — a Master Hockey Analytics Bible with 1,000+ 
 12. **Referees** — crew assignment, penalty tendencies (home/away bias), fighting/misconduct frequency, game pace, ref history with specific teams/players ✅ *(referee assignment and PP-opportunity tendency already scoped)*
 13. **Arena Factors** — home ice advantage, ice quality, altitude, temperature, crowd noise, building scoring trends
 14. **Coaching** — record, challenge success, line matching, PP/PK strategy, pull-goalie timing ✅ *(coaching change, coach reaction to last game already scoped)*
-15. **Betting Market Intelligence** — opening/current line, sharp vs. public money, line movement, closing line value
+15. **Betting Market Intelligence** — opening/current line, sharp vs. public money, line movement, closing line value ✅ *(see section 6 — Player Prop Engine — for the full prop-market breakdown)*
 16. **Psychological / Intangibles** — revenge games, contract year, trade rumors, must-win/elimination/trap games, milestones ✅ *(this matches the intangibles list already scoped — see section 6)*
 17. **Team Culture** — leadership quality, locker room morale, body language, internal conflict, trade-deadline mood
 18. **Video Intelligence (future)** — forecheck pressure, gap control, passing lanes, skating stride, fatigue read from tape
@@ -66,7 +66,25 @@ For each matchup, rank every factor that mattered by weight, so predictions are 
 
 The exact weighting is a modeling question for later — the point for this build phase is that the UI/data model should support attaching a "why it mattered" ranking to every prediction, not just a single percentage.
 
-## 6. Confidence tiers & sourcing
+## 6. Player Prop Engine
+Game-outcome prediction ("who wins") is only one layer. The bigger, faster-growing market is player and game *props* — this should become its own dedicated engine with 100+ betting markets, each with its own analytics model, continuously tracked for prediction accuracy over time.
+
+**Top-tier markets (highest volume/priority to build first):**
+- **Player goal props** — anytime/first/last scorer, 2+ goals, hat trick. Needs: goals L5/L10, career vs. opponent, PP deployment, shot volume, xGoals, high-danger chances, linemates, defensive matchup, home/away splits
+- **Player point props** — over 0.5/1.5 points, 2+ assists, 3+ points. Needs: recent production, ice time, PP role, opponent PK, linemate strength, coach usage
+- **Shots on goal** — e.g. "Over 4.5 shots." Needs: average shots, L10, shot attempts, O-zone starts, opponent shots-allowed rate, game pace, home/away
+- **Live betting** — next goal, next penalty, will it go to OT. Needs: real-time momentum, in-game xG, zone time, goalie fatigue
+- **Same-game parlays** — correlate legs (e.g. team win + player goal + assist + over) and flag whether combining them is genuinely additive or double-counts the same underlying driver
+
+**Other markets to build toward:** assists (primary/secondary/PP), saves, goals against, faceoff wins, hits, blocked shots, penalty minutes, time on ice, team goals, total goals (over/under), first-period betting, power play props, empty net goals, fantasy-site props (DraftKings/FanDuel points), season-long bets (Rocket Richard, Hart, Calder, Vezina, division/President's Trophy), and "micro bets" (next team/player to score, will there be a penalty in the next 5 minutes, first fight, etc.)
+
+**Confidence display format** — every prop prediction should show its "why," not just a percentage:
+> **Matthews Anytime Goal — 78% Confidence**
+> 🔥 18 goals in last 20 games · 🎯 Averaging 5.8 shots/game · ⚡ Opponent allows 3rd-most slot chances · 🏒 Facing backup goalie (.892 SV%) · 💪 PP has converted in 8 of last 10 games · 📈 xG trend up 14% · 🤖 AI Edge: +11% vs. sportsbook implied odds
+
+**Host debate framing:** the two hosts should react to this differently, not just read it — one leaning into the bullish read, one flagging the counterpoint (e.g. a tough defensive matchup), so the prop comes with built-in perspective rather than a flat number.
+
+## 7. Confidence tiers & sourcing
 Every answer to a taxonomy question should carry one of three confidence tags, not be presented as uniformly certain:
 - **Fact** — official stats, box scores, confirmed lineups/injuries
 - **Reported** — beat writer or team-confirmed info not yet reflected in official data (e.g. a coach's presser comment)
@@ -80,17 +98,17 @@ Every answer to a taxonomy question should carry one of three confidence tags, n
 
 **Voice delivery rule:** the tier should control language, not just a UI tag — a Fact is stated flatly by the AI host, a Reported item gets "I'm hearing that..." framing, a Rumor gets an explicit "take this with a grain of salt" caveat before it's said aloud.
 
-## 7. Community consensus mechanic
+## 8. Community consensus mechanic
 Users can submit opinions/observations (e.g. "that slash looked like it'll affect his shot") into the forum tied to a specific taxonomy question. Other users upvote/agree. Once agreement crosses a set threshold (e.g. 70%+ of a minimum vote count), the claim is promoted from forum chatter into a **"Community Consensus"** tag on the matchup sheet — a tier between Reported and Rumor, since it's aggregated across many observers rather than one source. Below threshold, it stays visible only in the forum, not promoted to the main sheet.
 
 Open question to settle before building: should the consensus badge show which specific users contributed (reinforces trust in sharp predictors, ties into the "follow high-accuracy users" feature) or stay anonymous/aggregate (protects against brigading a specific claim)?
 
-## 8. Delivery channels
+## 9. Delivery channels
 The filled-out question list per game needs to reach paying users two ways:
 - **Visual** — the matchup sheet / deep-dive UI (this file's companion HTML)
 - **Verbal** — through the "Ask Our Analyst" voice feature, applying the same confidence-tier language rules above
 
-## 9. Intangibles layer (folds into category 16 above)
+## 10. Intangibles layer (folds into category 16 above)
 These are judgment-based factors the AI should weigh qualitatively — they don't come from a stat query, but should influence the confidence/framing of a prediction:
 - Revenge game (player facing a former team)
 - Contract-year motivation
@@ -102,7 +120,7 @@ These are judgment-based factors the AI should weigh qualitatively — they don'
 - National TV / rivalry-atmosphere spotlight
 - Recent bad blood (fights, scrums, controversial hit in the last meeting)
 
-## 10. Brand reference
+## 11. Brand reference
 Full brand guide already exists for The Ticker — reference it directly rather than re-deriving a palette:
 - **Colors:** Ticker Blue `#1E5BFF`, Ice White `#FFFFFF`, Night Black `#0B0B0F`, Steel Gray `#5C6670`, Puck Silver `#C8CDD3`
 - **Type:** Rajdhani Bold (headlines), Oswald SemiBold (accent/labels), Inter Regular (body)
