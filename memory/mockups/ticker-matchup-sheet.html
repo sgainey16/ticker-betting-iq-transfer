@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ticker — Matchup Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Oswald:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ticker-blue:#1E5BFF;
+    --ice-white:#FFFFFF;
+    --night-black:#0B0B0F;
+    --steel-gray:#5C6670;
+    --puck-silver:#C8CDD3;
+    --panel:#131319;
+    --panel-line:#20222b;
+    --home-accent:#1E5BFF;
+    --away-accent:#E0473E;
+    --win-glow: 0 0 0 1px rgba(30,91,255,0.35), 0 0 24px rgba(30,91,255,0.15);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 50% -10%, rgba(30,91,255,0.10), transparent 60%),
+      var(--night-black);
+    color:var(--puck-silver);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:28px 16px 60px;
+  }
+  .wrap{max-width:920px; margin:0 auto;}
+  .eyebrow{font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:0.28em; text-transform:uppercase; color:var(--steel-gray); text-align:center; margin-bottom:6px;}
+  h1{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:34px; letter-spacing:0.01em; text-align:center; color:var(--ice-white); text-transform:uppercase;}
+  .sub{text-align:center; font-size:12.5px; color:var(--steel-gray); margin-top:4px; margin-bottom:26px;}
+  .teams{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:10px; margin-bottom:22px;}
+  .team-card{background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; padding:16px 14px; text-align:center; position:relative; overflow:hidden;}
+  .team-card.home{border-top:3px solid var(--home-accent);}
+  .team-card.away{border-top:3px solid var(--away-accent);}
+  .team-name{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:20px; color:var(--ice-white); text-transform:uppercase; letter-spacing:0.01em;}
+  .team-record{font-size:11px; color:var(--steel-gray); margin-top:2px;}
+  .rank-score{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:38px; margin-top:8px; line-height:1;}
+  .home .rank-score{color:var(--home-accent);}
+  .away .rank-score{color:var(--away-accent);}
+  .rank-label{font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--steel-gray); margin-top:4px;}
+  .vs{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:15px; color:var(--steel-gray); text-align:center; padding:0 4px;}
+  .section-label{font-family:'Oswald',sans-serif; font-size:11px; letter-spacing:0.22em; text-transform:uppercase; color:var(--steel-gray); margin:26px 0 10px; padding-left:2px; display:flex; align-items:center; gap:10px;}
+  .section-label::after{content:""; flex:1; height:1px; background:var(--panel-line);}
+  .sheet{background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; overflow:hidden;}
+  .row{display:grid; grid-template-columns: 68px 1fr 68px; align-items:center; padding:11px 14px; border-bottom:1px solid var(--panel-line); gap:10px;}
+  .row:last-child{border-bottom:none;}
+  .row:hover{background:rgba(255,255,255,0.02);}
+  .val{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:17px; text-align:center;}
+  .val.home-val{color:var(--ice-white);}
+  .val.away-val{color:var(--ice-white);}
+  .val.edge{color:var(--home-accent);}
+  .val.edge.away{color:var(--away-accent);}
+  .stat-sub{font-family:'Oswald',sans-serif; font-size:8px; letter-spacing:0.08em; color:var(--steel-gray); font-weight:500; margin-top:2px;}
+  .cross-row{padding-top:13px; padding-bottom:13px;}
+  .deepdive{display:flex; flex-direction:column; gap:10px;}
+  .dd-card{background:var(--panel); border:1px solid var(--panel-line); border-radius:14px; overflow:hidden;}
+  .dd-card[open] summary{border-bottom:1px solid var(--panel-line);}
+  .dd-card summary{list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
+  .dd-card summary::-webkit-details-marker{display:none;}
+  .dd-team-accent{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .dd-team-accent.home{background:var(--home-accent);}
+  .dd-team-accent.away{background:var(--away-accent);}
+  .dd-summary-text{flex:1; min-width:0;}
+  .dd-team{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:16px; color:var(--ice-white); text-transform:uppercase; display:flex; align-items:center; gap:8px;}
+  .dd-headline{font-size:11.5px; color:var(--steel-gray); margin-top:2px;}
+  .dd-chevron{color:var(--steel-gray); font-size:13px; transition:transform .2s ease;}
+  .dd-card[open] .dd-chevron{transform:rotate(180deg);}
+  .dd-body{padding:4px 16px 18px;}
+  .dd-context-row{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0 16px;}
+  .dd-chip{background:var(--night-black); border:1px solid var(--panel-line); border-radius:10px; padding:9px 6px; text-align:center;}
+  .dd-chip-val{font-family:'Rajdhani',sans-serif; font-weight:700; font-size:19px; color:var(--ice-white);}
+  .dd-chip-label{font-size:9.5px; color:var(--steel-gray); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;}
+  .dd-subhead{font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:var(--steel-gray); margin:14px 0 8px;}
+  .dd-scorer-table{width:100%; border-collapse:collapse;}
+  .dd-scorer-table td{font-size:12.5px; padding:6px 4px; border-bottom:1px solid var(--panel-line);}
+  .dd-scorer-table tr:last-child td{border-bottom:none;}
+  .dd-scorer-name{color:var(--ice-white); font-weight:500;}
+  .dd-scorer-stat{color:var(--steel-gray); text-align:right; white-space:nowrap;}
+  .dd-scorer-type{color:var(--steel-gray); font-size:11px;}
+  .dd-notes{list-style:none;}
+  .dd-notes li{display:flex; gap:9px; font-size:12.5px; line-height:1.5; padding:7px 0; border-bottom:1px solid var(--panel-line);}
+  .dd-notes li:last-child{border-bottom:none;}
+  .dd-note-icon{flex-shrink:0; width:18px; text-align:center;}
+  .dd-note-flag{font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:0.06em; text-transform:uppercase; padding:1px 6px; border-radius:5px; margin-left:6px; background:rgba(30,91,255,0.15); color:var(--home-accent); white-space:nowrap;}
+  .dd-note-flag.warn{background:rgba(224,71,62,0.15); color:var(--away-accent);}
+  .dd-tier{font-family:'Oswald',sans-serif; font-size:8.5px; letter-spacing:0.06em; text-transform:uppercase; padding:1px 6px; border-radius:5px; margin-left:6px; white-space:nowrap; flex-shrink:0;}
+  .dd-tier.fact{background:rgba(200,205,211,0.15); color:var(--puck-silver);}
+  .dd-tier.reported{background:rgba(255,193,7,0.15); color:#E8B923;}
+  .dd-tier.rumor{background:rgba(224,71,62,0.15); color:var(--away-accent);}
+  .dd-tabs{display:flex; gap:6px; margin:10px 0 4px;}
+  .dd-tab{font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:0.08em; text-transform:uppercase; color:var(--steel-gray); background:var(--night-black); border:1px solid var(--panel-line); border-radius:8px; padding:7px 12px; cursor:pointer;}
+  .dd-tab.active{color:var(--ice-white); border-color:var(--home-accent); background:rgba(30,91,255,0.12);}
+  .away-card .dd-tab.active{border-color:var(--away-accent); background:rgba(224,71,62,0.12);}
+  .dd-qlist{list-style:none; margin-top:8px;}
+  .dd-qlist li{font-size:12.5px; line-height:1.55; color:var(--puck-silver); padding:8px 0 8px 20px; border-bottom:1px solid var(--panel-line); position:relative;}
+  .dd-qlist li:last-child{border-bottom:none;}
+  .dd-qlist li::before{content:"?"; position:absolute; left:0; top:8px; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:12px; color:var(--steel-gray);}
+  .mid{display:flex; flex-direction:column; align-items:center; gap:5px;}
+  .cat-label{font-size:11px; color:var(--puck-silver); text-align:center; text-transform:none; letter-spacing:0.01em;}
+  .bar{width:100%; max-width:220px; height:5px; border-radius:4px; background:var(--panel-line); position:relative; overflow:hidden;}
+  .bar-fill{position:absolute; top:0; bottom:0; border-radius:4px; transition:width .3s ease;}
+  .bar-fill.home{left:50%; background:var(--home-accent);}
+  .bar-fill.away{right:50%; background:var(--away-accent);}
+  .bar-mid{position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:rgba(255,255,255,0.18); transform:translateX(-0.5px);}
+  .legend{display:flex; justify-content:center; gap:22px; margin-top:22px; font-size:11px; color:var(--steel-gray);}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:8px; height:8px; border-radius:50%;}
+  .dot.home{background:var(--home-accent);}
+  .dot.away{background:var(--away-accent);}
+  .footer-note{text-align:center; font-size:10.5px; color:var(--steel-gray); margin-top:26px; line-height:1.6;}
+  @media (max-width:480px){
+    h1{font-size:24px;}
+    .rank-score{font-size:28px;}
+    .row{grid-template-columns:52px 1fr 52px; padding:10px;}
+    .val{font-size:14px;}
+    .cat-label{font-size:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">The Ticker · Matchup Sheet</div>
+  <h1>Tonight's Edge</h1>
+  <div class="sub">Side-by-side team analytics — every category, one edge at a time</div>
+  <div class="teams">
+    <div class="team-card home">
+      <div class="team-name">Wolves</div>
+      <div class="team-record">34-19-6 · Home</div>
+      <div class="rank-score">87</div>
+      <div class="rank-label">Ticker Rank</div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="team-card away">
+      <div class="team-name">Ironclad</div>
+      <div class="team-record">29-24-5 · Away</div>
+      <div class="rank-score">74</div>
+      <div class="rank-label">Ticker Rank</div>
+    </div>
+  </div>
+  <div class="section-label">Scoring &amp; Shot Quality</div>
+  <div class="sheet" id="scoring"></div>
+  <div class="section-label">Crossover Matchup (Their Strength vs Your Weakness)</div>
+  <div class="sheet" id="crossover"></div>
+  <div class="section-label">Puck Possession &amp; Discipline</div>
+  <div class="sheet" id="possession"></div>
+  <div class="section-label">Special Teams &amp; Goaltending</div>
+  <div class="sheet" id="special"></div>
+  <div class="section-label">Power Play Deep Dive</div>
+  <div class="deepdive" id="deepdive"></div>
+  <div class="legend">
+    <span><i class="dot home"></i>Wolves edge</span>
+    <span><i class="dot away"></i>Ironclad edge</span>
+  </div>
+  <div class="footer-note">Sample data for template purposes — wire up to live NHL/MoneyPuck feed per game.<br>Bar shows the size of the edge, not just who's ahead.</div>
+</div>
+<script>
+const sections = {
+  scoring: [
+    ["Goals For (Season)", 231, 181, "231", "181", true],
+    ["Goals Against (Season)", 170, 208, "170", "208", false],
+    ["Goals For / Game", 3.4, 2.7, "3.4", "2.7", true],
+    ["Goals Against / Game", 2.5, 3.1, "2.5", "3.1", false],
+    ["Shot Attempts % (Corsi)", 52.8, 47.2, "52.8%", "47.2%", true],
+    ["Scoring Chances For %", 54.1, 45.9, "54.1%", "45.9%", true],
+    ["High-Danger Chances For %", 56.3, 43.7, "56.3%", "43.7%", true],
+    ["Shots From the Point / Game", 9.2, 11.8, "9.2", "11.8", false],
+    ["Goals Allowed off Point Shots", 4, 9, "4", "9", false],
+  ],
+  possession: [
+    ["Takeaways / Game", 8.6, 6.1, "8.6", "6.1", true],
+    ["Giveaways / Game", 6.9, 9.4, "6.9", "9.4", false],
+    ["Offensive Zone Time %", 53.5, 46.5, "53.5%", "46.5%", true],
+    ["Faceoff Win %", 51.2, 48.8, "51.2%", "48.8%", true],
+    ["Penalties Drawn / Game", 3.4, 2.6, "3.4", "2.6", true],
+    ["Penalties Taken / Game", 2.9, 3.8, "2.9", "3.8", false],
+  ],
+  special: [
+    ["Power Play %", 24.5, 18.2, "24.5%", "18.2%", true],
+    ["Penalty Kill %", 82.3, 76.8, "82.3%", "76.8%", true],
+    ["PP% Last 10 Games", 27.0, 15.5, "27.0%", "15.5%", true],
+    ["Save % (starting goalie)", 0.915, 0.902, ".915", ".902", true],
+  ]
+};
+const crossoverRows = [
+  { label: "Wolves Offense vs Ironclad Defense", hVal: 3.4, aVal: 3.1, hDisp: "3.4", aDisp: "3.1", hSub: "GF/GM", aSub: "OPP GA/GM", favor: "home" },
+  { label: "Ironclad Offense vs Wolves Defense", hVal: 2.5, aVal: 2.7, hDisp: "2.5", aDisp: "2.7", hSub: "GA/GM", aSub: "OPP GF/GM", favor: "home" },
+  { label: "Wolves Zone Entries vs Ironclad Entry D", hVal: 68, aVal: 62, hDisp: "68%", aDisp: "62%", hSub: "ZONE ENTRY %", aSub: "ENTRY DENIAL %", favor: "home" },
+  { label: "Ironclad Zone Entries vs Wolves Entry D", hVal: 65, aVal: 58, hDisp: "65%", aDisp: "58%", hSub: "ENTRY DENIAL %", aSub: "ZONE ENTRY %", favor: "home" },
+  { label: "Wolves Power Play vs Ironclad Penalty Kill", hVal: 24.5, aVal: 23.2, hDisp: "24.5%", aDisp: "23.2%", hSub: "WOLVES PP%", aSub: "IRONCLAD PK-FAIL %", favor: "home" },
+  { label: "Ironclad Power Play vs Wolves Penalty Kill", hVal: 17.7, aVal: 18.2, hDisp: "17.7%", aDisp: "18.2%", hSub: "WOLVES PK-FAIL %", aSub: "IRONCLAD PP%", favor: "away" },
+];
+function buildRow([label, hVal, aVal, hDisp, aDisp, higherBetter]){
+  const total = hVal + aVal || 1;
+  let homePct = (hVal / total) * 100;
+  homePct = Math.max(8, Math.min(92, homePct));
+  const awayPct = 100 - homePct;
+  const homeWins = higherBetter ? hVal > aVal : hVal < aVal;
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <div class="val home-val ${homeWins ? 'edge' : ''}">${hDisp}</div>
+    <div class="mid">
+      <div class="cat-label">${label}</div>
+      <div class="bar">
+        <div class="bar-fill home" style="width:${(homePct/2)}%"></div>
+        <div class="bar-fill away" style="width:${(awayPct/2)}%"></div>
+        <div class="bar-mid"></div>
+      </div>
+    </div>
+    <div class="val away-val ${!homeWins ? 'edge away' : ''}">${aDisp}</div>
+  `;
+  return row;
+}
+function buildCrossRow({label, hVal, aVal, hDisp, aDisp, hSub, aSub, favor}){
+  const total = hVal + aVal || 1;
+  let homePct = (hVal / total) * 100;
+  homePct = Math.max(8, Math.min(92, homePct));
+  const awayPct = 100 - homePct;
+  const homeWins = favor === "home";
+  const row = document.createElement('div');
+  row.className = 'row cross-row';
+  row.innerHTML = `
+    <div class="val home-val ${homeWins ? 'edge' : ''}">${hDisp}<div class="stat-sub">${hSub}</div></div>
+    <div class="mid">
+      <div class="cat-label">${label}</div>
+      <div class="bar">
+        <div class="bar-fill home" style="width:${(homePct/2)}%"></div>
+        <div class="bar-fill away" style="width:${(awayPct/2)}%"></div>
+        <div class="bar-mid"></div>
+      </div>
+    </div>
+    <div class="val away-val ${!homeWins ? 'edge away' : ''}">${aDisp}<div class="stat-sub">${aSub}</div></div>
+  `;
+  return row;
+}
+Object.keys(sections).forEach(id => {
+  const container = document.getElementById(id);
+  sections[id].forEach(stat => container.appendChild(buildRow(stat)));
+});
+const crossContainer = document.getElementById('crossover');
+crossoverRows.forEach(stat => crossContainer.appendChild(buildCrossRow(stat)));
+const deepDiveData = [
+  { team: "Wolves", side: "home", record: "Power Play Unit",
+    context: [["85%","SEASON"], ["79%","LAST 10"], ["87%","VS IRONCLAD"]],
+    scorers: [
+      ["#17 Marsh", "6G · 4A", "One-timer, left circle"],
+      ["#9 Okafor", "4G · 7A", "Net-front deflection"],
+      ["#22 Petrov", "3G · 9A", "Point shot, low glove side"],
+    ],
+    notes: [
+      ["🥅", "Ironclad's starting goalie is 0.798 SV% on the PK across the last 3 meetings", null, "fact"],
+      ["🩹", "Petrov (top PP QB) questionable — direct hit to PP1 if he sits", "warn", "reported"],
+      ["✈️", "Wolves on 2nd game of a back-to-back — PK legs more affected than PP", null, "fact"],
+      ["👥", "PP1 taking 78% of all PP minutes — 2nd unit rarely used", null, "fact"],
+      ["🚩", "Referee crew tonight averages 4.1 PP opportunities/game (league avg: 3.4)", null, "fact"],
+      ["💬", "Locker-room chatter suggests Petrov played through the injury reluctantly last game", null, "rumor"],
+    ]
+  },
+  { team: "Ironclad", side: "away", record: "Penalty Kill Unit",
+    context: [["76.8%","SEASON"], ["71.2%","LAST 10"], ["68.4%","VS WOLVES"]],
+    scorers: [
+      ["#4 Bellew", "PK forward", "Leads team in SH blocks"],
+      ["#31 Nazarov", "Starting G", "0.884 SV% on PK, season"],
+      ["#14 Trask", "PK forward", "Drawing toughest F1 assignment"],
+    ],
+    notes: [
+      ["🩹", "Bellew (top PK forward) day-to-day — Ironclad's 2nd PK pair allows 22% more shot attempts", "warn", "reported"],
+      ["✈️", "No fatigue flag — Ironclad is fully rested (3 days off)", null, "fact"],
+      ["📉", "PK unit has faced a top-5 PP in 4 of last 5 games — sample may be tougher than season avg suggests", null, "fact"],
+      ["🎯", "Allowing high-danger chances on 31% of PK shifts, above their season rate of 24%", "warn", "fact"],
+      ["💬", "Beat reporter podcast mentioned a possible PK personnel change being considered this week", null, "rumor"],
+    ]
+  }
+];
+function buildScorerRow([name, stat, type]){
+  return `<tr>
+    <td class="dd-scorer-name">${name}</td>
+    <td class="dd-scorer-stat">${stat}</td>
+  </tr><tr><td colspan="2" class="dd-scorer-type" style="padding-top:0; border-bottom:1px solid var(--panel-line);">${type}</td></tr>`;
+}
+function buildNote([icon, text, flag, tier]){
+  const flagHtml = flag ? `<span class="dd-note-flag ${flag}">${flag === 'warn' ? 'Flag' : 'Note'}</span>` : '';
+  const tierLabel = tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : '';
+  const tierHtml = tier ? `<span class="dd-tier ${tier}">${tierLabel}</span>` : '';
+  return `<li><span class="dd-note-icon">${icon}</span><span style="flex:1;">${text}${flagHtml}</span>${tierHtml}</li>`;
+}
+const questionBank = [
+  "What's this team's power play % this season, over the last 10 games, and specifically against tonight's opponent?",
+  "Who's scoring the power play goals, who's getting the assists, and where/how are those goals coming from?",
+  "Which goalie played in the previous meetings between these two teams, and how did they perform on special teams?",
+  "Is any injured player a power play or penalty kill specialist — or do they not play special teams at all?",
+  "Is either team dealing with heavy travel fatigue that could distort recent special-teams numbers?",
+  "Is the top PP unit taking most of the minutes, or is a weaker second unit dragging the overall % down?",
+  "Which PK pair or forward tandem is drawing the toughest defensive assignments?",
+  "What's each team's faceoff win % in the offensive/defensive zone, and how does that affect zone time and PP setup?",
+  "Which referee crew is assigned tonight, and do they tend to call more or fewer penalties than average?",
+  "What's each team's penalties-drawn vs. penalties-taken ratio?",
+  "Could score effects (trailing teams get more late-game PP looks) inflate either team's raw PP volume?",
+  "Is either team on a back-to-back or in a stretch like 3-in-4 nights?",
+  "Is this a playoff-race or must-win game that could raise aggression and penalty minutes?",
+  "Is the power play generating high-danger chances, or just converting on lower-quality looks?",
+  "What's the starting goalie's shorthanded save % specifically, not just their overall save %?",
+  "What PP system is each team running (umbrella, overload, 1-3-1), and how does it match up against the opponent's PK formation?",
+];
+function buildDeepDiveCard(d, isOpen){
+  const el = document.createElement('details');
+  el.className = 'dd-card' + (d.side === 'away' ? ' away-card' : '');
+  if (isOpen) el.setAttribute('open', '');
+  const uid = 'dd-' + d.team.toLowerCase();
+  el.innerHTML = `
+    <summary>
+      <span class="dd-team-accent ${d.side}"></span>
+      <span class="dd-summary-text">
+        <div class="dd-team">${d.team} — ${d.record}</div>
+        <div class="dd-headline">${d.context.map(c => c[0] + ' ' + c[1].toLowerCase()).join(' · ')}</div>
+      </span>
+      <span class="dd-chevron">▾</span>
+    </summary>
+    <div class="dd-body">
+      <div class="dd-tabs">
+        <button class="dd-tab active" data-target="${uid}-overview">Breakdown</button>
+        <button class="dd-tab" data-target="${uid}-questions">Our Questions</button>
+      </div>
+      <div id="${uid}-overview" class="dd-tab-content">
+        <div class="dd-context-row">
+          ${d.context.map(([val, label]) => `<div class="dd-chip"><div class="dd-chip-val">${val}</div><div class="dd-chip-label">${label}</div></div>`).join('')}
+        </div>
+        <div class="dd-subhead">Who's Producing</div>
+        <table class="dd-scorer-table">${d.scorers.map(buildScorerRow).join('')}</table>
+        <div class="dd-subhead">Matchup Context</div>
+        <ul class="dd-notes">${d.notes.map(buildNote).join('')}</ul>
+      </div>
+      <div id="${uid}-questions" class="dd-tab-content" hidden>
+        <div class="dd-subhead">The Full Scoop — What We Check</div>
+        <ul class="dd-qlist">${questionBank.map(q => `<li>${q}</li>`).join('')}</ul>
+      </div>
+    </div>
+  `;
+  el.querySelectorAll('.dd-tab').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const card = btn.closest('.dd-card');
+      card.querySelectorAll('.dd-tab').forEach(b => b.classList.remove('active'));
+      card.querySelectorAll('.dd-tab-content').forEach(c => c.hidden = true);
+      btn.classList.add('active');
+      card.querySelector('#' + btn.dataset.target).hidden = false;
+    });
+  });
+  return el;
+}
+const ddContainer = document.getElementById('deepdive');
+deepDiveData.forEach((d, i) => ddContainer.appendChild(buildDeepDiveCard(d, i === 0)));
+</script>
+</body>
+</html>

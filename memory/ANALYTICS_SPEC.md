@@ -28,6 +28,10 @@ Raw inputs the prediction engine is actually built on:
 
 **Data licensing roadmap:** Official/exclusive NHL data licensing (the tier Sportradar currently holds exclusively for sportsbooks/media) is a future business-development goal once The Ticker has real traction and revenue — not a Phase 1 target. No self-serve application exists for this; it requires a direct partnership conversation.
 
+**Existing pipeline asset:** A data pipeline script for the NHL API + MoneyPuck pulls already exists as a starting point — ask the founder for it directly before Sprint 1 kicks off.
+
+**Visual + logic reference:** The concrete UI target for the matchup analytics feature lives in `/app/memory/mockups/ticker-matchup-sheet.html` (component/UI reference — sample data only) and `/app/memory/mockups/MATCHUP_ANALYTICS_SPEC.md` (data + logic behind it, incl. 20-category framework, Ticker Intelligence composite scores, factor-importance transparency "Holy Grail," Fact/Reported/Rumor confidence tiers, Community Consensus mechanic, and intangibles layer). Treat the Matchup Sheet as the flagship visual output of Layer 3 — the "receipts view" that the guided-question UX drills into on demand.
+
 **Elite Prospects licensing target:** For deep cross-era player coverage (drafts, juniors, international, retired players, European leagues below the NHL pipeline), the canonical source is **Elite Prospects Data Services** — enterprise licensing, direct partnership only, typical deals ~$1,500–$5,000/mo depending on scope. Same "future business-development" tier as Sportradar/NHL exclusive. Not Phase 1. In the interim, we cover ~80% of the historical need using NHL's own public API (`/v1/player/{id}/landing` returns career + junior + international splits for most NHL players), the NHL Records API for all-time stats and draft history, and Wikidata/Wikipedia for biographical detail — all free and legitimately usable. Scraping Elite Prospects is prohibited by their ToS and creates real legal exposure for a commercial app.
 
 **Layer 3 — The Ticker's Proprietary Intelligence Engine**
