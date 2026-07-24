@@ -38,6 +38,8 @@ export default function Stats() {
   const [teams, setTeams] = useState([]);
   const [games, setGames] = useState([]);
   const [nhlLive, setNhlLive] = useState(false);
+  const [teamFilter, setTeamFilter] = useState("ALL");
+  const [divFilter, setDivFilter] = useState("ALL");
 
   useEffect(() => {
     api.get("/stats/players").then((r) => setPlayers(r.data.players || [])).catch(() => {});
@@ -45,8 +47,29 @@ export default function Stats() {
     api.get("/nhl/games").then((r) => { setGames(r.data.games || []); setNhlLive(!!r.data.live); }).catch(() => {});
   }, []);
 
-  const skaters = useMemo(() => players.filter((p) => p.pos !== "G"), [players]);
-  const goalies = useMemo(() => players.filter((p) => p.pos === "G"), [players]);
+  const teamsInDiv = useMemo(() => {
+    if (divFilter === "ALL") return null;
+    return new Set(teams.filter((t) => t.div === divFilter).map((t) => t.code));
+  }, [teams, divFilter]);
+
+  const filteredPlayers = useMemo(() => {
+    return players.filter((p) => {
+      if (teamFilter !== "ALL" && p.team !== teamFilter) return false;
+      if (teamsInDiv && !teamsInDiv.has(p.team)) return false;
+      return true;
+    });
+  }, [players, teamFilter, teamsInDiv]);
+
+  const filteredTeams = useMemo(() => {
+    return teams.filter((t) => {
+      if (teamFilter !== "ALL" && t.code !== teamFilter) return false;
+      if (divFilter !== "ALL" && t.div !== divFilter) return false;
+      return true;
+    });
+  }, [teams, teamFilter, divFilter]);
+
+  const skaters = useMemo(() => filteredPlayers.filter((p) => p.pos !== "G"), [filteredPlayers]);
+  const goalies = useMemo(() => filteredPlayers.filter((p) => p.pos === "G"), [filteredPlayers]);
 
   function sortRows(rows, defaultKey) {
     const key = sortKey || defaultKey;
@@ -114,16 +137,42 @@ export default function Stats() {
         className="rounded-2xl border border-white/10 overflow-hidden shadow-[0_20px_60px_-30px_rgba(30,93,255,0.4)]"
         style={{ background: "linear-gradient(180deg, #f7f8fa 0%, #ffffff 100%)" }}
       >
-        {/* Widget top bar (mimics NHL.com filter row) */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-white">
+        {/* Widget top bar with team + division filters (mimics NHL.com filter row) */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-200 bg-white flex-wrap">
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
             <span className="font-accent text-[10px] uppercase tracking-[0.28em] text-slate-500">
-              Live · Season 2025-26 · All Situations
+              Live · Season 2025-26
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-[10px] font-accent uppercase tracking-widest text-slate-400">
-            Sort with column headers
+          <div className="flex items-center gap-2 flex-wrap">
+            <label className="font-accent text-[10px] uppercase tracking-widest text-slate-400">Division</label>
+            <select
+              value={divFilter}
+              onChange={(e) => setDivFilter(e.target.value)}
+              data-testid="stats-filter-division"
+              className="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-700 focus:outline-none focus:border-[#1e5dff]"
+            >
+              <option value="ALL">All divisions</option>
+              <option value="Atlantic">Atlantic</option>
+              <option value="Metropolitan">Metropolitan</option>
+              <option value="Central">Central</option>
+              <option value="Pacific">Pacific</option>
+            </select>
+            <label className="font-accent text-[10px] uppercase tracking-widest text-slate-400 ml-2">Team</label>
+            <select
+              value={teamFilter}
+              onChange={(e) => setTeamFilter(e.target.value)}
+              data-testid="stats-filter-team"
+              className="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-700 focus:outline-none focus:border-[#1e5dff]"
+            >
+              <option value="ALL">All teams</option>
+              {teams
+                .filter((t) => divFilter === "ALL" || t.div === divFilter)
+                .map((t) => (
+                  <option key={t.code} value={t.code}>{t.code} — {t.name}</option>
+                ))}
+            </select>
           </div>
         </div>
 
@@ -174,7 +223,7 @@ export default function Stats() {
         {tab === "teams" && (
           <NHLTable
             rows={sortRows(
-              teams.map((t) => ({ ...t, diff: (t.gf || 0) - (t.ga || 0) })),
+              filteredTeams.map((t) => ({ ...t, diff: (t.gf || 0) - (t.ga || 0) })),
               "pts",
             ).map((t, i) => ({ ...t, rank: i + 1 }))}
             columns={[
@@ -238,6 +287,9 @@ export default function Stats() {
           </div>
         </div>
       </div>
+
+      {/* Leaders grid — scroll-down leaders in every category, NHL.com-style */}
+      <LeadersGrid players={filteredPlayers} />
 
       {/* Founder value tease — subtle, on-brand, one row */}
       <FounderTease />
@@ -306,8 +358,107 @@ function NHLTable({ rows, columns, onSort, sortKey, sortDir, currentTab }) {
   );
 }
 
-function FounderTease() {
+// Scroll-down leaders in every major category — NHL.com's "Stats Hub" pattern
+// distilled into compact top-3 cards. Everything's read from the filtered
+// player list so team/division filters carry through.
+function LeadersGrid({ players }) {
+  const skaters = players.filter((p) => p.pos !== "G");
+  const goalies = players.filter((p) => p.pos === "G");
+
+  const cats = [
+    { title: "Goals", key: "g", unit: "" },
+    { title: "Assists", key: "a", unit: "" },
+    { title: "Points", key: "pts", unit: "" },
+    { title: "Plus / Minus", key: "plus_minus", unit: "", fmt: (v) => (v > 0 ? `+${v}` : String(v)) },
+    { title: "Shots on Goal", key: "s", unit: "" },
+    { title: "Shooting %", key: "s_pct", unit: "%", fmt: (v) => v?.toFixed(1) },
+    { title: "Power Play Goals", key: "ppg", unit: "" },
+    { title: "Game-Winning Goals", key: "gwg", unit: "" },
+    { title: "Hits", key: "hits", unit: "" },
+    { title: "Blocked Shots", key: "blocks", unit: "" },
+    { title: "Faceoff Win %", key: "fow_pct", unit: "%", fmt: (v) => v?.toFixed(1) },
+    { title: "Penalty Minutes", key: "pim", unit: "" },
+  ];
+
+  const goalieCats = [
+    { title: "Wins", key: "w", unit: "" },
+    { title: "Save %", key: "sv_pct", unit: "", fmt: (v) => "." + Math.round(v * 1000).toString().padStart(3, "0") },
+    { title: "Goals-Against Avg", key: "gaa", unit: "", fmt: (v) => v?.toFixed(2), lowerBetter: true },
+    { title: "Shutouts", key: "so", unit: "" },
+  ];
+
   return (
+    <section data-testid="stats-leaders-grid" className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-white/60">
+          Leaders · every category
+        </div>
+        <div className="flex-1 h-px bg-[#2d2d35]" />
+        <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
+          Filters carry through
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {cats.map((c) => (
+          <LeaderCard key={c.key} players={skaters} cat={c} />
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-white/60">
+          Goaltenders
+        </div>
+        <div className="flex-1 h-px bg-[#2d2d35]" />
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {goalieCats.map((c) => (
+          <LeaderCard key={c.key} players={goalies} cat={c} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function LeaderCard({ players, cat }) {
+  const sorted = [...players]
+    .filter((p) => p[cat.key] != null)
+    .sort((a, b) => cat.lowerBetter ? (a[cat.key] - b[cat.key]) : (b[cat.key] - a[cat.key]))
+    .slice(0, 3);
+  const fmt = cat.fmt || ((v) => String(v));
+
+  return (
+    <div className="rounded-xl border border-[#2d2d35] bg-[#0b0b10] p-3 hover:border-[#1e5dff]/50 transition-colors">
+      <div className="font-accent text-[10px] uppercase tracking-[0.22em] text-white/50 mb-2">
+        {cat.title}
+      </div>
+      {sorted.length === 0 ? (
+        <div className="text-white/30 text-xs">No data</div>
+      ) : (
+        <ol className="space-y-1.5">
+          {sorted.map((p, i) => (
+            <li key={p.id} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`font-accent text-[10px] w-4 ${i === 0 ? "text-[#1e5dff]" : "text-white/35"}`}>
+                  {i + 1}
+                </span>
+                <span className={`truncate text-sm ${i === 0 ? "text-white font-medium" : "text-white/75"}`}>
+                  {p.name}
+                </span>
+                <span className="text-[10px] font-accent text-white/40 flex-shrink-0">{p.team}</span>
+              </div>
+              <span className={`font-headline flex-shrink-0 ${i === 0 ? "text-white text-base" : "text-white/70 text-sm"}`}>
+                {fmt(p[cat.key])}{cat.unit}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function FounderTease() {  return (
     <div
       className="rounded-2xl p-5 border border-[#1e5dff]/40 relative overflow-hidden"
       style={{ background: "linear-gradient(120deg, rgba(30,93,255,0.14) 0%, transparent 55%), #0d0d13" }}

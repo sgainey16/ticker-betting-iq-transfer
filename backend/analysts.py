@@ -78,28 +78,31 @@ ANALYSTS = {
 
 
 # Mock NHL 2025-26 season data (illustrative — realistic-looking numbers).
+# Full stat set so the Stats page can render leaders in every category
+# without waiting on the paid feed to fill in the deeper columns.
 PLAYERS = [
-    {"id": "mcdavid", "name": "Connor McDavid", "team": "EDM", "pos": "C", "gp": 48, "g": 32, "a": 58, "pts": 90, "plus_minus": 18, "toi": "22:14"},
-    {"id": "draisaitl", "name": "Leon Draisaitl", "team": "EDM", "pos": "C", "gp": 47, "g": 28, "a": 47, "pts": 75, "plus_minus": 14, "toi": "21:02"},
-    {"id": "matthews", "name": "Auston Matthews", "team": "TOR", "pos": "C", "gp": 46, "g": 34, "a": 29, "pts": 63, "plus_minus": 9, "toi": "20:38"},
-    {"id": "mackinnon", "name": "Nathan MacKinnon", "team": "COL", "pos": "C", "gp": 48, "g": 26, "a": 55, "pts": 81, "plus_minus": 21, "toi": "22:41"},
-    {"id": "kucherov", "name": "Nikita Kucherov", "team": "TBL", "pos": "RW", "gp": 47, "g": 24, "a": 51, "pts": 75, "plus_minus": 12, "toi": "20:11"},
-    {"id": "hughes-j", "name": "Jack Hughes", "team": "NJD", "pos": "C", "gp": 44, "g": 22, "a": 39, "pts": 61, "plus_minus": 6, "toi": "20:52"},
-    {"id": "makar", "name": "Cale Makar", "team": "COL", "pos": "D", "gp": 48, "g": 14, "a": 44, "pts": 58, "plus_minus": 19, "toi": "25:33"},
-    {"id": "kaprizov", "name": "Kirill Kaprizov", "team": "MIN", "pos": "LW", "gp": 45, "g": 27, "a": 34, "pts": 61, "plus_minus": 8, "toi": "20:07"},
-    {"id": "hellebuyck", "name": "Connor Hellebuyck", "team": "WPG", "pos": "G", "gp": 38, "w": 27, "l": 8, "sv_pct": 0.928, "gaa": 2.11},
-    {"id": "shesterkin", "name": "Igor Shesterkin", "team": "NYR", "pos": "G", "gp": 36, "w": 22, "l": 11, "sv_pct": 0.918, "gaa": 2.44},
+    {"id": "mcdavid",    "name": "Connor McDavid",    "team": "EDM", "pos": "C",  "gp": 48, "g": 32, "a": 58, "pts": 90, "plus_minus": 18, "toi": "22:14", "s": 187, "s_pct": 17.1, "ppg": 10, "shg": 1, "gwg": 6, "pim": 22, "hits": 41, "blocks": 12, "fow_pct": 54.2},
+    {"id": "draisaitl",  "name": "Leon Draisaitl",    "team": "EDM", "pos": "C",  "gp": 47, "g": 28, "a": 47, "pts": 75, "plus_minus": 14, "toi": "21:02", "s": 158, "s_pct": 17.7, "ppg": 12, "shg": 0, "gwg": 5, "pim": 18, "hits": 30, "blocks": 15, "fow_pct": 52.1},
+    {"id": "matthews",   "name": "Auston Matthews",   "team": "TOR", "pos": "C",  "gp": 46, "g": 34, "a": 29, "pts": 63, "plus_minus":  9, "toi": "20:38", "s": 214, "s_pct": 15.9, "ppg":  8, "shg": 2, "gwg": 7, "pim": 12, "hits": 25, "blocks": 18, "fow_pct": 55.4},
+    {"id": "mackinnon",  "name": "Nathan MacKinnon",  "team": "COL", "pos": "C",  "gp": 48, "g": 26, "a": 55, "pts": 81, "plus_minus": 21, "toi": "22:41", "s": 195, "s_pct": 13.3, "ppg":  9, "shg": 0, "gwg": 5, "pim": 20, "hits": 33, "blocks": 14, "fow_pct": 51.8},
+    {"id": "kucherov",   "name": "Nikita Kucherov",   "team": "TBL", "pos": "RW", "gp": 47, "g": 24, "a": 51, "pts": 75, "plus_minus": 12, "toi": "20:11", "s": 170, "s_pct": 14.1, "ppg":  9, "shg": 0, "gwg": 4, "pim": 14, "hits": 12, "blocks":  8},
+    {"id": "hughes-j",   "name": "Jack Hughes",       "team": "NJD", "pos": "C",  "gp": 44, "g": 22, "a": 39, "pts": 61, "plus_minus":  6, "toi": "20:52", "s": 172, "s_pct": 12.8, "ppg":  6, "shg": 1, "gwg": 3, "pim":  8, "hits":  9, "blocks":  6, "fow_pct": 48.9},
+    {"id": "makar",      "name": "Cale Makar",        "team": "COL", "pos": "D",  "gp": 48, "g": 14, "a": 44, "pts": 58, "plus_minus": 19, "toi": "25:33", "s": 145, "s_pct":  9.7, "ppg":  6, "shg": 0, "gwg": 3, "pim": 16, "hits": 28, "blocks": 62},
+    {"id": "kaprizov",   "name": "Kirill Kaprizov",   "team": "MIN", "pos": "LW", "gp": 45, "g": 27, "a": 34, "pts": 61, "plus_minus":  8, "toi": "20:07", "s": 165, "s_pct": 16.4, "ppg":  8, "shg": 0, "gwg": 4, "pim": 22, "hits": 22, "blocks":  9},
+    {"id": "hellebuyck", "name": "Connor Hellebuyck", "team": "WPG", "pos": "G",  "gp": 38, "w": 27, "l":  8, "sv_pct": 0.928, "gaa": 2.11, "so": 5, "sa": 1102, "sv": 1023},
+    {"id": "shesterkin", "name": "Igor Shesterkin",   "team": "NYR", "pos": "G",  "gp": 36, "w": 22, "l": 11, "sv_pct": 0.918, "gaa": 2.44, "so": 3, "sa": 1058, "sv":  971},
 ]
 
+# Divisions per team so the Stats page can filter by division/conference.
 TEAMS = [
-    {"code": "EDM", "name": "Edmonton Oilers", "gp": 50, "w": 31, "l": 15, "otl": 4, "pts": 66, "gf": 172, "ga": 143},
-    {"code": "COL", "name": "Colorado Avalanche", "gp": 50, "w": 33, "l": 13, "otl": 4, "pts": 70, "gf": 181, "ga": 138},
-    {"code": "TOR", "name": "Toronto Maple Leafs", "gp": 49, "w": 28, "l": 17, "otl": 4, "pts": 60, "gf": 159, "ga": 148},
-    {"code": "TBL", "name": "Tampa Bay Lightning", "gp": 50, "w": 29, "l": 16, "otl": 5, "pts": 63, "gf": 168, "ga": 149},
-    {"code": "MIN", "name": "Minnesota Wild", "gp": 49, "w": 26, "l": 18, "otl": 5, "pts": 57, "gf": 148, "ga": 145},
-    {"code": "NJD", "name": "New Jersey Devils", "gp": 49, "w": 27, "l": 18, "otl": 4, "pts": 58, "gf": 154, "ga": 141},
-    {"code": "WPG", "name": "Winnipeg Jets", "gp": 50, "w": 32, "l": 14, "otl": 4, "pts": 68, "gf": 165, "ga": 128},
-    {"code": "NYR", "name": "New York Rangers", "gp": 50, "w": 28, "l": 18, "otl": 4, "pts": 60, "gf": 157, "ga": 146},
+    {"code": "EDM", "name": "Edmonton Oilers",     "conf": "West", "div": "Pacific",      "gp": 50, "w": 31, "l": 15, "otl": 4, "pts": 66, "gf": 172, "ga": 143},
+    {"code": "COL", "name": "Colorado Avalanche",  "conf": "West", "div": "Central",      "gp": 50, "w": 33, "l": 13, "otl": 4, "pts": 70, "gf": 181, "ga": 138},
+    {"code": "TOR", "name": "Toronto Maple Leafs", "conf": "East", "div": "Atlantic",     "gp": 49, "w": 28, "l": 17, "otl": 4, "pts": 60, "gf": 159, "ga": 148},
+    {"code": "TBL", "name": "Tampa Bay Lightning", "conf": "East", "div": "Atlantic",     "gp": 50, "w": 29, "l": 16, "otl": 5, "pts": 63, "gf": 168, "ga": 149},
+    {"code": "MIN", "name": "Minnesota Wild",      "conf": "West", "div": "Central",      "gp": 49, "w": 26, "l": 18, "otl": 5, "pts": 57, "gf": 148, "ga": 145},
+    {"code": "NJD", "name": "New Jersey Devils",   "conf": "East", "div": "Metropolitan", "gp": 49, "w": 27, "l": 18, "otl": 4, "pts": 58, "gf": 154, "ga": 141},
+    {"code": "WPG", "name": "Winnipeg Jets",       "conf": "West", "div": "Central",      "gp": 50, "w": 32, "l": 14, "otl": 4, "pts": 68, "gf": 165, "ga": 128},
+    {"code": "NYR", "name": "New York Rangers",    "conf": "East", "div": "Metropolitan", "gp": 50, "w": 28, "l": 18, "otl": 4, "pts": 60, "gf": 157, "ga": 146},
 ]
 
 TICKER_ITEMS = [
