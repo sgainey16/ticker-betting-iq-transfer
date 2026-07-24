@@ -212,8 +212,8 @@ function HostPane({ host, focus, speaker, speaking, align }) {
       <div className="absolute inset-0"
         style={{
           backgroundImage: src ? `url(${src})` : undefined,
-          backgroundSize: "auto 92%",
-          backgroundPosition: `${align === "right" ? "72%" : "28%"} 26%`,
+          backgroundSize: "cover",
+          backgroundPosition: "center 30%",
           backgroundRepeat: "no-repeat",
           filter: isSpeaker
             ? "brightness(1.05) saturate(1.08) contrast(1.02)"
