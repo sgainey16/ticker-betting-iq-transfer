@@ -2,82 +2,73 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import TwoHostDesk, { resolveShot } from "@/components/TwoHostDesk";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import { api, BACKEND_URL } from "@/lib/api";
-import { Send, Volume2, VolumeX } from "lucide-react";
+import { Send, Volume2, VolumeX, PlayCircle, PauseCircle } from "lucide-react";
 import { playTickerSting } from "@/lib/sting";
 
-const PAUSE_BETWEEN_TURNS = 0;
-const INTERRUPT_START_EARLY_MS = 900; // hard cut-in, but less nuclear
-const NORMAL_OVERLAP_MS = 220; // relaxed pocket — no dead air, room for jokes to land
-
-// Per-turn `pace` cue → milliseconds between the current line ENDING and the
-// next one STARTING. Positive = deliberate pause (thought, joke landing).
-// Negative = overlap (early cut-in). null = default relaxed pocket.
+// ---- Timing ----
+// All gaps are signed milliseconds. NEGATIVE = start the next line early
+// (overlap). POSITIVE = wait after the current line ENDS. Defaults are
+// aggressive on purpose — the whole point of this show is "no dead air".
+const DEFAULT_OVERLAP_MS = 400; // ~0.4s of natural overlap between speakers
+const END_OF_TOPIC_GAP_MS = 320; // brief breath between topics in continuous flow
 const PACE_MS = {
-  cutoff: -900,   // hard interrupt, punches over the last word
-  quick: 40,      // debate handoff, near-touching
-  relaxed: 220,   // default pocket
-  beat: 420,      // thoughtful pause, let a stat sink in
-  land: 680,      // joke landing, laugh space
-  breath: 950,    // reset, new topic, deep breath
+  cutoff: -700,  // hard interrupt
+  quick: -500,   // near-touching debate handoff
+  relaxed: -400, // default overlap
+  beat: 60,      // tiny pause, almost seamless
+  land: 180,     // joke landing
+  breath: 320,   // reset / new topic
 };
 
 function paceGapMs(paceKey, isInterrupt) {
-  if (isInterrupt) return -INTERRUPT_START_EARLY_MS;
+  if (isInterrupt) return -700;
   if (paceKey && PACE_MS[paceKey] !== undefined) return PACE_MS[paceKey];
-  return -NORMAL_OVERLAP_MS; // default relaxed overlap
+  return -DEFAULT_OVERLAP_MS;
 }
 
 function playStinger(audioCtx, gain = 0.12) {
-  // Delegated to the shared Ticker sting so every "show is on" moment sounds
-  // identical — first unlock, topic change, and any future segment cue.
   playTickerSting(audioCtx, gain);
 }
 
-export default function LiveDesk() {
-  const [topics, setTopics] = useState([]);
-  const [activeTopic, setActiveTopic] = useState("league_wide");
+export default function LiveDesk({
+  topics = [],
+  activeTopic,
+  onTopicChange = () => {},
+  autoFlow = true,
+}) {
   const [turns, setTurns] = useState([]);
   const [currentSpeaker, setCurrentSpeaker] = useState(null);
-  const [currentShot, setCurrentShot] = useState("two_neutral_open");
+  const [currentShot, setCurrentShot] = useState("side_two_shot");
   const [turnIdx, setTurnIdx] = useState(0);
   const [muted, setMuted] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [chatInput, setChatInput] = useState("");
   const [chatBusy, setChatBusy] = useState(false);
   const [chatResponse, setChatResponse] = useState(null);
+
   const audioRef = useRef(null);
   const audioRefB = useRef(null);
   const chatAudioRef = useRef(null);
   const audioCtxRef = useRef(null);
-  const pushedRef = useRef(new Set());
   const unlockAudioRef = useRef(() => {});
+  const advancedRef = useRef(new Set());
 
-  // Load topics once.
+  // Load banter whenever the active topic changes.
   useEffect(() => {
-    api
-      .get("/topics")
-      .then((r) => setTopics(r.data.topics || []))
-      .catch(() => setTopics([]));
-  }, []);
-
-  // Load banter whenever the topic changes.
-  useEffect(() => {
+    if (!activeTopic) return;
     let mounted = true;
     (async () => {
       setTurns([]);
       setTurnIdx(0);
       setCurrentSpeaker(null);
       setCurrentShot("side_two_shot");
-      pushedRef.current = new Set();
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      // Fire the signature sting on every segment transition (once audio is
-      // unlocked). Skips silently before first click.
+      advancedRef.current = new Set();
+      if (audioRef.current) audioRef.current.pause();
+      if (audioRefB.current) audioRefB.current.pause();
       if (audioUnlocked && !muted && audioCtxRef.current) {
-        playStinger(audioCtxRef.current, 0.38);
+        playStinger(audioCtxRef.current, 0.36);
       }
       try {
         const r = await api.get(`/banter?topic=${encodeURIComponent(activeTopic)}`);
@@ -86,23 +77,19 @@ export default function LiveDesk() {
         console.error("banter load failed", e);
       }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTopic]);
 
-  // First interaction anywhere unlocks audio.
+  // First interaction unlocks audio.
   useEffect(() => {
     if (audioUnlocked) return;
-    const onFirstInteract = () => {
-      unlockAudioRef.current?.();
-    };
-    window.addEventListener("pointerdown", onFirstInteract, { once: true });
-    window.addEventListener("keydown", onFirstInteract, { once: true });
+    const onFirst = () => unlockAudioRef.current?.();
+    window.addEventListener("pointerdown", onFirst, { once: true });
+    window.addEventListener("keydown", onFirst, { once: true });
     return () => {
-      window.removeEventListener("pointerdown", onFirstInteract);
-      window.removeEventListener("keydown", onFirstInteract);
+      window.removeEventListener("pointerdown", onFirst);
+      window.removeEventListener("keydown", onFirst);
     };
   }, [audioUnlocked]);
 
@@ -120,10 +107,7 @@ export default function LiveDesk() {
           "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
         const p = el.play();
         if (p && typeof p.then === "function") {
-          p.then(() => {
-            el.pause();
-            el.currentTime = 0;
-          }).catch(() => {});
+          p.then(() => { el.pause(); el.currentTime = 0; }).catch(() => {});
         }
       }
       if (audioCtxRef.current) playStinger(audioCtxRef.current, 0.42);
@@ -133,115 +117,102 @@ export default function LiveDesk() {
     }
   }, [audioUnlocked]);
 
-  useEffect(() => {
-    unlockAudioRef.current = unlockAudio;
-  }, [unlockAudio]);
+  useEffect(() => { unlockAudioRef.current = unlockAudio; }, [unlockAudio]);
 
-  // Play current turn — camera cut happens BEFORE the audio starts.
+  // Core playback loop — one effect per turn.
   useEffect(() => {
     if (!turns.length) return;
+
+    // End of segment — advance to next topic in continuous flow, or park.
     if (turnIdx >= turns.length) {
       setCurrentSpeaker(null);
       setCurrentShot("two_neutral_open");
-      setChatOpen(true);
+      if (autoFlow && topics.length > 0 && activeTopic) {
+        const currIdx = topics.findIndex((t) => t.id === activeTopic);
+        const nextIdx = currIdx >= 0 && currIdx < topics.length - 1 ? currIdx + 1 : 0;
+        const nextId = topics[nextIdx]?.id;
+        if (nextId && nextId !== activeTopic) {
+          const t = setTimeout(() => onTopicChange(nextId), END_OF_TOPIC_GAP_MS);
+          return () => clearTimeout(t);
+        }
+      }
       return;
     }
+
+    if (paused) return;
+
     const turn = turns[turnIdx];
     setCurrentSpeaker(turn.speaker);
     setCurrentShot(resolveShot({ shot: turn.shot, speaker: turn.speaker }));
 
-    let cancelled = false;
+    let advanced = false;
     let handoff = null;
-
-    const advance = () => {
-      if (cancelled) return;
-      if (!pushedRef.current.has(turnIdx)) {
-        pushedRef.current.add(turnIdx);
-        handoff = setTimeout(() => {
-          if (!cancelled) setTurnIdx((x) => x + 1);
-        }, PAUSE_BETWEEN_TURNS);
-      }
+    const advance = (delayMs = 0) => {
+      if (advanced || advancedRef.current.has(turnIdx)) return;
+      advanced = true;
+      advancedRef.current.add(turnIdx);
+      handoff = setTimeout(() => setTurnIdx((i) => i + 1), Math.max(0, delayMs));
     };
 
-    if (audioUnlocked && !muted && turn.audio_url) {
-      const el = turnIdx % 2 === 0 ? audioRef.current : audioRefB.current;
-      const otherEl = turnIdx % 2 === 0 ? audioRefB.current : audioRef.current;
-      if (el) {
-        el.src = `${BACKEND_URL}${turn.audio_url}`;
-        el.currentTime = 0;
+    if (!audioUnlocked || muted || !turn.audio_url) {
+      const t = setTimeout(() => advance(0), Math.max(1000, turn.text.length * 45));
+      return () => clearTimeout(t);
+    }
 
-        let advanceScheduled = false;
-        const scheduleAdvance = (delayMs = PAUSE_BETWEEN_TURNS) => {
-          if (advanceScheduled || cancelled) return;
-          if (pushedRef.current.has(turnIdx)) return;
-          pushedRef.current.add(turnIdx);
-          advanceScheduled = true;
-          handoff = setTimeout(() => {
-            if (!cancelled) setTurnIdx((x) => x + 1);
-          }, Math.max(0, delayMs));
-        };
+    const isEven = turnIdx % 2 === 0;
+    const el = isEven ? audioRef.current : audioRefB.current;
+    const otherEl = isEven ? audioRefB.current : audioRef.current;
+    if (!el) return;
 
-        el.onended = () => scheduleAdvance(PAUSE_BETWEEN_TURNS);
-        el.onerror = () => {
-          console.warn("audio failed for", turn.audio_url);
-          scheduleAdvance(Math.max(1200, turn.text.length * 55));
-        };
+    const url = `${BACKEND_URL}${turn.audio_url}`;
+    if (el.src !== url) el.src = url;
+    try { el.currentTime = 0; } catch {}
 
-        const nextTurn = turns[turnIdx + 1];
-        if (nextTurn && nextTurn.audio_url && otherEl) {
-          otherEl.src = `${BACKEND_URL}${nextTurn.audio_url}`;
-          otherEl.load();
-        }
-
-        // Per-turn pace: hard interrupts cut in early, other paces (beat,
-        // land, breath, quick, relaxed) drive the gap between lines and
-        // give the desk its natural rhythm.
-        const gap = nextTurn ? paceGapMs(nextTurn.pace, nextTurn.interrupt) : -NORMAL_OVERLAP_MS;
-        if (nextTurn) {
-          if (gap < 0) {
-            const earlyMs = Math.abs(gap);
-            el.ontimeupdate = () => {
-              if (
-                !advanceScheduled &&
-                el.duration &&
-                isFinite(el.duration) &&
-                el.duration - el.currentTime <= earlyMs / 1000
-              ) {
-                scheduleAdvance(0);
-              }
-            };
-          } else {
-            el.ontimeupdate = null;
-            el.onended = () => scheduleAdvance(gap);
-          }
-        } else {
-          el.ontimeupdate = null;
-        }
-
-        el.play().catch((err) => {
-          console.warn("play() rejected", err);
-          scheduleAdvance(Math.max(1200, turn.text.length * 55));
-        });
-
-        return () => {
-          cancelled = true;
-          if (handoff) clearTimeout(handoff);
-          el.onended = null;
-          el.onerror = null;
-          el.ontimeupdate = null;
-        };
+    // Warm up the NEXT turn immediately so the swap is instant.
+    const next = turns[turnIdx + 1];
+    if (next?.audio_url && otherEl) {
+      const nextUrl = `${BACKEND_URL}${next.audio_url}`;
+      if (otherEl.src !== nextUrl) {
+        otherEl.src = nextUrl;
+        try { otherEl.load(); } catch {}
       }
     }
 
-    // Silent path — pace by text length. Still cut cameras.
-    const timer = setTimeout(advance, Math.max(1200, turn.text.length * 55));
+    const gap = next ? paceGapMs(next.pace, next.interrupt) : 200;
+
+    el.onended = () => advance(Math.max(0, gap));
+    el.onerror = () => {
+      console.warn("audio failed for", turn.audio_url);
+      advance(300);
+    };
+    el.ontimeupdate = () => {
+      if (advanced || gap >= 0) return;
+      if (!el.duration || !isFinite(el.duration)) return;
+      const earlySec = Math.abs(gap) / 1000;
+      if (el.duration - el.currentTime <= earlySec) advance(0);
+    };
+
+    el.play().catch((err) => {
+      console.warn("play() rejected", err);
+      advance(200);
+    });
+
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
       if (handoff) clearTimeout(handoff);
+      el.onended = null;
+      el.onerror = null;
+      el.ontimeupdate = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turns, turnIdx, audioUnlocked, muted]);
+  }, [turns, turnIdx, audioUnlocked, muted, paused, autoFlow, topics, activeTopic]);
+
+  // Mute toggle should pause both audio elements immediately.
+  useEffect(() => {
+    if (muted) {
+      audioRef.current?.pause();
+      audioRefB.current?.pause();
+    }
+  }, [muted]);
 
   async function submitTopic() {
     const t = chatInput.trim();
@@ -270,7 +241,8 @@ export default function LiveDesk() {
 
   const speakerAccent = currentSpeaker ? ANALYSTS[currentSpeaker]?.accent : "#1e5dff";
   const speakerName = currentSpeaker ? ANALYSTS[currentSpeaker]?.short : null;
-  const speakerRole = currentSpeaker ? ANALYSTS[currentSpeaker]?.role : null;
+  const activeTopicLabel =
+    topics.find((t) => t.id === activeTopic)?.label || "Live from the desk";
 
   return (
     <section className="relative">
@@ -278,39 +250,41 @@ export default function LiveDesk() {
       <audio ref={audioRefB} preload="auto" playsInline />
       <audio ref={chatAudioRef} preload="auto" playsInline />
 
-      {/* Header row: mute + topic tabs (LIVE label is baked into the hero) */}
-      <div className="mb-3 flex items-center gap-2 flex-wrap">
-        {topics.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap flex-1">
-            {topics.map((t) => {
-              const active = t.id === activeTopic;
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setActiveTopic(t.id)}
-                  data-testid={`desk-topic-${t.id}`}
-                  className={`px-4 py-2.5 rounded-full text-xs font-accent uppercase tracking-widest transition-all ${
-                    active
-                      ? "bg-[#1e5dff] text-white shadow-[0_0_20px_-4px_rgba(30,93,255,0.7)] scale-105"
-                      : "border border-[#2d2d35] text-white/60 hover:border-[#1e5dff]/60 hover:text-white"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              );
-            })}
+      {/* Slim control strip — topic label left, playback + mute right */}
+      <div className="mb-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="h-2 w-2 rounded-full bg-red-500 live-pulse flex-shrink-0" />
+          <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-white/50 flex-shrink-0">
+            Now
           </div>
-        )}
+          <div
+            className="font-headline text-white text-lg sm:text-xl truncate"
+            data-testid="desk-active-topic"
+          >
+            {activeTopicLabel}
+          </div>
+        </div>
 
-        <button
-          onClick={() => setMuted((m) => !m)}
-          data-testid={TEST_IDS.desk.muteBtn}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors ml-auto"
-          title={muted ? "Unmute the desk" : "Mute the desk"}
-        >
-          {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-          {muted ? "Muted" : "Sound On"}
-        </button>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => setPaused((p) => !p)}
+            data-testid="desk-play-toggle"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
+            title={paused ? "Resume broadcast" : "Pause broadcast"}
+          >
+            {paused ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+            {paused ? "Resume" : "Pause"}
+          </button>
+          <button
+            onClick={() => setMuted((m) => !m)}
+            data-testid={TEST_IDS.desk.muteBtn}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
+            title={muted ? "Unmute the desk" : "Mute the desk"}
+          >
+            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            {muted ? "Muted" : "Sound On"}
+          </button>
+        </div>
       </div>
 
       {/* Broadcast frame */}
@@ -318,10 +292,13 @@ export default function LiveDesk() {
         data-testid={TEST_IDS.desk.shotFrame}
         className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]"
       >
-        <TwoHostDesk shot={currentShot} speaker={currentSpeaker} speaking={!!currentSpeaker && audioUnlocked && !muted} />
+        <TwoHostDesk
+          shot={currentShot}
+          speaker={currentSpeaker}
+          speaking={!!currentSpeaker && audioUnlocked && !muted && !paused}
+        />
 
-        {/* Full-frame "TAP TO START" overlay — browsers block autoplay
-            without a user gesture; this makes that one tap unmissable. */}
+        {/* Full-frame Tap-to-Start overlay */}
         {!audioUnlocked && (
           <button
             type="button"
@@ -352,46 +329,27 @@ export default function LiveDesk() {
           </button>
         )}
 
-        {/* Lower-third — sits above the desk bar so nothing overlaps */}
-        <div
-          className="absolute left-5 right-5 sm:left-8 sm:right-8 rounded-lg backdrop-blur-sm border px-4 py-2.5 flex items-center gap-3 transition-all duration-300 min-h-[46px] z-20"
-          style={{
-            bottom: "26%",
-            background: "rgba(11,11,16,0.75)",
-            borderColor: speakerAccent + "66",
-          }}
-          data-testid={TEST_IDS.desk.lowerThird}
-        >
-          {currentSpeaker ? (
-            <>
-              <span
-                className="h-2.5 w-2.5 rounded-full live-pulse flex-shrink-0"
-                style={{ background: speakerAccent }}
-              />
-              <div className="text-white/80 font-accent text-[11px] uppercase tracking-widest">
-                On Mic
-              </div>
-              <div className="ml-auto flex items-center gap-1.5">
-                {["reggie", "marc"].map((id) => (
-                  <span
-                    key={id}
-                    className="h-1.5 w-6 rounded-full transition-all"
-                    style={{
-                      background:
-                        currentSpeaker === id ? ANALYSTS[id].accent : "#2d2d35",
-                    }}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-white/40 text-sm font-accent uppercase tracking-widest">
-              {audioUnlocked
-                ? "The desk is listening…"
-                : "Tap a topic to start the broadcast"}
-            </div>
-          )}
-        </div>
+        {/* Minimal speaker badge — no more chunky lower-third */}
+        {currentSpeaker && audioUnlocked && (
+          <div
+            className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-md border transition-opacity duration-300"
+            style={{
+              background: "rgba(5,7,15,0.55)",
+              borderColor: speakerAccent + "88",
+            }}
+            data-testid={TEST_IDS.desk.lowerThird}
+          >
+            <span
+              className="h-2 w-2 rounded-full live-pulse"
+              style={{ background: speakerAccent }}
+            />
+            <span
+              className="font-accent text-[11px] uppercase tracking-widest text-white/90"
+            >
+              {speakerName}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Ask-the-panel input */}
@@ -408,21 +366,14 @@ export default function LiveDesk() {
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submitTopic()}
-            placeholder={
-              chatOpen
-                ? "e.g. What's wrong with the Leafs?"
-                : "Desk is talking — hang on a sec…"
-            }
-            disabled={!chatOpen || chatBusy}
+            placeholder="e.g. What's wrong with the Leafs?"
+            disabled={chatBusy}
             data-testid={TEST_IDS.desk.topicInput}
             className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
           />
           <button
-            onClick={() => {
-              unlockAudio();
-              submitTopic();
-            }}
-            disabled={!chatOpen || chatBusy || !chatInput.trim()}
+            onClick={() => { unlockAudio(); submitTopic(); }}
+            disabled={chatBusy || !chatInput.trim()}
             data-testid={TEST_IDS.desk.topicSubmit}
             className="h-[48px] px-5 rounded-lg bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 disabled:cursor-not-allowed text-white font-accent uppercase tracking-widest text-sm inline-flex items-center gap-2 transition-colors"
           >

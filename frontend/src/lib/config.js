@@ -38,7 +38,12 @@ export const ANALYST_ORDER = ["reggie", "marc"];
 export const TEST_IDS = {
   nav: {
     home: "nav-home",
+    broadcast: "nav-broadcast",
     ask: "nav-ask",
+    presser: "nav-presser",
+    fantasy: "nav-fantasy",
+    stats: "nav-stats",
+    login: "nav-login",
     predictions: "nav-predictions",
   },
   home: {
@@ -47,6 +52,7 @@ export const TEST_IDS = {
     askCta: "home-ask-cta",
     analystCard: (id) => `analyst-card-${id}`,
     analystAskBtn: (id) => `analyst-ask-btn-${id}`,
+    tickerTopic: (id) => `ticker-topic-${id}`,
   },
   ask: {
     analystStrip: "analyst-strip",
@@ -57,6 +63,9 @@ export const TEST_IDS = {
     statCard: "ask-stat-card",
     loadingLine: "ask-loading-line",
     suggested: (i) => `ask-suggested-${i}`,
+    upgradeModal: "presser-upgrade-modal",
+    upgradeConfirm: "presser-upgrade-confirm",
+    questionCounter: "presser-question-counter",
   },
   pred: {
     userInput: "pred-user-input",
@@ -68,6 +77,19 @@ export const TEST_IDS = {
     leaderboard: "pred-leaderboard",
     mine: "pred-mine",
     simulate: "pred-simulate",
+  },
+  stats: {
+    pageRoot: "stats-page",
+    tabSkaters: "stats-tab-skaters",
+    tabGoalies: "stats-tab-goalies",
+    tabTeams: "stats-tab-teams",
+    tabSchedule: "stats-tab-schedule",
+  },
+  fantasy: {
+    pageRoot: "fantasy-page",
+    upgradeBtn: "fantasy-upgrade-btn",
+    saveRoster: "fantasy-save-roster",
+    playerRow: (i) => `fantasy-player-${i}`,
   },
   desk: {
     shotFrame: "desk-shot-frame",

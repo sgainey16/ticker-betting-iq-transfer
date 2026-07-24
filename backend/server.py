@@ -563,6 +563,98 @@ async def simulate_resolve():
     return {"resolved_count": updates}
 
 
+# ---------- Subscription (foundation — mock activation for MVP) ----------
+FREE_QUESTION_LIMIT = 3
+
+
+class DeviceReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=6, max_length=80)
+
+
+class RosterReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=6, max_length=80)
+    league_name: Optional[str] = Field(default="", max_length=80)
+    scoring: Optional[str] = Field(default="", max_length=40)   # e.g. points / H2H / roto
+    roster: list = Field(default_factory=list)                  # [{name, team, pos}]
+    favorite_teams: list = Field(default_factory=list)          # ["TOR","EDM"]
+    notes: Optional[str] = Field(default="", max_length=400)
+
+
+async def _get_sub_doc(device_id: str) -> dict:
+    doc = await db.subscribers.find_one({"device_id": device_id}, {"_id": 0})
+    if doc:
+        return doc
+    fresh = {
+        "device_id": device_id,
+        "is_premium": False,
+        "questions_used": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.subscribers.insert_one(fresh)
+    return fresh
+
+
+@api.get("/subscription/state")
+async def subscription_state(device_id: str):
+    doc = await _get_sub_doc(device_id)
+    return {
+        "device_id": device_id,
+        "is_premium": doc.get("is_premium", False),
+        "questions_used": doc.get("questions_used", 0),
+        "free_limit": FREE_QUESTION_LIMIT,
+        "questions_remaining": max(0, FREE_QUESTION_LIMIT - doc.get("questions_used", 0))
+            if not doc.get("is_premium") else None,
+    }
+
+
+@api.post("/subscription/increment-question")
+async def subscription_increment(req: DeviceReq):
+    doc = await _get_sub_doc(req.device_id)
+    if doc.get("is_premium"):
+        return {"questions_used": doc.get("questions_used", 0), "gated": False, "is_premium": True}
+    used = doc.get("questions_used", 0) + 1
+    await db.subscribers.update_one({"device_id": req.device_id}, {"$set": {"questions_used": used}})
+    return {
+        "questions_used": used,
+        "gated": used > FREE_QUESTION_LIMIT,
+        "is_premium": False,
+        "free_limit": FREE_QUESTION_LIMIT,
+    }
+
+
+@api.post("/subscription/activate")
+async def subscription_activate(req: DeviceReq):
+    """MOCK activation — flips the device to premium. Real Stripe wiring
+    lands after user confirms the pricing tier."""
+    await _get_sub_doc(req.device_id)
+    await db.subscribers.update_one(
+        {"device_id": req.device_id},
+        {"$set": {"is_premium": True, "activated_at": datetime.now(timezone.utc).isoformat()}},
+    )
+    return {"is_premium": True, "device_id": req.device_id}
+
+
+@api.get("/subscription/roster")
+async def subscription_roster(device_id: str):
+    doc = await db.rosters.find_one({"device_id": device_id}, {"_id": 0})
+    return doc or {"device_id": device_id, "league_name": "", "scoring": "",
+                   "roster": [], "favorite_teams": [], "notes": ""}
+
+
+@api.post("/subscription/roster")
+async def subscription_roster_save(req: RosterReq):
+    payload = req.model_dump()
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.rosters.update_one(
+        {"device_id": req.device_id},
+        {"$set": payload},
+        upsert=True,
+    )
+    return {"saved": True, **payload}
+
+
 app.include_router(api)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly

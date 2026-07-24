@@ -1,11 +1,14 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
-import AskAnalyst from "@/pages/AskAnalyst";
+import PressConference from "@/pages/PressConference";
 import Predictions from "@/pages/Predictions";
 import VoiceLab from "@/pages/VoiceLab";
 import Voices from "@/pages/Voices";
+import Stats from "@/pages/Stats";
+import Fantasy from "@/pages/Fantasy";
+import Login from "@/pages/Login";
 import { Toaster } from "sonner";
 
 function App() {
@@ -15,7 +18,12 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/ask" element={<AskAnalyst />} />
+            <Route path="/press-conference" element={<PressConference />} />
+            {/* legacy alias */}
+            <Route path="/ask" element={<Navigate to="/press-conference" replace />} />
+            <Route path="/stats" element={<Stats />} />
+            <Route path="/fantasy" element={<Fantasy />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />

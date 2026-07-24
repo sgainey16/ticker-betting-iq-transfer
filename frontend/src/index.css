@@ -130,6 +130,9 @@ body {
   box-shadow: 0 0 12px var(--brand-glow);
 }
 
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+
 /* Analyst glow ring on hover */
 .analyst-card {
   position: relative;

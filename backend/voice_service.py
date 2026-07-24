@@ -7,6 +7,8 @@ analyst_id + text) so the same line is generated exactly once, ever.
 import os
 import hashlib
 import logging
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -27,13 +29,13 @@ ANALYST_VOICES = {
     # voice_id may be swapped when user picks a Voice-Design candidate in /voice-lab.
     "reggie": {
         "voice_id": "QFNlGyAI98kVm40cB3ik",  # user's Voice Design draft #1
-        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.10},
+        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.14},
     },
     # Marc — 60, analytics co-host. Calm, measured, warm. Placeholder is a
     # mature US male voice ("Bill" from the pre-made ElevenLabs library).
     "marc": {
         "voice_id": "pqHfZKP75CvOlQylNhV4",  # Bill — mature, warm
-        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 1.02},
+        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 1.08},
     },
 }
 
@@ -116,11 +118,49 @@ def ensure_audio(analyst_id: str, text: str) -> Optional[str]:
         if not buf:
             logger.warning("ElevenLabs returned empty audio for %s", analyst_id)
             return None
-        # Write atomically.
-        tmp = path.with_suffix(".mp3.tmp")
-        tmp.write_bytes(buf)
-        tmp.replace(path)
+        # Write raw ElevenLabs mp3 to a temp file, then use ffmpeg to strip
+        # leading/trailing silence and any long internal gaps. This is the
+        # single biggest lever for "no dead air" — ElevenLabs pads every clip
+        # with ~150-400ms of quiet at both ends by default, which stacks up
+        # brutally across 30+ turns.
+        raw = path.with_suffix(".raw.mp3")
+        raw.write_bytes(buf)
+        trimmed = _trim_silence(raw, path)
+        raw.unlink(missing_ok=True)
+        if not trimmed:
+            # Fall back to the untrimmed audio if ffmpeg failed for any reason.
+            path.write_bytes(buf)
         return f"/api/audio/{filename}"
     except Exception as e:
         logger.exception("TTS generation failed for %s: %s", analyst_id, e)
         return None
+
+
+def _trim_silence(src: Path, dst: Path) -> bool:
+    """Strip silence from both ends of the clip so back-to-back turns have
+    zero dead air. Uses ffmpeg's `silenceremove` filter twice — once at the
+    start, once (via reverse) at the end. Threshold -40dB, min 80ms.
+    Returns True if trimmed file was written to dst."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return False
+    try:
+        result = subprocess.run(
+            [
+                ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+                "-i", str(src),
+                "-af",
+                # 1) drop leading silence (>80ms below -40dB)
+                # 2) drop trailing silence by reversing/trimming/reversing
+                "silenceremove="
+                "start_periods=1:start_duration=0.05:start_threshold=-40dB:"
+                "stop_periods=-1:stop_duration=0.05:stop_threshold=-40dB",
+                "-codec:a", "libmp3lame", "-b:a", "128k",
+                str(dst),
+            ],
+            capture_output=True, timeout=15,
+        )
+        return result.returncode == 0 and dst.exists() and dst.stat().st_size > 0
+    except Exception as e:
+        logger.warning("ffmpeg silence-trim failed: %s", e)
+        return False
