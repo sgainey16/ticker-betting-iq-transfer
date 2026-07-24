@@ -185,3 +185,33 @@ Within analytics specifically, recommended build order:
 4. Anomaly Engine / Story Opportunity scoring (Section 5)
 5. Trade Analyzer (Section 7)
 6. Deep matchup/shot analytics (Section 4) — highest complexity, biggest differentiator, can follow once core loop is proven
+
+---
+
+## Annex A · Historical Context Flavor Layer (side piece)
+
+Not a core analytics feature — a *flavor* layer that colors panel delivery when a natural callback exists. Reggie and Marc reach for a history reference when it lands, not on every segment. The engine's job is to have hooks *available* on the shelf so the AI can grab one when the moment calls for it.
+
+**Three hook types the engine surfaces on demand:**
+
+1. **Similar-player comps** — vector-match active-player career markers against retired-player same-age seasons. Return top 3 comps only when similarity is strong (not forced).
+   - *"Bedard's age-19 shot rate lines up almost exactly with a young Sakic."*
+   - *"Utah's third-line C is doing a Tikkanen impression — eats the other team's top center every night."*
+
+2. **Records on pace** — nightly job flags players whose season/career pace is within meaningful range (>85% of the mark) of all-time or age-cohort records.
+   - *"If MacKinnon keeps this pace, first since Lemieux to hit 130 at 29."*
+   - *"McDavid is four games from Gretzky's consecutive multi-point mark at that age."*
+
+3. **Team/era parallels** — a lightweight tag that matches current team profiles (rebuild trajectory, roster shape, underlying-vs-record gap) against famous historical teams. Fires rarely, hits hard when it does.
+   - *"This Utah club feels like the '82 Islanders in reverse — great in transition, brutal own-zone, one veteran signing away from scary."*
+
+**Data sources** (all free/legal, no new spend):
+- NHL Records API for all-time records + franchise leaderboards
+- NHL Public API `/v1/player/{id}/landing` for career + junior + international splits on any NHLer
+- Wikidata for retired-player bios and milestones
+
+**Story Opportunity Score integration** (from Section 5): a matched hook adds a small bump to the score band — never dominates it. History is seasoning, not the meal.
+
+**Delivery rule** (extends Section 9): callbacks must sound conversational, never encyclopedic. Marc leads on stat-driven comps and record-watch; Reggie leads on personality/locker-room comps ("Same swagger Iginla had — that's a compliment").
+
+Elite Prospects licensing (Section 2) would eventually extend this to non-NHL European legends. Not required for Phase 1.
