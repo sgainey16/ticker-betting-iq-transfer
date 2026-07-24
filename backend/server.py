@@ -31,7 +31,7 @@ from analysts import (
     pick_banter,
     quick_fallback_line,
 )
-from voice_service import ensure_audio, audio_url_for
+from voice_service import ensure_audio, audio_url_for, budget_status
 from voice_picker import get_picker_state, set_active as picker_set_active, ensure_preview, CANDIDATES
 import nhl_data
 
@@ -312,6 +312,14 @@ async def stats_players():
 @api.get("/stats/teams")
 async def stats_teams():
     return {"teams": TEAMS}
+
+
+@api.get("/tts/budget")
+async def tts_budget():
+    """Today's ElevenLabs character usage vs. daily cap. Used by the
+    frontend health indicator + as a debugging endpoint after credit
+    burns. The cap itself lives in ELEVENLABS_DAILY_CHAR_LIMIT (.env)."""
+    return budget_status()
 
 
 # ---------- Voice Picker (2-host: Reggie + Marc) ----------

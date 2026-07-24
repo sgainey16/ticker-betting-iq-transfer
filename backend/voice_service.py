@@ -5,10 +5,12 @@ each analyst's personality. Audio is cached on disk as mp3 (keyed by hash of
 analyst_id + text) so the same line is generated exactly once, ever.
 """
 import os
+import json
 import hashlib
 import logging
 import shutil
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -66,6 +68,73 @@ def _load_saved_voice_choices():
 _load_saved_voice_choices()
 
 
+# ---------------------------------------------------------------------------
+# Daily character-budget alarm.
+#
+# ElevenLabs charges per character. If a bug loops a generation call, or a
+# cache-clear + regeneration burst runs against tens of thousands of lines,
+# credits vanish in minutes (this has happened). We track daily character
+# usage in a small JSON file and hard-refuse to hit the API once we cross
+# the per-day cap. Set ELEVENLABS_DAILY_CHAR_LIMIT in .env to raise/lower;
+# default is 20,000 chars/day (about a full show's worth of new script).
+# ---------------------------------------------------------------------------
+
+_budget_path = _audio_dir / "elevenlabs_daily_budget.json"
+_DEFAULT_DAILY_LIMIT = 20_000
+
+
+def _daily_limit() -> int:
+    try:
+        return int(os.environ.get("ELEVENLABS_DAILY_CHAR_LIMIT", _DEFAULT_DAILY_LIMIT))
+    except (TypeError, ValueError):
+        return _DEFAULT_DAILY_LIMIT
+
+
+def _budget_read() -> dict:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not _budget_path.exists():
+        return {"date": today, "chars": 0}
+    try:
+        data = json.loads(_budget_path.read_text())
+        if data.get("date") != today:
+            return {"date": today, "chars": 0}
+        return {"date": today, "chars": int(data.get("chars", 0))}
+    except Exception:
+        return {"date": today, "chars": 0}
+
+
+def _budget_write(state: dict) -> None:
+    try:
+        _budget_path.write_text(json.dumps(state))
+    except Exception as e:
+        logger.warning("Failed to persist ElevenLabs budget: %s", e)
+
+
+def _budget_would_exceed(text: str) -> bool:
+    """Return True if generating this line would push us past today's cap."""
+    state = _budget_read()
+    return (state["chars"] + len(text)) > _daily_limit()
+
+
+def _budget_charge(text: str) -> None:
+    state = _budget_read()
+    state["chars"] += len(text)
+    _budget_write(state)
+
+
+def budget_status() -> dict:
+    """Public helper so the API can surface today's TTS usage."""
+    state = _budget_read()
+    limit = _daily_limit()
+    return {
+        "date": state["date"],
+        "chars_used": state["chars"],
+        "limit": limit,
+        "remaining": max(0, limit - state["chars"]),
+        "exhausted": state["chars"] >= limit,
+    }
+
+
 def _get_client() -> Optional[ElevenLabs]:
     global _client
     if _client is not None:
@@ -102,6 +171,16 @@ def ensure_audio(analyst_id: str, text: str) -> Optional[str]:
     if client is None:
         return None
 
+    # Budget guard — refuse to hit the paid API if today's char cap is
+    # already spent. Prevents runaway loops from draining credits again.
+    if _budget_would_exceed(text):
+        state = _budget_read()
+        logger.warning(
+            "ElevenLabs daily budget exhausted (%d/%d chars). Skipping %s.",
+            state["chars"], _daily_limit(), analyst_id,
+        )
+        return None
+
     voice = ANALYST_VOICES[analyst_id]
     try:
         audio_stream = client.text_to_speech.convert(
@@ -118,6 +197,9 @@ def ensure_audio(analyst_id: str, text: str) -> Optional[str]:
         if not buf:
             logger.warning("ElevenLabs returned empty audio for %s", analyst_id)
             return None
+        # Only charge the budget once we actually got bytes back — a failed
+        # call shouldn't count against today's cap.
+        _budget_charge(text)
         # Write raw ElevenLabs mp3 to a temp file, then use ffmpeg to strip
         # leading/trailing silence and any long internal gaps. This is the
         # single biggest lever for "no dead air" — ElevenLabs pads every clip

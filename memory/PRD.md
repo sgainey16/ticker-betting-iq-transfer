@@ -44,7 +44,7 @@ fantasy back-office, subscription foundation with affiliate rails.
 4. **P1 — Real Stripe subscription plumbing** ($3.99/mo Founding Member) with paywall OFF until launch.
 5. **P1 — Free NHL Stats API** (`api-web.nhle.com`) for player-level analytics.
 6. **P2 — Fantasy AI engine**: Replace heuristic insights with real Claude-driven start-sit calls from saved roster.
-7. **P2 — Cost safety net**: Daily character-budget alarm on ElevenLabs; fall back to captions past a threshold.
+7. **P2 — Cost safety net**: Daily character-budget alarm on ElevenLabs; fall back to captions past a threshold. **✅ DONE 2026-02-25** — 20k chars/day cap, `/api/tts/budget` endpoint, tunable via `ELEVENLABS_DAILY_CHAR_LIMIT`.
 
 ## Backlog
 - Additional hosts (Tank, Lou, Cody) — deferred
@@ -54,6 +54,7 @@ fantasy back-office, subscription foundation with affiliate rails.
 - 3D/video avatars — deferred (budget protection)
 
 ## Change Log
+- **2026-02-25** — Marc Collins voice canon locked in (patient, curious, wise — the audience-smartener); expanded `system_prompt` in `analysts.py`, added full Marcism quote bank to `CHARACTER_STYLE_GUIDE.md`, updated tagline + loading lines + fallback replies; daily ElevenLabs character-budget alarm live at `/api/tts/budget` (20k chars/day default)
 - **2026-02-24** — Character style locked to hero art; contact-sheet slicing pipeline; style guide document
 - **2026-02-24** — 5-page nav, topics-in-ticker, subscription foundation, Stats + Fantasy pages, DK/Sleeper affiliate rail, tighter audio scheduler, silence-trim
 - **Earlier** — Studio UI, Tap-to-Join, cold opens, ElevenLabs voice casting, SportsData.io ticker
