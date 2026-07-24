@@ -9,6 +9,7 @@ import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
 import Fantasy from "@/pages/Fantasy";
 import Login from "@/pages/Login";
+import DeskPreview from "@/pages/DeskPreview";
 import { Toaster } from "sonner";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />
+            <Route path="/desk-preview" element={<DeskPreview />} />
           </Routes>
         </Layout>
         <Toaster theme="dark" richColors position="bottom-right" />

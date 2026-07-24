@@ -1,24 +1,40 @@
-// TwoHostDesk — Fox-Sports-1-style wide studio two-shot. Built entirely in
-// CSS so there is one shared studio (monitor-wall + desk + THE TICKER lit
-// logo bar) around BOTH hosts. The two hosts sit inside their own panes as
-// smaller, framed subjects; studio air surrounds them so the frame feels
-// like a real broadcast wide.
+// TwoHostDesk — the on-air broadcast frame.
 //
-// A shot cue (reggie_* / marc_*) pushes one pane wider for a soft camera cut.
-import { useMemo } from "react";
+// Two rendering modes:
+//   1) SOLO SHOT — when the scripted `shot` names a specific host expression
+//      (e.g. reggie_pointing, marc_analyzing_stats) AND we have the matching
+//      full-frame portrait on disk, render that portrait as the entire frame.
+//      This is the real "camera cut" — a hand-drawn Reggie/Marc pose fills
+//      the screen exactly like a broadcast tight shot.
+//   2) COMPOSED TWO-SHOT — for wide two-shots or when the specific portrait
+//      isn't available yet, fall back to the original CSS studio with both
+//      hosts side-by-side and the speaker pane widened.
+//
+// Adding new expressions is just dropping a PNG into
+//   /app/backend/static/hosts/expressions/<host>/<slug>.png
+// where <slug> is the shot suffix with underscores replaced by hyphens.
+
+import { useMemo, useState, useEffect } from "react";
 import { BACKEND_URL } from "@/lib/api";
 import { ANALYSTS } from "@/lib/config";
 
+// The 20 expression slots each host has a portrait for. Adding a new
+// expression = just drop `<slug>.png` into the host's folder and add the
+// name here. Filename uses hyphens; shot cue uses underscores.
+const EXPRESSION_SLUGS = [
+  "neutral", "explaining", "pointing", "leaning",
+  "hands_open", "counting", "looking_notes", "looking_monitor",
+  "listening_off", "skeptical", "smirking", "laughing",
+  "yelling", "disappointed", "serious", "chirping",
+  "celebrating", "thinking", "hot_take", "mic_drop",
+  // legacy cues still supported for backwards-compat with old scripts
+  "analyzing_stats", "adjusting_glasses", "listening", "smiling", "chuckle",
+];
+
 export const SHOTS = new Set([
   "side_two_shot", "two_neutral_open", "two_friendly_debate", "two_laughing",
-  "reggie_neutral", "reggie_explaining", "reggie_leaning", "reggie_pointing",
-  "reggie_hands_open", "reggie_counting", "reggie_looking_notes",
-  "reggie_looking_monitor", "reggie_listening_off", "reggie_skeptical",
-  "reggie_smirking", "reggie_laughing", "reggie_yelling",
-  "reggie_disappointed", "reggie_serious",
-  "marc_explaining", "marc_analyzing_stats", "marc_looking_notes",
-  "marc_adjusting_glasses", "marc_looking_monitor", "marc_listening",
-  "marc_smiling", "marc_skeptical", "marc_serious", "marc_chuckle",
+  ...EXPRESSION_SLUGS.map((s) => `reggie_${s}`),
+  ...EXPRESSION_SLUGS.map((s) => `marc_${s}`),
 ]);
 
 export function resolveShot({ shot, speaker }) {
@@ -35,22 +51,94 @@ function focusFor(shot) {
   return null;
 }
 
+function expressionUrl(shot) {
+  const m = /^(reggie|marc)_(.+)$/.exec(shot || "");
+  if (!m) return null;
+  const slug = m[2].replace(/_/g, "-");
+  return `${BACKEND_URL}/api/hosts/expressions/${m[1]}/${slug}.png`;
+}
+
 export default function TwoHostDesk({ shot, speaker, speaking }) {
   const focus = useMemo(() => focusFor(shot), [shot]);
+  const soloUrl = useMemo(() => expressionUrl(shot), [shot]);
+  const [soloReady, setSoloReady] = useState(false);
+  const [soloFailed, setSoloFailed] = useState(false);
+
+  // Preload the solo portrait; if it 404s we fall back to composed studio.
+  useEffect(() => {
+    setSoloReady(false); setSoloFailed(false);
+    if (!soloUrl) return;
+    const img = new Image();
+    img.onload = () => setSoloReady(true);
+    img.onerror = () => setSoloFailed(true);
+    img.src = soloUrl;
+  }, [soloUrl]);
+
+  const useSolo = soloUrl && soloReady && !soloFailed;
 
   return (
     <div
       className="relative w-full overflow-hidden"
       style={{ aspectRatio: "22 / 10", background: "#050510" }}
     >
-      {/* --- Layer 1: monitor wall / studio backdrop --- */}
+      {useSolo ? (
+        <SoloFrame url={soloUrl} host={focus} speaking={speaking && speaker === focus} />
+      ) : (
+        <ComposedStudio focus={focus} speaker={speaker} speaking={speaking} />
+      )}
+
+      {/* Vignette so overlays stay readable */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{ boxShadow: "inset 0 0 160px 20px rgba(0,0,0,0.55)" }}
+      />
+    </div>
+  );
+}
+
+// ---- Solo camera cut: full-frame expression portrait ----
+function SoloFrame({ url, host, speaking }) {
+  const a = ANALYSTS[host] || {};
+  return (
+    <div className="absolute inset-0">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url(${url})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center 28%",
+          backgroundRepeat: "no-repeat",
+          filter: speaking
+            ? "brightness(1.02) saturate(1.06)"
+            : "brightness(0.94)",
+          transition: "filter 400ms ease-out",
+        }}
+      />
+      {/* subtle speaker pulse rim in the host accent */}
+      {speaking && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            boxShadow: `inset 0 -180px 140px -80px ${a.accent}55`,
+            animation: "reggieSpeakPulse 2.6s ease-in-out infinite",
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---- Fallback: composed studio with both hosts (existing behavior) ----
+function ComposedStudio({ focus, speaker, speaking }) {
+  return (
+    <>
       <div className="absolute inset-0" style={monitorWallStyle} />
       <div className="absolute inset-0" style={monitorWallOverlayStyle} />
-      {/* Studio ambient glow left/right */}
-      <div className="absolute inset-y-0 left-0 w-1/3 pointer-events-none" style={{ background: "radial-gradient(circle at 0% 50%, rgba(30,93,255,0.16), transparent 60%)" }} />
-      <div className="absolute inset-y-0 right-0 w-1/3 pointer-events-none" style={{ background: "radial-gradient(circle at 100% 50%, rgba(0,229,255,0.12), transparent 60%)" }} />
+      <div className="absolute inset-y-0 left-0 w-1/3 pointer-events-none"
+        style={{ background: "radial-gradient(circle at 0% 50%, rgba(30,93,255,0.16), transparent 60%)" }} />
+      <div className="absolute inset-y-0 right-0 w-1/3 pointer-events-none"
+        style={{ background: "radial-gradient(circle at 100% 50%, rgba(0,229,255,0.12), transparent 60%)" }} />
 
-      {/* --- Layer 2: both hosts, sized to leave studio air around them --- */}
       <div className="absolute inset-x-0 top-0" style={{ bottom: "22%" }}>
         <div className="w-full h-full flex">
           <HostPane host="reggie" focus={focus} speaker={speaker} speaking={speaking} align="right" />
@@ -58,69 +146,42 @@ export default function TwoHostDesk({ shot, speaker, speaking }) {
         </div>
       </div>
 
-      {/* --- Layer 3: desk-front with THE TICKER logo strip --- */}
       <div className="absolute inset-x-0 bottom-0 pointer-events-none z-20" style={{ height: "22%" }}>
-        {/* desk plane */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "linear-gradient(180deg, rgba(5,5,16,0) 0%, rgba(5,5,16,0.85) 12%, rgba(8,10,26,0.98) 45%, #05070f 100%)",
-          }}
-        />
-        {/* thin lit rim across the desk edge */}
-        <div
-          className="absolute inset-x-0 top-0"
-          style={{
-            height: "3px",
-            background:
-              "linear-gradient(90deg, transparent 0%, #1e5dff88 22%, #1e5dff 46%, #00e5ff 54%, #00e5ffaa 78%, transparent 100%)",
-            boxShadow: "0 0 24px 4px rgba(30,93,255,0.55)",
-          }}
-        />
-        {/* THE TICKER wordmark carved into the desk front, centered */}
+        <div className="absolute inset-0" style={{
+          background:
+            "linear-gradient(180deg, rgba(5,5,16,0) 0%, rgba(5,5,16,0.85) 12%, rgba(8,10,26,0.98) 45%, #05070f 100%)",
+        }} />
+        <div className="absolute inset-x-0 top-0" style={{
+          height: "3px",
+          background:
+            "linear-gradient(90deg, transparent 0%, #1e5dff88 22%, #1e5dff 46%, #00e5ff 54%, #00e5ffaa 78%, transparent 100%)",
+          boxShadow: "0 0 24px 4px rgba(30,93,255,0.55)",
+        }} />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div
-            className="font-headline text-white/80 tracking-[0.35em]"
+          <div className="font-headline text-white/80 tracking-[0.35em]"
             style={{
               fontSize: "clamp(16px, 2.2vw, 28px)",
-              textShadow:
-                "0 0 18px rgba(30,93,255,0.7), 0 1px 0 rgba(0,0,0,0.6)",
-            }}
-          >
+              textShadow: "0 0 18px rgba(30,93,255,0.7), 0 1px 0 rgba(0,0,0,0.6)",
+            }}>
             THE&nbsp;TICKER
           </div>
         </div>
       </div>
-
-      {/* Vignette so the lower-third overlays stay readable */}
-      <div
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          boxShadow: "inset 0 0 160px 20px rgba(0,0,0,0.55)",
-        }}
-      />
-    </div>
+    </>
   );
 }
 
 function HostPane({ host, focus, speaker, speaking, align }) {
   const a = ANALYSTS[host] || {};
   const src = a.hero ? `${BACKEND_URL}${a.hero}` : "";
-
   const grow = focus === host ? 1.8 : focus ? 0.7 : 1;
   const isSpeaker = speaker === host && speaking;
   const isListening = speaker && speaker !== host;
 
-  // Give the character breathing room: sit them at ~68% of pane height so
-  // the studio backdrop reads above them, and the desk bar shows below.
   return (
-    <div
-      className="relative transition-all duration-700 ease-out"
-      style={{ flexGrow: grow, flexBasis: 0, minWidth: 0 }}
-    >
-      <div
-        className="absolute inset-0"
+    <div className="relative transition-all duration-700 ease-out"
+      style={{ flexGrow: grow, flexBasis: 0, minWidth: 0 }}>
+      <div className="absolute inset-0"
         style={{
           backgroundImage: src ? `url(${src})` : undefined,
           backgroundSize: "auto 92%",
@@ -132,34 +193,25 @@ function HostPane({ host, focus, speaker, speaking, align }) {
             ? "brightness(0.55) saturate(0.75)"
             : "brightness(0.88)",
           transition: "filter 400ms ease-out, background-position 700ms ease-out",
-        }}
-      />
+        }} />
       {isSpeaker && (
-        <div
-          className="absolute inset-0 pointer-events-none"
+        <div className="absolute inset-0 pointer-events-none"
           style={{
             boxShadow: `inset 0 -180px 120px -80px ${a.accent}55`,
             animation: "reggieSpeakPulse 2.6s ease-in-out infinite",
-          }}
-        />
+          }} />
       )}
     </div>
   );
 }
 
-// ---- Studio backdrop (CSS "monitor wall") ----
 const monitorWallStyle = {
-  background:
-    "linear-gradient(180deg, #0a0f22 0%, #060814 60%, #04060f 100%)",
+  background: "linear-gradient(180deg, #0a0f22 0%, #060814 60%, #04060f 100%)",
 };
 
-// A tiled dim monitor pattern — subtle rectangles suggesting a wall of
-// video screens without competing with the hosts for attention.
 const monitorWallOverlayStyle = {
   backgroundImage: [
-    // horizontal scan lines
     "repeating-linear-gradient(0deg, rgba(30,93,255,0.045) 0 1px, transparent 1px 4px)",
-    // monitor tiles
     "repeating-linear-gradient(90deg, rgba(255,255,255,0.02) 0 78px, rgba(30,93,255,0.05) 78px 82px)",
     "repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0 44px, rgba(0,229,255,0.04) 44px 48px)",
   ].join(","),
