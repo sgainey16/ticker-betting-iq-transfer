@@ -1,76 +1,59 @@
 # The Ticker — PRD (Product Requirements Document)
 
-## Original Vision
-An AI-powered sports television network MVP focused on NHL hockey. A two-host
-panel (Reggie Banks + Marc Collins) delivers a continuous, TV-quality broadcast
-with real NHL data, distinct personalities, ElevenLabs-voiced audio, and a
-podcast-like cadence. Users can also 1-on-1 press-conference the hosts,
-manage a fantasy back-office, and browse NHL-style stats.
+## Vision
+AI-powered NHL broadcast MVP with a two-host panel (Reggie Banks + Marc
+Collins). TV-quality feel, real NHL data, ElevenLabs-voiced audio,
+podcast-cadence banter, 1-on-1 press-conference deep dives, personal
+fantasy back-office, subscription foundation with affiliate rails.
 
 ## Architecture (locked)
-- **Home** (`/`) — Passive broadcast: continuous 15-min flow through topics, tap ticker to jump.
-- **Presser** (`/press-conference`) — 1-on-1 deep dives, 3 free questions then soft "Founding Member" nudge (paywall OFF for MVP).
+- **Home** (`/`) — Continuous broadcast, auto-advances through topics, tap ticker to jump.
+- **Presser** (`/press-conference`) — 1-on-1 deep dives + 3-free-question soft nudge.
 - **Stats** (`/stats`) — Public NHL.com-style leaders / standings / schedule.
-- **Fantasy** (`/fantasy`) — Roster editor, favorite teams, decision-insights, DK/Sleeper/Yahoo/ESPN affiliate rail.
-- **Login** (`/login`) — Placeholder + notify-me email + device-based activation.
-- (Legacy) Voices `/voices`, VoiceLab `/voice-lab`, Predictions `/predictions` still live but off-nav.
+- **Fantasy** (`/fantasy`) — Roster editor + AI insights + DK/Sleeper/Yahoo/ESPN affiliate rail.
+- **Login** (`/login`) — Notify-me + Founding Member activation stub.
+- **Desk preview** (`/desk-preview`) — Hidden dev QA page for all camera shots.
 
-## What's Implemented (as of Feb 2026)
-### Core Broadcast
-- Wide Fox-Sports-style CSS studio with two-host split, monitor wall, THE TICKER desk logo
-- ElevenLabs custom Voice Design for Reggie + Marc (cast via /voices)
-- Two-lane ticker: ON THE SHOW (clickable topics) + LIVE NHL (SportsData.io headlines)
-- Auto-flow: end of one topic → next topic (continuous 15-min feel)
-- Tap-to-Join overlay (bypasses browser autoplay)
-- Pause / Sound-on / Sound-off controls
-- Minimal in-frame speaker badge (no more chunky "ON MIC" lower-third)
-- Ping-pong audio scheduler with preload + aggressive negative overlap (default 400 ms)
-- Pace cue map: cutoff/-700, quick/-500, relaxed/-400, beat/60, land/180, breath/320 ms
-- **Backend ffmpeg silence-trim pipeline** on all new ElevenLabs clips (silenceremove, -40 dB, 50 ms window)
+## Character Style — LOCKED to hero art
+- Canonical: `reggie_hero_crop.png` + `marc_hero_crop.png` (painterly Pixar-adjacent 3D)
+- Full style guide at `/app/memory/CHARACTER_STYLE_GUIDE.md` — hand to ChatGPT for future expression sheets
+- Archives: `_legacy_v1/` (older cartoon), `_realistic_v2_archive/` (off-style contact sheets)
 
-### Press Conference
-- Renamed `/ask` → `/press-conference` (302 redirect kept)
-- 3-free deep-dive counter per device (localStorage id)
-- Soft upgrade modal + Founding Member sidebar CTA
-- Mock activation (`POST /subscription/activate` — real Stripe deferred)
+## Shipped this session
+- ON MIC banner removed → minimal in-frame speaker badge
+- Show topics moved into ticker as clickable scrolling lane
+- Top nav: Broadcast · Presser · Fantasy · Stats · Login
+- LiveDesk audio scheduler v3: two-audio ping-pong + preload + 400ms default overlap + tighter pace cues (breath 320, land 180, beat 60)
+- FFmpeg silence-trim on all new ElevenLabs clips
+- Continuous flow: end of one topic auto-advances to next
+- Stats page — NHL-style skater/goalie leaders, standings, schedule
+- Fantasy page — league name + scoring + 6-row roster + favorite teams + notes + heuristic insights + affiliate rail
+- Subscription foundation (mock) — device-based counter, upgrade modal, activation endpoint, roster persistence in Mongo
+- "Jump in — ask the desk" removed from Home; Presser only
+- Hero portraits + composed studio unified to canonical style
+- Contact-sheet slicer script (`scripts/slice_contact_sheet.py`) for future updates
+- Character style guide document created
 
-### Stats (public, NHL-style)
-- Skaters leaders table (G/A/P/+//TOI)
-- Goalies leaders (SV%/GAA/W-L)
-- Standings (PTS/GF/GA/DIFF)
-- Tonight's schedule (SportsData.io games)
+## Known Blockers
+- **Recurring**: ElevenLabs credits burn on any regeneration. Cache is respected on replay; new lines only cost when generated fresh. Verify credits are on the workspace whose key sits in `/app/backend/.env`.
 
-### Fantasy Desk (foundation)
-- League name + scoring type + 6-row roster editor + favorite-teams chips + notes
-- Decision Insights panel (heuristic today; AI-driven with Founding Member later)
-- **Affiliate rail**: DraftKings, Sleeper, Yahoo Fantasy, ESPN Fantasy (placeholder links + sponsored tag)
-- Founding Member activation button
-- Roster persists in Mongo (`db.rosters`, keyed by device_id)
+## Priority for tomorrow
+1. **P0 — Podcast structure refinement**: Crisper timing/delivery. Banter jabs at open + close of each segment; one host carries the meat of the middle with the other doing short reactions only ("Hmm", "Wow", "C'mon").
+2. **P0 — Expand shot cueing in `analysts.py`**: Use the richer camera roster (`two_arguing`, `two_hot_take_clash`, `two_punchline`, `two_signoff`) once expression sheets are re-shot in hero style.
+3. **P1 — Voice Input on Presser**: Web Speech API default + Whisper fallback via Emergent LLM Key.
+4. **P1 — Real Stripe subscription plumbing** ($3.99/mo Founding Member) with paywall OFF until launch.
+5. **P1 — Free NHL Stats API** (`api-web.nhle.com`) for player-level analytics.
+6. **P2 — Fantasy AI engine**: Replace heuristic insights with real Claude-driven start-sit calls from saved roster.
+7. **P2 — Cost safety net**: Daily character-budget alarm on ElevenLabs; fall back to captions past a threshold.
 
-### Backend
-- FastAPI on 8001 (`/api/*` routed via ingress)
-- Endpoints: `/banter`, `/topics`, `/ticker`, `/nhl/*`, `/stats/*`, `/ask/stream`, `/voices/*`, `/predictions/*`, `/subscription/*`
-- MongoDB collections: `qa_log`, `predictions`, `subscribers`, `rosters`
-- 3rd-party: ElevenLabs (TTS), SportsData.io (NHL), Emergent LLM Key (Claude Sonnet 4.5)
-
-## Known Blockers (as of last change)
-- **P0 – ElevenLabs credits exhausted.** New audio can't be generated. Audio cache was cleared to force regeneration through the new silence-trim pipeline; user must top up ElevenLabs credits before broadcast audio plays again. All code is in place; audio will auto-populate on first `/api/banter` hit once credits refresh.
-
-## Backlog / P1
-- Voice Input on Presser (Web Speech API + Whisper fallback via Emergent LLM Key)
-- Real Stripe subscription plumbing ($3.99/mo Founding Member)
-- Free NHL Stats API integration (`api-web.nhle.com`) for player-level analytics
-- Better decision-insight AI engine (currently heuristic)
-
-## Backlog / P2
-- Additional hosts (Tank, Lou, Cody)
-- Community forums, user profiles, prediction tracking
-- Real fantasy platform sync (Sleeper API first, then Yahoo/ESPN OAuth)
-- Push notifications for anomaly flags
-
-## Backlog / P3
-- 3D/video character avatars (explicitly deferred to protect $400 budget)
+## Backlog
+- Additional hosts (Tank, Lou, Cody) — deferred
+- Community forums, prediction tracking — deferred
+- Real fantasy platform sync (Sleeper → Yahoo → ESPN OAuth) — deferred
+- Push notifications for anomaly flags — deferred
+- 3D/video avatars — deferred (budget protection)
 
 ## Change Log
-- **2026-02** — 2-page → 5-page nav; ticker eats topic bubbles; continuous flow; tighter audio scheduler; silence-trim; subscription foundation; Stats + Fantasy pages; DK/Sleeper affiliate rail
-- **Earlier** — Studio UI, Tap-to-Join, cold opens, ElevenLabs voice casting, SportsData.io ticker, pace cues
+- **2026-02-24** — Character style locked to hero art; contact-sheet slicing pipeline; style guide document
+- **2026-02-24** — 5-page nav, topics-in-ticker, subscription foundation, Stats + Fantasy pages, DK/Sleeper affiliate rail, tighter audio scheduler, silence-trim
+- **Earlier** — Studio UI, Tap-to-Join, cold opens, ElevenLabs voice casting, SportsData.io ticker
