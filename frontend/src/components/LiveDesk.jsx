@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import TwoHostDesk, { resolveShot } from "@/components/TwoHostDesk";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
-import { api, BACKEND_URL } from "@/lib/api";
-import { Send, Volume2, VolumeX, PlayCircle, PauseCircle } from "lucide-react";
-import { playTickerSting } from "@/lib/sting";
+import { BACKEND_URL, api } from "@/lib/api";
+import { Volume2, VolumeX, PlayCircle, PauseCircle } from "lucide-react";import { playTickerSting } from "@/lib/sting";
 
 // ---- Timing ----
 // All gaps are signed milliseconds. NEGATIVE = start the next line early
@@ -43,14 +42,9 @@ export default function LiveDesk({
   const [muted, setMuted] = useState(false);
   const [paused, setPaused] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
-  const [chatInput, setChatInput] = useState("");
-  const [chatBusy, setChatBusy] = useState(false);
-  const [chatResponse, setChatResponse] = useState(null);
 
   const audioRef = useRef(null);
   const audioRefB = useRef(null);
-  const chatAudioRef = useRef(null);
   const audioCtxRef = useRef(null);
   const unlockAudioRef = useRef(() => {});
   const advancedRef = useRef(new Set());
@@ -214,31 +208,6 @@ export default function LiveDesk({
     }
   }, [muted]);
 
-  async function submitTopic() {
-    const t = chatInput.trim();
-    if (!t || chatBusy) return;
-    setChatBusy(true);
-    setChatResponse(null);
-    try {
-      const r = await api.post("/banter/quick-reply", { topic: t });
-      setChatResponse(r.data);
-      setChatInput("");
-      if (r.data.analyst_id === "reggie") setCurrentShot("reggie_pointing");
-      else if (r.data.analyst_id === "marc") setCurrentShot("marc_analyzing_stats");
-      if (audioUnlocked && !muted && r.data.audio_url && chatAudioRef.current) {
-        chatAudioRef.current.src = `${BACKEND_URL}${r.data.audio_url}`;
-        chatAudioRef.current.play().catch(() => {});
-      }
-    } catch (e) {
-      setChatResponse({
-        analyst_id: "reggie",
-        text: "Signal lost from the desk. Try again.",
-      });
-    } finally {
-      setChatBusy(false);
-    }
-  }
-
   const speakerAccent = currentSpeaker ? ANALYSTS[currentSpeaker]?.accent : "#1e5dff";
   const speakerName = currentSpeaker ? ANALYSTS[currentSpeaker]?.short : null;
   const activeTopicLabel =
@@ -248,7 +217,6 @@ export default function LiveDesk({
     <section className="relative">
       <audio ref={audioRef} preload="auto" playsInline />
       <audio ref={audioRefB} preload="auto" playsInline />
-      <audio ref={chatAudioRef} preload="auto" playsInline />
 
       {/* Slim control strip — topic label left, playback + mute right */}
       <div className="mb-3 flex items-center gap-3 flex-wrap">
@@ -348,70 +316,6 @@ export default function LiveDesk({
             >
               {speakerName}
             </span>
-          </div>
-        )}
-      </div>
-
-      {/* Ask-the-panel input */}
-      <div
-        className={`mt-5 card-surface p-5 transition-all duration-500 ${
-          chatOpen ? "opacity-100" : "opacity-70"
-        }`}
-      >
-        <label className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">
-          Jump in — ask the desk
-        </label>
-        <div className="mt-2 flex items-center gap-3">
-          <input
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && submitTopic()}
-            placeholder="e.g. What's wrong with the Leafs?"
-            disabled={chatBusy}
-            data-testid={TEST_IDS.desk.topicInput}
-            className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-lg px-4 py-3 text-white placeholder:text-white/30 focus:outline-none disabled:opacity-40"
-          />
-          <button
-            onClick={() => { unlockAudio(); submitTopic(); }}
-            disabled={chatBusy || !chatInput.trim()}
-            data-testid={TEST_IDS.desk.topicSubmit}
-            className="h-[48px] px-5 rounded-lg bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 disabled:cursor-not-allowed text-white font-accent uppercase tracking-widest text-sm inline-flex items-center gap-2 transition-colors"
-          >
-            <Send className="w-4 h-4" />
-            Toss it in
-          </button>
-        </div>
-
-        {chatBusy && (
-          <div className="mt-3 text-white/50 text-sm font-accent uppercase tracking-widest">
-            Someone at the desk is jumping in…
-          </div>
-        )}
-
-        {chatResponse && (
-          <div
-            className="mt-3 rounded-lg border p-4 flex items-start gap-3"
-            style={{
-              borderColor: (ANALYSTS[chatResponse.analyst_id]?.accent || "#2d2d35") + "77",
-              background: "#0b0b10",
-            }}
-            data-testid={TEST_IDS.desk.quickReply}
-          >
-            <span
-              className="h-2.5 w-2.5 mt-2 rounded-full live-pulse flex-shrink-0"
-              style={{ background: ANALYSTS[chatResponse.analyst_id]?.accent }}
-            />
-            <div className="flex-1 min-w-0">
-              <div
-                className="font-accent text-[11px] uppercase tracking-widest"
-                style={{ color: ANALYSTS[chatResponse.analyst_id]?.accent }}
-              >
-                {ANALYSTS[chatResponse.analyst_id]?.role}
-              </div>
-              <div className="text-white/85 text-sm mt-1 leading-relaxed">
-                {chatResponse.text}
-              </div>
-            </div>
           </div>
         )}
       </div>
