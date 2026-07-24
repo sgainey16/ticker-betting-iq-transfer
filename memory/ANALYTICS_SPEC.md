@@ -28,6 +28,8 @@ Raw inputs the prediction engine is actually built on:
 
 **Data licensing roadmap:** Official/exclusive NHL data licensing (the tier Sportradar currently holds exclusively for sportsbooks/media) is a future business-development goal once The Ticker has real traction and revenue — not a Phase 1 target. No self-serve application exists for this; it requires a direct partnership conversation.
 
+**MOAT PLUMBING (start at launch, not later):** Composite analytics scores are copyable by a well-resourced competitor within 6-12 months — they aren't the moat. The real moat is accumulated data + public accuracy track record that can't be backfilled. **Phase 1 must include invisible logging of every prediction (AI and user) with reasoning captured at pick-time.** See `MOAT_ROADMAP.md` for the full three-phase plan (invisible logging → recap/Elo features → community + sweepstakes-style staking).
+
 **Existing pipeline asset:** A data pipeline script for the NHL API + MoneyPuck pulls already exists as a starting point — ask the founder for it directly before Sprint 1 kicks off.
 
 **Visual + logic reference:** The concrete UI target for the matchup analytics feature lives in `/app/memory/mockups/ticker-matchup-sheet.html` (component/UI reference — sample data only) and `/app/memory/mockups/MATCHUP_ANALYTICS_SPEC.md` (data + logic behind it, incl. 20-category framework, Ticker Intelligence composite scores, factor-importance transparency "Holy Grail," Fact/Reported/Rumor confidence tiers, Community Consensus mechanic, and intangibles layer). Treat the Matchup Sheet as the flagship visual output of Layer 3 — the "receipts view" that the guided-question UX drills into on demand.
