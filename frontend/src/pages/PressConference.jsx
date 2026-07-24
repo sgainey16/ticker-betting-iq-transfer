@@ -4,7 +4,7 @@ import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api, askAnalystStream, BACKEND_URL } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import { UPCOMING, DEEP_DIVE_TABS, GAME_TABS } from "@/lib/upcoming";
-import { Send, Sparkles, Crown, X, ChevronDown, Radio } from "lucide-react";
+import { Send, Sparkles, Crown, X, ChevronDown, Radio, Target, Trophy, Star, ArrowUpRight } from "lucide-react";
 
 function useQueryParam(name) {
   const { search } = useLocation();
@@ -323,11 +323,11 @@ export default function PressConference() {
             </div>
 
             <div className="sm:col-span-2 card-surface p-4" data-testid={TEST_IDS.ask.statCard}>
-              <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-white/50">
-                The data card
-              </div>
               {statCard ? (
                 <>
+                  <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-white/50">
+                    The data card
+                  </div>
                   <div className="mt-2 font-headline text-lg text-white leading-tight">{statCard.title}</div>
                   <div className="text-[10px] font-accent uppercase tracking-widest text-white/50 mt-0.5">
                     {statCard.subtitle}
@@ -342,9 +342,7 @@ export default function PressConference() {
                   </div>
                 </>
               ) : (
-                <div className="mt-2 text-white/40 text-xs">
-                  Ask a question — receipts land here.
-                </div>
+                <BackOfficeMiniTicker />
               )}
             </div>
           </div>
@@ -479,6 +477,69 @@ export default function PressConference() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* -------- Back Office Mini Ticker --------
+   Sits in the empty state of the data card. Shows a compressed personal
+   stat strip so the third-section-down feels like YOUR desk, not another
+   "type a question" prompt. Deep-links each stat to its Back Office tab.
+   All values mocked for now — will wire to real device profile data next.
+*/
+function BackOfficeMiniTicker() {
+  const stats = [
+    { label: "Accuracy",   value: "—",   sub: "No picks yet",  icon: Target,  to: "/back-office", accent: "#1e5dff" },
+    { label: "Banners",    value: "0",   sub: "Win a season",  icon: Trophy,  to: "/back-office", accent: "#f5c542" },
+    { label: "Top Team",   value: "—",   sub: "Set a favorite", icon: Star,   to: "/back-office", accent: "#00e5ff" },
+  ];
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-white/50">
+          Your Back Office
+        </div>
+        <Link
+          to="/back-office"
+          data-testid="presser-mini-ticker-link"
+          className="font-accent text-[9px] uppercase tracking-widest text-[#1e5dff] hover:text-white transition-colors flex items-center gap-1"
+        >
+          Open <ArrowUpRight className="w-3 h-3" />
+        </Link>
+      </div>
+      <div className="mt-3 space-y-2">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Link
+              key={s.label}
+              to={s.to}
+              data-testid={`presser-mini-ticker-${s.label.toLowerCase().replace(" ", "-")}`}
+              className="flex items-center gap-3 rounded-lg border border-[#2d2d35] bg-[#0b0b10] px-3 py-2.5 hover:border-white/30 transition-colors group"
+            >
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-md flex-shrink-0"
+                style={{ background: s.accent + "22", border: `1px solid ${s.accent}55` }}
+              >
+                <Icon className="w-3.5 h-3.5" style={{ color: s.accent }} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-accent text-[9px] uppercase tracking-widest text-white/45">
+                  {s.label}
+                </div>
+                <div className="text-[10px] text-white/40 truncate">{s.sub}</div>
+              </div>
+              <div className="font-headline text-xl text-white flex-shrink-0">
+                {s.value}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+      <div className="mt-3 text-[10px] font-accent uppercase tracking-widest text-white/35 text-center">
+        Ask a question — receipts land here next
+      </div>
     </div>
   );
 }
