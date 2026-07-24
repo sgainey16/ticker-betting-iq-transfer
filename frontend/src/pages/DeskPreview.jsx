@@ -15,8 +15,15 @@ const EXPRESSIONS = [
   "celebrating", "thinking", "hot_take", "mic_drop",
 ];
 
+const TWO_SHOTS = [
+  "neutral_open", "cold_open", "panel_wide", "side_two_shot", "reggie_leads",
+  "marc_leads", "friendly_debate", "arguing", "hot_take_clash", "in_agreement",
+  "serious_analysis", "reviewing_tape", "looking_at_monitor", "both_thinking",
+  "both_pointing", "shocked", "laughing", "celebrating", "punchline", "signoff",
+];
+
 const ALL_SHOTS = [
-  "side_two_shot",
+  ...TWO_SHOTS.map((s) => (s === "side_two_shot" ? s : `two_${s}`)),
   ...EXPRESSIONS.map((s) => `reggie_${s}`),
   ...EXPRESSIONS.map((s) => `marc_${s}`),
 ];

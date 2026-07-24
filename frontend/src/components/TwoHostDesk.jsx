@@ -18,9 +18,7 @@ import { useMemo, useState, useEffect } from "react";
 import { BACKEND_URL } from "@/lib/api";
 import { ANALYSTS } from "@/lib/config";
 
-// The 20 expression slots each host has a portrait for. Adding a new
-// expression = just drop `<slug>.png` into the host's folder and add the
-// name here. Filename uses hyphens; shot cue uses underscores.
+// The 20 solo-expression slots each host has a portrait for.
 const EXPRESSION_SLUGS = [
   "neutral", "explaining", "pointing", "leaning",
   "hands_open", "counting", "looking_notes", "looking_monitor",
@@ -31,10 +29,22 @@ const EXPRESSION_SLUGS = [
   "analyzing_stats", "adjusting_glasses", "listening", "smiling", "chuckle",
 ];
 
+// The 20 two-shot slots (mirrors filenames in /hosts/expressions/together/).
+export const TOGETHER_SLUGS = [
+  "neutral_open", "cold_open", "panel_wide", "side_two_shot", "reggie_leads",
+  "marc_leads", "friendly_debate", "arguing", "hot_take_clash", "in_agreement",
+  "serious_analysis", "reviewing_tape", "looking_at_monitor", "both_thinking",
+  "both_pointing", "shocked", "laughing", "celebrating", "punchline", "signoff",
+];
+
 export const SHOTS = new Set([
+  // Legacy two-shot aliases that scripts may already use.
   "side_two_shot", "two_neutral_open", "two_friendly_debate", "two_laughing",
   ...EXPRESSION_SLUGS.map((s) => `reggie_${s}`),
   ...EXPRESSION_SLUGS.map((s) => `marc_${s}`),
+  // Full two-shot roster; can be used bare (arguing) or with `two_` prefix.
+  ...TOGETHER_SLUGS,
+  ...TOGETHER_SLUGS.map((s) => `two_${s}`),
 ]);
 
 export function resolveShot({ shot, speaker }) {
@@ -51,11 +61,29 @@ function focusFor(shot) {
   return null;
 }
 
+// Resolve any shot cue to a PNG under /api/hosts/expressions/<host>/<slug>.png.
+// Returns null if the shot is a plain two-shot fallback that has no artwork.
 function expressionUrl(shot) {
-  const m = /^(reggie|marc)_(.+)$/.exec(shot || "");
-  if (!m) return null;
-  const slug = m[2].replace(/_/g, "-");
-  return `${BACKEND_URL}/api/hosts/expressions/${m[1]}/${slug}.png`;
+  if (!shot) return null;
+
+  // Solo shots — reggie_* / marc_*
+  const solo = /^(reggie|marc)_(.+)$/.exec(shot);
+  if (solo) {
+    const slug = solo[2].replace(/_/g, "-");
+    return `${BACKEND_URL}/api/hosts/expressions/${solo[1]}/${slug}.png`;
+  }
+
+  // Two-shot cues — either "two_arguing" or bare "arguing"
+  const twoPrefixed = /^two_(.+)$/.exec(shot);
+  const bareSlug = twoPrefixed ? twoPrefixed[1] : shot;
+  if (bareSlug === "side_two_shot") {
+    return `${BACKEND_URL}/api/hosts/expressions/together/side-two-shot.png`;
+  }
+  if (TOGETHER_SLUGS.includes(bareSlug)) {
+    const slug = bareSlug.replace(/_/g, "-");
+    return `${BACKEND_URL}/api/hosts/expressions/together/${slug}.png`;
+  }
+  return null;
 }
 
 export default function TwoHostDesk({ shot, speaker, speaking }) {

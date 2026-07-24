@@ -21,13 +21,24 @@ SHEET = Path(sys.argv[2])
 OUT = Path(f"/app/backend/static/hosts/expressions/{HOST}")
 OUT.mkdir(parents=True, exist_ok=True)
 
-NAMES = [
+# Solo-host name list (20 slots) — used for reggie / marc contact sheets.
+SOLO_NAMES = [
     "neutral", "explaining", "pointing", "leaning",
     "hands-open", "counting", "looking-notes", "looking-monitor",
     "listening-off", "skeptical", "smirking", "laughing",
     "yelling", "disappointed", "serious", "chirping",
     "celebrating", "thinking", "hot-take", "mic-drop",
 ]
+
+# Two-shot name list — mirrors the labels in the "together" contact sheet.
+TOGETHER_NAMES = [
+    "neutral-open", "cold-open", "panel-wide", "side-two-shot", "reggie-leads",
+    "marc-leads", "friendly-debate", "arguing", "hot-take-clash", "in-agreement",
+    "serious-analysis", "reviewing-tape", "looking-at-monitor", "both-thinking", "both-pointing",
+    "shocked", "laughing", "celebrating", "punchline", "signoff",
+]
+
+NAMES = TOGETHER_NAMES if HOST == "together" else SOLO_NAMES
 
 im = Image.open(SHEET).convert("RGB")
 W, H = im.size
@@ -85,13 +96,16 @@ print(f"columns span: {x0} → {x1}")
 col_w = (x1 - x0) / NCOLS
 
 idx = 0
+# The "together" sheet has a dark label bar at the top of each cell
+# (numbered badge + shot name). Skip the top ~42px so we crop just the art.
+top_bleed = 42 if HOST == "together" else 2
 for r_i, (ry0, ry1) in enumerate(row_bands[:NROWS]):
     for c_i in range(NCOLS):
         if idx >= len(NAMES):
             break
         cx0 = int(x0 + c_i * col_w + 2)
         cx1 = int(x0 + (c_i + 1) * col_w - 2)
-        crop = im.crop((cx0, ry0 + 2, cx1, ry1 - 2))
+        crop = im.crop((cx0, ry0 + top_bleed, cx1, ry1 - 2))
         out_path = OUT / f"{NAMES[idx]}.png"
         crop.save(out_path, "PNG", optimize=True)
         print(f"  [{idx+1:02d}] {NAMES[idx]:18} ({cx0},{ry0})→({cx1},{ry1}) {crop.size}")
