@@ -1,0 +1,51 @@
+{
+  "_readme": "Archive of every Reggie/Marc voice profile ever configured. Nothing here gets deleted — swap between profiles by asking the agent. Active profile lives in voice_service.py + voice_choices.json.",
+
+  "reggie": {
+    "new_upload": {
+      "voice_id": "xlMuE31yicdJYxPOyMin",
+      "voice_name": "Reggie (user upload)",
+      "description": "User's custom Reggie voice, uploaded 2026-02-25. Cool + confident + excited + a bit cheesy — full sportscaster swagger.",
+      "settings": {
+        "stability": 0.4,
+        "similarity_boost": 0.75,
+        "style": 0.55,
+        "use_speaker_boost": true,
+        "speed": 1.05
+      },
+      "first_used": "2026-02-25",
+      "status": "ACTIVE"
+    },
+    "voice_design_draft_1": {
+      "voice_id": "QFNlGyAI98kVm40cB3ik",
+      "voice_name": "Reggie (Voice Design draft #1)",
+      "description": "Original Voice Design draft. Feedback: too throaty/gravelly, not enough excitement.",
+      "settings": {
+        "stability": 0.35,
+        "similarity_boost": 0.78,
+        "style": 0.45,
+        "use_speaker_boost": true,
+        "speed": 1.14
+      },
+      "first_used": "pre-2026-02-25",
+      "status": "archived"
+    }
+  },
+
+  "marc": {
+    "bill_pre_made": {
+      "voice_id": "pqHfZKP75CvOlQylNhV4",
+      "voice_name": "Bill (ElevenLabs pre-made)",
+      "description": "Mature, warm US male. Placeholder Marc voice while awaiting user custom upload.",
+      "settings": {
+        "stability": 0.55,
+        "similarity_boost": 0.78,
+        "style": 0.25,
+        "use_speaker_boost": true,
+        "speed": 1.08
+      },
+      "first_used": "pre-2026-02-25",
+      "status": "ACTIVE"
+    }
+  }
+}
