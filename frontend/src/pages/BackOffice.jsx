@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { api } from "@/lib/api";
 import { TEST_IDS } from "@/lib/config";
+import { getDeviceId } from "@/lib/device";
 import {
   Target,
   Zap,
@@ -13,11 +15,15 @@ import {
   TrendingUp,
   Lock,
   Star,
+  Brain,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 const TABS = [
   { id: "picks",      label: "Your Picks",  icon: Target,   kicker: "Track record" },
   { id: "edge",       label: "Edge Score",  icon: Zap,      kicker: "Reggie's rating of you" },
+  { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "Your personal AI betting coach" },
   { id: "fantasy",    label: "Fantasy",     icon: Trophy,   kicker: "Your roster + AI" },
   { id: "social",     label: "Social",      icon: Users,    kicker: "Public profile · followers" },
   { id: "prefs",      label: "Preferences", icon: Settings, kicker: "Team · pace · voice" },
@@ -82,6 +88,7 @@ export default function BackOffice() {
         <section>
           {active === "picks"      && <PicksTab />}
           {active === "edge"       && <EdgeScoreTab />}
+          {active === "betting-iq" && <BettingIQTab />}
           {active === "fantasy"    && <FantasyTab />}
           {active === "social"     && <SocialTab />}
           {active === "prefs"      && <PreferencesTab />}
@@ -710,3 +717,415 @@ function MembershipTab() {
     </div>
   );
 }
+
+
+/* -------- Tab: Betting IQ (Phase 1 — Bet Log) --------
+   Follows /app/memory/BETTING_IQ_SPEC.md. All stats surfaced here respect
+   the Section 7 confidence bands and Section 8 skill-vs-profitability
+   separation. This is the foundation the Betting Coach layer sits on. */
+
+const BET_TYPES = [
+  "moneyline", "spread", "puck-line", "total (over/under)",
+  "player-prop", "first-goal", "shots", "saves", "other",
+];
+
+function BettingIQTab() {
+  const deviceId = useMemo(() => getDeviceId(), []);
+  const [bets, setBets] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [b, s] = await Promise.all([
+        api.get(`/betting/bets?device_id=${deviceId}`),
+        api.get(`/betting/stats?device_id=${deviceId}`),
+      ]);
+      setBets(b.data?.bets || []);
+      setStats(s.data || null);
+    } finally {
+      setLoading(false);
+    }
+  }, [deviceId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const deleteBet = async (id) => {
+    if (!confirm("Delete this bet? This can't be undone.")) return;
+    await api.delete(`/betting/bet/${id}?device_id=${deviceId}`);
+    refresh();
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader
+        kicker="Your personal AI betting coach"
+        title="Betting IQ"
+        right={
+          <button
+            onClick={() => setFormOpen((v) => !v)}
+            data-testid="betting-iq-log-btn"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Log a bet
+          </button>
+        }
+      />
+
+      {/* Log-a-bet form */}
+      {formOpen && (
+        <BetForm
+          deviceId={deviceId}
+          onSaved={() => {
+            setFormOpen(false);
+            refresh();
+          }}
+        />
+      )}
+
+      {/* Stat headline cards — prediction skill vs. betting profitability separated per spec §8 */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <StatCard
+          title="Prediction Accuracy"
+          subtitle="Did you pick the right outcome?"
+          n={stats?.prediction_accuracy?.n || 0}
+          confidence={stats?.prediction_accuracy?.confidence}
+          value={
+            stats?.prediction_accuracy?.win_rate_pct != null
+              ? `${stats.prediction_accuracy.win_rate_pct}%`
+              : "—"
+          }
+          note={
+            stats?.prediction_accuracy?.n
+              ? `${stats.prediction_accuracy.wins}-${stats.prediction_accuracy.losses} record`
+              : "Log resolved bets to unlock"
+          }
+        />
+        <StatCard
+          title="Betting Profitability"
+          subtitle="Did the wagers make money after odds?"
+          n={stats?.betting_profitability?.n || 0}
+          confidence={stats?.betting_profitability?.confidence}
+          value={
+            stats?.betting_profitability?.roi_pct != null
+              ? `${stats.betting_profitability.roi_pct > 0 ? "+" : ""}${stats.betting_profitability.roi_pct}%`
+              : "—"
+          }
+          note={
+            stats?.betting_profitability?.profit_loss != null
+              ? `${stats.betting_profitability.profit_loss >= 0 ? "+" : ""}$${stats.betting_profitability.profit_loss.toFixed(2)} P/L`
+              : "Log money bets to unlock"
+          }
+          accent="#f5c542"
+        />
+      </div>
+
+      {/* Callout: coach behavior explanation */}
+      <div className="card-surface p-4 border-l-4 border-l-[#1e5dff]">
+        <div className="font-accent text-[10px] uppercase tracking-widest text-[#1e5dff]">
+          How Betting IQ works
+        </div>
+        <div className="text-white/70 text-sm mt-1 leading-relaxed">
+          Log every bet — even prediction-only picks with no money. Once you cross{" "}
+          <span className="text-white">10 comparable bets</span>, patterns start unlocking.
+          At <span className="text-white">25</span> we call it moderate confidence; at{" "}
+          <span className="text-white">50+</span>, higher. We never claim insight from a small sample.
+        </div>
+      </div>
+
+      {/* Bet history */}
+      <div className="card-surface p-0 overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#2d2d35] flex items-center justify-between">
+          <div className="font-accent text-[11px] uppercase tracking-widest text-white/70">
+            Bet History
+          </div>
+          <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
+            {stats?.total || 0} logged · {stats?.pending || 0} pending
+          </div>
+        </div>
+        {loading ? (
+          <div className="p-8 text-center text-white/40 text-sm">Loading…</div>
+        ) : bets.length === 0 ? (
+          <EmptyState
+            icon={Brain}
+            title="No bets logged yet"
+            body="Every bet — win or lose, money or prediction-only — teaches the coach how you play. Log your first one to start the coaching relationship."
+            cta={
+              <button
+                onClick={() => setFormOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Log your first bet
+              </button>
+            }
+          />
+        ) : (
+          <div className="divide-y divide-[#2d2d35]">
+            {bets.map((b) => (
+              <BetRow key={b.id} bet={b} onDelete={() => deleteBet(b.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Splits by bet type — only surface if we have enough samples */}
+      {stats?.by_bet_type?.some((r) => r.n >= 10) && (
+        <div className="card-surface p-5">
+          <div className="font-accent text-[10px] uppercase tracking-widest text-white/45 mb-3">
+            By Bet Type
+          </div>
+          <div className="space-y-2">
+            {stats.by_bet_type.filter((r) => r.n >= 10).map((row) => (
+              <SplitRow key={row.key} row={row} />
+            ))}
+          </div>
+          <div className="text-[10px] font-accent uppercase tracking-widest text-white/35 mt-3">
+            Rows with fewer than 10 bets are hidden until enough data exists.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatCard({ title, subtitle, n, confidence, value, note, accent = "#1e5dff" }) {
+  const bandLabel = {
+    insufficient: "Insufficient history",
+    low: "Low confidence",
+    moderate: "Moderate confidence",
+    higher: "Higher confidence",
+  };
+  return (
+    <div className="card-surface p-5">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="font-accent text-[10px] uppercase tracking-widest" style={{ color: accent }}>
+            {title}
+          </div>
+          <div className="text-white/50 text-xs mt-0.5">{subtitle}</div>
+        </div>
+      </div>
+      <div className="font-headline text-white text-4xl mt-3">{value}</div>
+      <div className="text-white/50 text-xs mt-1">{note}</div>
+      <div className="mt-3 flex items-center gap-2">
+        <div
+          className={`rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-widest ${
+            confidence === "higher"
+              ? "bg-emerald-500/15 text-emerald-300"
+              : confidence === "moderate"
+              ? "bg-yellow-500/15 text-yellow-300"
+              : confidence === "low"
+              ? "bg-orange-500/15 text-orange-300"
+              : "bg-white/10 text-white/50"
+          }`}
+        >
+          {bandLabel[confidence] || bandLabel.insufficient}
+        </div>
+        <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
+          n = {n}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SplitRow({ row }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] gap-3 items-center py-1">
+      <div>
+        <div className="text-white text-sm">{row.label}</div>
+        <div className="text-[10px] font-accent uppercase tracking-widest text-white/40 mt-0.5">
+          n {row.n} · {row.confidence}
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="font-headline text-white text-lg">{row.win_rate_pct}%</div>
+        {row.roi_pct != null && (
+          <div className={`text-[10px] font-accent uppercase tracking-widest ${row.roi_pct >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+            {row.roi_pct >= 0 ? "+" : ""}{row.roi_pct}% ROI
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BetRow({ bet, onDelete }) {
+  const chip = {
+    win: "bg-emerald-500/20 text-emerald-300",
+    loss: "bg-rose-500/20 text-rose-300",
+    push: "bg-white/10 text-white/50",
+    pending: "bg-yellow-500/15 text-yellow-300",
+  }[bet.result] || "bg-white/10 text-white/50";
+  return (
+    <div className="px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <div className="font-headline text-white text-sm truncate">
+            {bet.matchup}
+          </div>
+          <div className={`rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-widest ${chip}`}>
+            {bet.result}
+          </div>
+          {bet.prediction_only && (
+            <div className="rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-widest bg-[#1e5dff]/20 text-[#1e5dff]">
+              Prediction only
+            </div>
+          )}
+        </div>
+        <div className="text-white/50 text-xs mt-0.5">
+          {bet.bet_date} · {bet.bet_type} · {bet.selection} · odds {bet.odds}
+          {!bet.prediction_only && ` · $${bet.stake.toFixed(2)}`}
+        </div>
+      </div>
+      {!bet.prediction_only && (
+        <div className={`font-headline text-sm ${bet.profit_loss >= 0 ? "text-emerald-300" : "text-rose-300"}`}>
+          {bet.profit_loss >= 0 ? "+" : ""}${bet.profit_loss.toFixed(2)}
+        </div>
+      )}
+      <button
+        onClick={onDelete}
+        aria-label="Delete bet"
+        className="p-1.5 rounded-md text-white/40 hover:text-rose-400 hover:bg-white/5 transition-colors"
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
+function BetForm({ deviceId, onSaved }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [form, setForm] = useState({
+    bet_date: today,
+    matchup: "",
+    bet_type: "moneyline",
+    selection: "",
+    odds: "",
+    stake: "",
+    prediction_only: false,
+    result: "pending",
+    profit_loss: "",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.matchup || !form.selection || !form.odds) return;
+    setSaving(true);
+    try {
+      await api.post("/betting/bet", {
+        device_id: deviceId,
+        bet_date: form.bet_date,
+        matchup: form.matchup,
+        bet_type: form.bet_type,
+        selection: form.selection,
+        odds: form.odds,
+        stake: form.prediction_only ? 0 : parseFloat(form.stake || "0"),
+        prediction_only: form.prediction_only,
+        result: form.result,
+        profit_loss: form.prediction_only ? 0 : parseFloat(form.profit_loss || "0"),
+        notes: form.notes,
+      });
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={submit}
+      className="card-surface p-5 space-y-3"
+      data-testid="betting-iq-form"
+    >
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label="Date">
+          <input type="date" value={form.bet_date} onChange={(e) => set("bet_date", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Matchup">
+          <input placeholder="e.g. BOS @ NJD" value={form.matchup} onChange={(e) => set("matchup", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Bet Type">
+          <select value={form.bet_type} onChange={(e) => set("bet_type", e.target.value)} className={inputCls}>
+            {BET_TYPES.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Your Selection">
+          <input placeholder="e.g. Devils ML" value={form.selection} onChange={(e) => set("selection", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Odds">
+          <input placeholder="-135 or +180" value={form.odds} onChange={(e) => set("odds", e.target.value)} className={inputCls} />
+        </Field>
+        <Field label="Result">
+          <select value={form.result} onChange={(e) => set("result", e.target.value)} className={inputCls}>
+            <option value="pending">Pending</option>
+            <option value="win">Win</option>
+            <option value="loss">Loss</option>
+            <option value="push">Push</option>
+          </select>
+        </Field>
+      </div>
+
+      <label className="flex items-center gap-2 pt-1 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={form.prediction_only}
+          onChange={(e) => set("prediction_only", e.target.checked)}
+          className="h-4 w-4 accent-[#1e5dff]"
+        />
+        <span className="text-white/70 text-sm">
+          Prediction only (no money wagered)
+        </span>
+      </label>
+
+      {!form.prediction_only && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Stake ($)">
+            <input type="number" step="0.01" value={form.stake} onChange={(e) => set("stake", e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Profit / Loss ($) — negative for losses">
+            <input type="number" step="0.01" value={form.profit_loss} onChange={(e) => set("profit_loss", e.target.value)} className={inputCls} />
+          </Field>
+        </div>
+      )}
+
+      <Field label="Notes (optional)">
+        <input placeholder="Anything the coach should remember" value={form.notes} onChange={(e) => set("notes", e.target.value)} className={inputCls} />
+      </Field>
+
+      <div className="flex justify-end gap-2 pt-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="inline-flex items-center gap-2 px-5 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+        >
+          {saving ? "Saving…" : "Save bet"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <div className="font-accent text-[10px] uppercase tracking-widest text-white/45 mb-1">
+        {label}
+      </div>
+      {children}
+    </label>
+  );
+}
+
+const inputCls =
+  "w-full rounded-md border border-[#2d2d35] bg-[#0b0b10] px-3 py-2 text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#1e5dff]";
+

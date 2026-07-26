@@ -82,6 +82,42 @@ class Prediction(BaseModel):
     correct: Optional[bool] = None
 
 
+# ---------- Betting IQ — Phase 1: Bet Log ----------
+# Follows /app/memory/BETTING_IQ_SPEC.md. Every stat surfaced from this data
+# MUST respect the sample-size confidence bands in Section 7 of the spec.
+class BetLogCreate(BaseModel):
+    """Data captured when a user logs a bet. All fields except device_id and
+    result required — result may be 'pending' for future/live bets."""
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    bet_date: str                          # ISO 'YYYY-MM-DD'
+    matchup: str = Field(min_length=1, max_length=80)  # 'BOS @ NJD'
+    bet_type: str = Field(min_length=1, max_length=40) # 'moneyline'|'spread'|'total'|'prop'|'first-goal'|'shots'|'saves'|'other'
+    selection: str = Field(min_length=1, max_length=120)  # what the user chose
+    odds: str = Field(min_length=1, max_length=20)  # '-135' / '+180'
+    stake: float = 0.0                     # 0 if prediction_only
+    prediction_only: bool = False          # bets w/ no money — spec §9
+    result: str = "pending"                # 'win'|'loss'|'push'|'pending'
+    profit_loss: float = 0.0
+    notes: str = Field(default="", max_length=280)
+
+
+class BetLog(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    device_id: str
+    bet_date: str
+    matchup: str
+    bet_type: str
+    selection: str
+    odds: str
+    stake: float
+    prediction_only: bool
+    result: str
+    profit_loss: float
+    notes: str
+    created_at: str
+
+
 # ---------- Root / meta ----------
 @api.get("/")
 async def root():
@@ -683,6 +719,145 @@ async def subscription_roster_save(req: RosterReq):
         upsert=True,
     )
     return {"saved": True, **payload}
+
+
+
+# --------------------------------------------------------------------
+# Betting IQ — Phase 1 endpoints. Bet log CRUD + summary stats.
+# Follows /app/memory/BETTING_IQ_SPEC.md:
+#   §7 Confidence bands — computed here, enforced at UI as well
+#   §8 Prediction skill vs. profitability — separated in stats output
+#   §9 User controls — includes DELETE for user data removal
+#   §10 Guardrails — no "recommend more bets" language in this layer
+# --------------------------------------------------------------------
+
+def _confidence_band(n: int) -> str:
+    """Section 7 spec — never claim confidence from small samples."""
+    if n < 10:  return "insufficient"
+    if n < 25:  return "low"
+    if n < 50:  return "moderate"
+    return "higher"
+
+
+@api.post("/betting/bet", response_model=BetLog)
+async def log_bet(payload: BetLogCreate):
+    """Log a single bet (or prediction-only pick) tied to device_id."""
+    now = datetime.now(timezone.utc).isoformat()
+    doc = BetLog(
+        device_id=payload.device_id,
+        bet_date=payload.bet_date,
+        matchup=payload.matchup,
+        bet_type=payload.bet_type,
+        selection=payload.selection,
+        odds=payload.odds,
+        stake=payload.stake,
+        prediction_only=payload.prediction_only,
+        result=payload.result,
+        profit_loss=payload.profit_loss,
+        notes=payload.notes,
+        created_at=now,
+    )
+    await db.bet_log.insert_one(doc.model_dump())
+    return doc
+
+
+@api.get("/betting/bets")
+async def list_bets(device_id: str):
+    """All bets for a device, newest first."""
+    cursor = db.bet_log.find({"device_id": device_id}).sort("bet_date", -1)
+    rows = []
+    async for r in cursor:
+        r.pop("_id", None)
+        rows.append(r)
+    return {"bets": rows}
+
+
+@api.delete("/betting/bet/{bet_id}")
+async def delete_bet(bet_id: str, device_id: str):
+    """User-controls-first: only the device that logged the bet can delete."""
+    res = await db.bet_log.delete_one({"id": bet_id, "device_id": device_id})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Bet not found")
+    return {"deleted": True}
+
+
+@api.get("/betting/stats")
+async def betting_stats(device_id: str):
+    """Aggregate stats respecting Section 7 confidence bands. Splits are
+    always paired with sample size + band so the UI can show both."""
+    cursor = db.bet_log.find({"device_id": device_id})
+    bets = []
+    async for r in cursor:
+        r.pop("_id", None)
+        bets.append(r)
+
+    total = len(bets)
+    resolved = [b for b in bets if b.get("result") in ("win", "loss", "push")]
+    wins = [b for b in resolved if b["result"] == "win"]
+    losses = [b for b in resolved if b["result"] == "loss"]
+    money = [b for b in resolved if not b.get("prediction_only")]
+    money_wins = [b for b in money if b["result"] == "win"]
+    total_stake = sum(b.get("stake", 0.0) for b in money)
+    total_pl = sum(b.get("profit_loss", 0.0) for b in money)
+
+    def split(field_fn, label_for):
+        """Bucket resolved bets by a computed key, return per-bucket stats."""
+        buckets = {}
+        for b in resolved:
+            k = field_fn(b)
+            if k is None:
+                continue
+            buckets.setdefault(k, []).append(b)
+        out = []
+        for k, arr in buckets.items():
+            w = [b for b in arr if b["result"] == "win"]
+            m = [b for b in arr if not b.get("prediction_only")]
+            m_w = [b for b in m if b["result"] == "win"]
+            stake = sum(b.get("stake", 0.0) for b in m)
+            pl = sum(b.get("profit_loss", 0.0) for b in m)
+            out.append({
+                "key": k,
+                "label": label_for(k),
+                "n": len(arr),
+                "wins": len(w),
+                "win_rate_pct": round(len(w) / len(arr) * 100, 1) if arr else 0,
+                "money_bets": len(m),
+                "money_win_rate_pct": round(len(m_w) / len(m) * 100, 1) if m else None,
+                "total_stake": round(stake, 2),
+                "profit_loss": round(pl, 2),
+                "roi_pct": round((pl / stake) * 100, 1) if stake else None,
+                "confidence": _confidence_band(len(arr)),
+            })
+        out.sort(key=lambda r: r["n"], reverse=True)
+        return out
+
+    return {
+        "total": total,
+        "resolved": len(resolved),
+        "pending": total - len(resolved),
+        # Section 8 — prediction skill (all resolved) is SEPARATE from
+        # betting profitability (money bets only).
+        "prediction_accuracy": {
+            "n": len(resolved),
+            "wins": len(wins),
+            "losses": len(losses),
+            "win_rate_pct": round(len(wins) / len(resolved) * 100, 1) if resolved else None,
+            "confidence": _confidence_band(len(resolved)),
+        },
+        "betting_profitability": {
+            "n": len(money),
+            "win_rate_pct": round(len(money_wins) / len(money) * 100, 1) if money else None,
+            "total_stake": round(total_stake, 2),
+            "profit_loss": round(total_pl, 2),
+            "roi_pct": round((total_pl / total_stake) * 100, 1) if total_stake else None,
+            "confidence": _confidence_band(len(money)),
+        },
+        "by_bet_type": split(lambda b: b.get("bet_type"), lambda k: str(k).title()),
+        "by_result": split(lambda b: b.get("result"), lambda k: str(k).title()),
+        # Team splits parsed loosely from matchup string.
+        "by_matchup": split(lambda b: b.get("matchup"), lambda k: str(k)),
+    }
+
 
 
 app.include_router(api)
