@@ -673,9 +673,6 @@ function BackOfficeMiniTicker() {
           );
         })}
       </div>
-      <div className="mt-3 text-[10px] font-accent uppercase tracking-widest text-white/35 text-center">
-        Ask a question — receipts land here next
-      </div>
     </div>
   );
 }
