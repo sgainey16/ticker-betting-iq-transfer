@@ -28,5 +28,16 @@
       "use_speaker_boost": true,
       "speed": 1.02
     }
+  },
+  "reggie": {
+    "voice_id": "xlMuE31yicdJYxPOyMin",
+    "voice_name": "Reggie (user upload)",
+    "settings": {
+      "stability": 0.4,
+      "similarity_boost": 0.75,
+      "style": 0.55,
+      "use_speaker_boost": true,
+      "speed": 1.05
+    }
   }
 }

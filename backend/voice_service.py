@@ -27,11 +27,11 @@ logger = logging.getLogger("ticker.voice")
 # best fits from the standard library. Full accent accuracy needs voice
 # cloning (record 60s samples per analyst).
 ANALYST_VOICES = {
-    # Reggie Banks — lead anchor, ex-NHL. Confident US-broadcast baritone.
-    # voice_id may be swapped when user picks a Voice-Design candidate in /voice-lab.
+    # Reggie Banks — lead anchor, ex-NHL. User-uploaded custom voice
+    # ("Reggie") — cool + confident + excited + sportscaster swagger.
     "reggie": {
-        "voice_id": "QFNlGyAI98kVm40cB3ik",  # user's Voice Design draft #1
-        "settings": {"stability": 0.35, "similarity_boost": 0.78, "style": 0.45, "use_speaker_boost": True, "speed": 1.14},
+        "voice_id": "xlMuE31yicdJYxPOyMin",  # User's custom "Reggie" voice
+        "settings": {"stability": 0.4, "similarity_boost": 0.75, "style": 0.55, "use_speaker_boost": True, "speed": 1.05},
     },
     # Marc — 60, analytics co-host. Calm, measured, warm. Placeholder is a
     # mature US male voice ("Bill" from the pre-made ElevenLabs library).
