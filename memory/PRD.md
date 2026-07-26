@@ -42,8 +42,9 @@ segments, betting/fantasy intelligence, custom alerts.
 - **Reggie-only** for MVP. Marc plumbing kept intact for future re-enable.
 - Post-MVP: expand to ~10 characters (Tank, Lou, Cody, Marc, etc.)
 
-### Deferred to Post-MVP (see `/app/memory/BETTING_IQ_SPEC.md`)
+### Deferred to Post-MVP (see `/app/memory/BETTING_IQ_SPEC.md` and `/app/memory/COMMUNITY_EDGE_SPEC.md`)
 - **The Ticker Betting IQ** — named proprietary product with 4 components: **Bet Log** · **Personal Edge** · **Betting DNA** · **Betting Coach**. Turns The Ticker from predictor into *coach* — analyzes both the game and the person making the prediction. Includes mandatory confidence bands, prediction-vs-profitability separation, user privacy controls, responsible-play guardrails (never says "bet heavily" / "recover losses" / etc.), and progressive-specificity comparable-bet definition. Lives in Back Office as its own tab. **Requires separate legal review** — personalized "bet this / skip this" is a different regulatory category than general prediction content.
+- **The Ticker Community Edge™** — the social layer. Public profiles with **Verified Edge per category** (not overall accuracy), auto-generated Team & Category Specialists leaderboards, follow-predictors mechanics with configurable notification thresholds (post / agreement / contrarian), Trust Score composite ranking (accuracy + ROI + sample + consistency + recency + diversity + verified history), Strength Breakdown showing both edges *and* weaknesses ("Don't follow them for player props"), communities/groups/leagues, reputation badges earned through verified performance. **Own legal review required** — public financial claims, copy-picks / tout-service considerations, cross-user data visibility, verified-history tamper resistance. **Ship AFTER Betting IQ Phase 1 has enough per-user history to produce credible per-category leaderboards** — empty leaderboards make the product look dead.
 
 ## Vision
 AI-powered NHL broadcast MVP with a two-host panel (Reggie Banks + Marc
