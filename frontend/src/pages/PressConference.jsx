@@ -94,11 +94,24 @@ export default function PressConference() {
     setActiveQ(asked);
     setQuestion("");
     setLoading(true); setAnswer(""); setStatCard(null); setErrorMsg("");
+    // Voiced-reply audio ref — plays as soon as the backend hands us the URL.
+    let answerAudioEl = null;
     await askAnalystStream(
       { analyst_id: analystId, question: asked },
       ({ event, data }) => {
         if (event === "stat_card") setStatCard(data);
         else if (event === "token") setAnswer((prev) => prev + (data.t || ""));
+        else if (event === "audio" && data?.audio_url) {
+          // Reggie actually speaks his reply. Fire the audio element as
+          // soon as the URL lands. The IdleHost is already paused
+          // (pauseIdle() was called at submit()), so no overlap risk.
+          try {
+            answerAudioEl = new Audio(`${BACKEND_URL}${data.audio_url}`);
+            answerAudioEl.play().catch((e) => console.warn("Answer audio blocked:", e));
+          } catch (e) {
+            console.warn("Answer audio setup failed:", e);
+          }
+        }
         else if (event === "error") setErrorMsg(data.message || "Signal lost from the desk.");
         else if (event === "done") setLoading(false);
       },

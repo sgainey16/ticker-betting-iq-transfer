@@ -436,6 +436,28 @@ async def ask_stream(req: AskRequest):
         except Exception:
             logger.exception("Failed to persist Q/A log")
 
+        # Generate voiced audio and hand back its URL BEFORE the `done`
+        # event so the client can auto-play the analyst's reply.
+        # Strips stage-direction asterisks and light markdown so TTS doesn't
+        # awkwardly read them aloud ("leans forward"). Fails silently — text
+        # streaming already succeeded, audio is a bonus.
+        import re as _re
+        spoken = answer
+        spoken = _re.sub(r"\*[^*]+\*", "", spoken)          # *stage directions*
+        spoken = _re.sub(r"\*\*([^*]+)\*\*", r"\1", spoken) # **bold**
+        spoken = _re.sub(r"_([^_]+)_", r"\1", spoken)       # _italic_
+        spoken = _re.sub(r"[`~>]", "", spoken)              # code/quote marks
+        spoken = _re.sub(r"\s+", " ", spoken).strip()
+        # Hard cap so a runaway LLM answer can't torch the daily budget.
+        if len(spoken) > 1200:
+            spoken = spoken[:1200].rsplit(" ", 1)[0] + "…"
+        try:
+            audio_url = ensure_audio(analyst["id"], spoken) if spoken else None
+            if audio_url:
+                yield f"event: audio\ndata: {json.dumps({'audio_url': audio_url})}\n\n"
+        except Exception:
+            logger.exception("Failed to generate answer audio")
+
         yield f"event: done\ndata: {json.dumps({'session_id': session_id})}\n\n"
 
     return StreamingResponse(
