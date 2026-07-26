@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api, askAnalystStream, BACKEND_URL } from "@/lib/api";
-import { getDeviceId } from "@/lib/device";
+import { getDeviceId, trackVisit } from "@/lib/device";
 import { UPCOMING, DEEP_DIVE_TABS, GAME_TABS } from "@/lib/upcoming";
 import { Send, Sparkles, Crown, X, ChevronDown, Radio, Target, Trophy, Star, ArrowUpRight } from "lucide-react";
 
@@ -26,6 +26,12 @@ export default function PressConference() {
   const [suggestOpen, setSuggestOpen] = useState(true);
   const [sub, setSub] = useState({ questions_used: 0, free_limit: 3, is_premium: false });
   const [showUpgrade, setShowUpgrade] = useState(false);
+  // Live-chat history: each entry is a completed exchange { q, a, statCard, errorMsg }.
+  // The CURRENT streaming answer stays in `answer`/`statCard` until "done", then
+  // gets pushed onto `history` on the next submit.
+  const [history, setHistory] = useState([]);
+  // Visit count for the Welcome-back header — tracked once on mount.
+  const [visitCount] = useState(() => trackVisit("presser"));
   const answerRef = useRef(null);
 
   const deviceId = useMemo(() => getDeviceId(), []);
@@ -61,6 +67,10 @@ export default function PressConference() {
     if (answerRef.current) answerRef.current.scrollTop = answerRef.current.scrollHeight;
   }, [answer]);
 
+  // Question currently being streamed (kept separate from `question` input so
+  // the user can type the next one while Reggie is still answering).
+  const [activeQ, setActiveQ] = useState("");
+
   async function submit(q) {
     const asked = (q ?? question).trim();
     if (!asked || loading) return;
@@ -71,6 +81,12 @@ export default function PressConference() {
         setShowUpgrade(true);
       }
     } catch (_) {}
+    // Push the previous completed exchange (if any) onto the chat history.
+    if (activeQ && (answer || errorMsg)) {
+      setHistory((h) => [...h, { q: activeQ, a: answer, statCard, errorMsg }]);
+    }
+    setActiveQ(asked);
+    setQuestion("");
     setLoading(true); setAnswer(""); setStatCard(null); setErrorMsg("");
     await askAnalystStream(
       { analyst_id: analystId, question: asked },
@@ -83,6 +99,14 @@ export default function PressConference() {
       (err) => { console.error(err); setErrorMsg("Signal lost from the desk. Try again."); setLoading(false); },
     );
     setLoading(false);
+  }
+
+  function clearChat() {
+    setHistory([]);
+    setAnswer("");
+    setStatCard(null);
+    setErrorMsg("");
+    setActiveQ("");
   }
 
   async function activatePremium() {
@@ -105,9 +129,18 @@ export default function PressConference() {
           <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-[#1e5dff]">
             1-on-1 · Press Conference
           </div>
-          <h1 className="font-headline text-3xl sm:text-4xl text-white mt-1">
-            At the podium tonight.
+          <h1 className="font-headline text-3xl sm:text-4xl text-white mt-1" data-testid="presser-welcome">
+            {visitCount <= 1
+              ? "At the podium tonight."
+              : visitCount <= 3
+              ? "Welcome back. Grab a seat."
+              : `Welcome back, kid. Reggie's been on tape all morning.`}
           </h1>
+          {visitCount > 1 && (
+            <div className="font-accent text-[10px] uppercase tracking-widest text-white/40 mt-1">
+              Visit {visitCount} · picking up where we left off
+            </div>
+          )}
         </div>
         {showCounter ? (
           <div
@@ -279,35 +312,70 @@ export default function PressConference() {
             </details>
           )}
 
-          {/* Answer + Stat card side-by-side on wide screens */}
+          {/* Chat thread — history + currently streaming exchange.
+              Each completed Q&A stays in `history`. The most recent one lives
+              in `activeQ` + `answer` + `statCard` until the next submit rolls
+              it in. Right column keeps the data card / mini-ticker as before. */}
           <div className="grid sm:grid-cols-5 gap-4">
             <div
               ref={answerRef}
               data-testid={TEST_IDS.ask.answerBlock}
-              className="sm:col-span-3 card-surface p-5 min-h-[220px]"
+              className="sm:col-span-3 card-surface p-5 min-h-[220px] max-h-[520px] overflow-y-auto"
             >
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3 sticky top-0 bg-[#0e0e14] pb-2 -mt-1 z-10">
                 <span className="h-2 w-2 rounded-full live-pulse" style={{ background: analyst.accent }} />
                 <div className="font-headline text-sm uppercase tracking-widest" style={{ color: analyst.accent }}>
                   {analyst.role}
                 </div>
-                <div className="ml-auto font-accent text-[10px] uppercase tracking-widest text-white/45">
-                  Live from the desk
+                <div className="ml-auto flex items-center gap-3">
+                  {(history.length > 0 || answer) && (
+                    <button
+                      onClick={clearChat}
+                      data-testid="presser-clear-chat"
+                      className="font-accent text-[10px] uppercase tracking-widest text-white/45 hover:text-white transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <div className="font-accent text-[10px] uppercase tracking-widest text-white/45">
+                    Live from the desk
+                  </div>
                 </div>
               </div>
-              {errorMsg ? (
-                <div className="text-red-400 font-accent text-sm" data-testid="ask-error">{errorMsg}</div>
-              ) : answer ? (
-                <p className={`text-white/90 text-base leading-relaxed whitespace-pre-wrap ${loading ? "stream-caret" : ""}`}>{answer}</p>
-              ) : loading ? (
-                <div className="text-white/50 italic font-accent uppercase tracking-widest text-sm" data-testid={TEST_IDS.ask.loadingLine}>
-                  {loadingLine}
-                </div>
-              ) : (
+
+              {/* Empty state */}
+              {history.length === 0 && !activeQ && !answer && !errorMsg && !loading && (
                 <div className="text-white/40 text-sm">
                   Type a question or tap a suggested chip. The panel is warmed up.
                 </div>
               )}
+
+              {/* Completed exchanges */}
+              <div className="space-y-4">
+                {history.map((m, i) => (
+                  <ChatExchange
+                    key={i}
+                    q={m.q}
+                    a={m.a}
+                    errorMsg={m.errorMsg}
+                    accent={analyst.accent}
+                    analystShort={analyst.short || analyst.short_name || analyst.role.split(" ")[0]}
+                  />
+                ))}
+
+                {/* Currently streaming */}
+                {(activeQ || loading || answer || errorMsg) && (
+                  <ChatExchange
+                    q={activeQ}
+                    a={answer}
+                    errorMsg={errorMsg}
+                    streaming={loading}
+                    loadingLine={loadingLine}
+                    accent={analyst.accent}
+                    analystShort={analyst.short || analyst.short_name || analyst.role.split(" ")[0]}
+                  />
+                )}
+              </div>
             </div>
 
             <div className="sm:col-span-2 card-surface p-4" data-testid={TEST_IDS.ask.statCard}>
@@ -465,6 +533,57 @@ export default function PressConference() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* -------- Chat exchange bubble --------
+   Renders a single Q+A pair. Used both for completed history entries and
+   the currently streaming exchange (streaming=true adds the caret + shows
+   loadingLine instead of empty text). */
+function ChatExchange({ q, a, errorMsg, streaming, loadingLine, accent, analystShort }) {
+  return (
+    <div className="space-y-2" data-testid="chat-exchange">
+      {q && (
+        <div className="flex justify-end">
+          <div className="max-w-[85%] rounded-2xl rounded-tr-md px-4 py-2.5 bg-white/8 border border-white/10">
+            <div className="font-accent text-[9px] uppercase tracking-widest text-white/40 mb-0.5">You</div>
+            <div className="text-white text-sm leading-relaxed">{q}</div>
+          </div>
+        </div>
+      )}
+      <div className="flex justify-start">
+        <div
+          className="max-w-[92%] rounded-2xl rounded-tl-md px-4 py-2.5 border"
+          style={{ background: accent + "18", borderColor: accent + "55" }}
+        >
+          <div
+            className="font-accent text-[9px] uppercase tracking-widest mb-0.5"
+            style={{ color: accent }}
+          >
+            {analystShort}
+          </div>
+          {errorMsg ? (
+            <div className="text-red-400 font-accent text-sm" data-testid="ask-error">{errorMsg}</div>
+          ) : a ? (
+            <p
+              className={`text-white/90 text-sm leading-relaxed whitespace-pre-wrap ${
+                streaming ? "stream-caret" : ""
+              }`}
+            >
+              {a}
+            </p>
+          ) : streaming ? (
+            <div
+              className="text-white/60 italic font-accent uppercase tracking-widest text-xs"
+              data-testid={TEST_IDS.ask.loadingLine}
+            >
+              {loadingLine || "The desk is going live…"}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
