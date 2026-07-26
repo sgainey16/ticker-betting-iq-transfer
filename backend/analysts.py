@@ -286,6 +286,18 @@ GAMES = [
 #   ots_reggie, ots_marc, side_two_shot, telestrator, end_of_show_wave
 
 BANTER_BY_TOPIC = {
+    "presser_idle_welcome": [
+        [
+            {"speaker": "reggie", "shot": "reggie_smiling", "text": "Alright folks — welcome in. Reggie Banks. Glad you pulled up a chair."},
+            {"speaker": "reggie", "shot": "reggie_leaning", "text": "Whatcha wanna talk about tonight? Line combos? The playoff race? Some fantasy panic?"},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "I've been chewing on the Metro Division all week — that thing is an absolute MESS. Somebody call a cleanup crew."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "Type me a question. Tap one of those chips down there. Or just let me keep rambling — I've been on tape since six a.m."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "You know what nobody's talking about? The Utah goalies. Third-best team save percentage in the league. Nobody."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "Marc's not here right now, by the way. It's just us. No spreadsheets, no charts, no PDO — perfect."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "Trade deadline's coming. I've got a list of guys about to move. Ask me who — I'll give you names."},
+            {"speaker": "reggie", "shot": "reggie_smiling", "text": "Come on — throw one at me. Anything. Your team, your player, your fantasy lineup. Reggie's here. Reggie's ready."},
+        ],
+    ],
     "wildcard_night_apr_8_2025": [
         [
             {"speaker": "reggie", "shot": "side_two_shot", "text": "Puck's already dropped on ten games, Marc. Three storylines we HAVE to hit — Devils clinched, wild card is a bloodbath, and Colorado just took Vegas to the wire."},

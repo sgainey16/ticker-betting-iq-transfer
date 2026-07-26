@@ -3,6 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import { ANALYSTS, ANALYST_ORDER, TEST_IDS } from "@/lib/config";
 import { api, askAnalystStream, BACKEND_URL } from "@/lib/api";
 import { getDeviceId, trackVisit } from "@/lib/device";
+import IdleHost from "@/components/IdleHost";
 import { UPCOMING, DEEP_DIVE_TABS, GAME_TABS } from "@/lib/upcoming";
 import { Send, Sparkles, Crown, X, ChevronDown, Radio, Target, Trophy, Star, ArrowUpRight } from "lucide-react";
 
@@ -32,6 +33,10 @@ export default function PressConference() {
   const [history, setHistory] = useState([]);
   // Visit count for the Welcome-back header — tracked once on mount.
   const [visitCount] = useState(() => trackVisit("presser"));
+  // Idle-host pause signal — parent bumps this whenever the user starts to
+  // engage (focus input, submit question) so the ambient monologue steps aside.
+  const [idlePauseSignal, setIdlePauseSignal] = useState(0);
+  const pauseIdle = () => setIdlePauseSignal((n) => n + 1);
   const answerRef = useRef(null);
 
   const deviceId = useMemo(() => getDeviceId(), []);
@@ -74,6 +79,7 @@ export default function PressConference() {
   async function submit(q) {
     const asked = (q ?? question).trim();
     if (!asked || loading) return;
+    pauseIdle();  // Reggie stops rambling the moment we ask him something.
     try {
       const r = await api.post("/subscription/increment-question", { device_id: deviceId });
       setSub((s) => ({ ...s, questions_used: r.data.questions_used, is_premium: r.data.is_premium }));
@@ -170,6 +176,15 @@ export default function PressConference() {
         )}
       </div>
 
+      {/* Idle host — Reggie's ambient monologue. Auto-plays on mount, pauses
+          when the user focuses the ask input or submits a question. */}
+      <IdleHost
+        topic="presser_idle_welcome"
+        pauseSignal={idlePauseSignal}
+        accent={analyst.accent}
+        analystName={analyst.short_name || "Reggie"}
+      />
+
       {/* Sticky sub-nav — Presser is locked to 3 sections: Deep Dive · Analytics · Games */}
       <div className="sticky top-16 z-30 -mx-5 sm:-mx-8 px-5 sm:px-8 py-2 bg-[#05050f]/85 backdrop-blur-md border-b border-[#2d2d35]">
         <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -260,6 +275,7 @@ export default function PressConference() {
                 data-testid={TEST_IDS.ask.input}
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
+                onFocus={pauseIdle}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); } }}
                 rows={2}
                 placeholder="Ask anything about the NHL, your fantasy team, matchup edges…"
