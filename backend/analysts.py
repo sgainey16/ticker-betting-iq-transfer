@@ -286,6 +286,32 @@ GAMES = [
 #   ots_reggie, ots_marc, side_two_shot, telestrator, end_of_show_wave
 
 BANTER_BY_TOPIC = {
+    "wildcard_night_apr_8_2025": [
+        [
+            {"speaker": "reggie", "shot": "side_two_shot", "text": "Puck's already dropped on ten games, Marc. Three storylines we HAVE to hit — Devils clinched, wild card is a bloodbath, and Colorado just took Vegas to the wire."},
+            {"speaker": "marc", "shot": "marc_explaining", "text": "Ten games, and every one of them mattered. Let's start in Newark. Boston at New Jersey. Seven-to-two Devils."},
+            {"speaker": "reggie", "shot": "reggie_leaning", "interrupt": True, "text": "SEVEN to two. That's not a hockey game, that's a message."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "The Devils clinched a playoff spot with this win. Bruins? Now on the outside looking in. Their expected goals share tonight was thirty-eight percent."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "You lose the room, you lose the season. I've been in that room. That's not a slump — that's a team stopped believing."},
+            {"speaker": "marc", "shot": "marc_looking_monitor", "text": "The pattern's been building for weeks. Boston's five-on-five goal share since March first is bottom-five in the league."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "Hockey keeps receipts. And New Jersey — they were the smart bet three months ago. Attaboy, Hughes brothers."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "Let's move to Nashville. Islanders at Predators. Six to seven. Thirteen goals."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "Now THAT'S a hockey game. Both goalies should send flowers to their forwards."},
+            {"speaker": "marc", "shot": "marc_chuckle", "text": "Both teams are chasing a wild card and both defended like it was preseason. Predators' PDO tonight was over one-oh-eight."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "Translate, Professor."},
+            {"speaker": "marc", "shot": "marc_smiling", "text": "They got lucky. Nashville got the two points, but this wasn't sustainable hockey."},
+            {"speaker": "reggie", "shot": "reggie_pointing", "text": "The scoreboard doesn't care about sustainable, Marc. Two points is two points in April."},
+            {"speaker": "marc", "shot": "two_friendly_debate", "text": "You're not wrong. But if I'm running Nashville — I'm worried about the defensive structure heading into round one."},
+            {"speaker": "reggie", "shot": "reggie_smirking", "text": "If you're running Nashville, you're worried about a lot of things. But tonight — enjoy it. — Last one. Vegas at Colorado."},
+            {"speaker": "marc", "shot": "marc_analyzing_stats", "text": "Three-to-two Colorado. And this is the game I want to talk about. Because the shot chart tells a different story than the scoreboard."},
+            {"speaker": "reggie", "shot": "reggie_serious", "text": "Vegas outshot them?"},
+            {"speaker": "marc", "shot": "marc_looking_monitor", "text": "Thirty-four to twenty-six in high-danger chances. Colorado won the game, but Vegas won the tape."},
+            {"speaker": "reggie", "shot": "reggie_hands_open", "text": "That's a Cup coach line right there. Bednar's team finds a way — but you can hear the door creaking."},
+            {"speaker": "marc", "shot": "two_serious", "text": "The Central Division is going to come down to the last week. And every one of these games matters more than the standings suggest."},
+            {"speaker": "reggie", "shot": "two_laughing", "text": "That's what I love about April, Marc. Boring hockey — wins in April. But TONIGHT? Tonight was NOT boring."},
+            {"speaker": "marc", "shot": "two_closing", "text": "That's the Ticker, folks. Ten games, three storylines, one clinch. Back tomorrow with tonight's slate."},
+        ],
+    ],
     "league_wide": [
         [
             {"speaker": "reggie", "shot": "side_two_shot", "text": "Puck drops in three, two, one — welcome to The Ticker, kid. Marc, we got a lot to get through tonight."},
@@ -530,6 +556,7 @@ BANTER_BY_TOPIC = {
 }
 
 TOPIC_META = [
+    {"id": "wildcard_night_apr_8_2025", "label": "Wildcard Night · Apr 8"},
     {"id": "league_wide", "label": "League Wide"},
     {"id": "power_play", "label": "Power Play"},
     {"id": "trade_deadline", "label": "Trade Deadline"},

@@ -9,7 +9,8 @@ import { Mic, Trophy, LineChart } from "lucide-react";
 export default function Home() {
   const [tickerItems, setTickerItems] = useState([]);
   const [topics, setTopics] = useState([]);
-  const [activeTopic, setActiveTopic] = useState("league_wide");
+  // First-visit default: April 8 2025 Wildcard Night panel (real games, real stats)
+  const [activeTopic, setActiveTopic] = useState("wildcard_night_apr_8_2025");
 
   useEffect(() => {
     api
