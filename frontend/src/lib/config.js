@@ -85,6 +85,11 @@ export const TEST_IDS = {
     tabGoalies: "stats-tab-goalies",
     tabTeams: "stats-tab-teams",
     tabSchedule: "stats-tab-schedule",
+    tabMatchups: "stats-tab-matchups",
+    matchupCard: (id) => `stats-matchup-card-${id}`,
+    matchupPickAway: (id) => `stats-matchup-pick-away-${id}`,
+    matchupPickHome: (id) => `stats-matchup-pick-home-${id}`,
+    accuracyBadge: "stats-accuracy-badge",
   },
   fantasy: {
     pageRoot: "fantasy-page",
