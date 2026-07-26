@@ -136,25 +136,17 @@ export default function MatchupInsight() {
         })}
       </div>
 
-      {/* Dive deeper CTAs — one per team */}
+      {/* Dive deeper CTAs — one per team → full 20-category breakdown */}
       <div className="mt-5 grid sm:grid-cols-2 gap-3">
         <DeepDiveButton
           team={m.away}
           data-testid="matchup-deepdive-away"
-          onClick={() =>
-            goPresser(
-              `Break down the ${m.away.name} tonight — what are they doing right, what's the weakness ${m.home.name} can exploit?`
-            )
-          }
+          onClick={() => navigate(`/matchup/${m.away.abbr}-${m.home.abbr}`)}
         />
         <DeepDiveButton
           team={m.home}
           data-testid="matchup-deepdive-home"
-          onClick={() =>
-            goPresser(
-              `Break down the ${m.home.name} tonight — what are they doing right, what's the weakness ${m.away.name} can exploit?`
-            )
-          }
+          onClick={() => navigate(`/matchup/${m.away.abbr}-${m.home.abbr}`)}
         />
       </div>
 

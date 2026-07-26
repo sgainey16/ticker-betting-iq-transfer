@@ -10,6 +10,7 @@ import Stats from "@/pages/Stats";
 import Fantasy from "@/pages/Fantasy";
 import Login from "@/pages/Login";
 import BackOffice from "@/pages/BackOffice";
+import MatchupDeepDive from "@/pages/MatchupDeepDive";
 import DeskPreview from "@/pages/DeskPreview";
 import ComingSoon from "@/pages/ComingSoon";
 import { Toaster } from "sonner";
@@ -27,6 +28,7 @@ function App() {
             <Route path="/stats" element={<Stats />} />
             <Route path="/fantasy" element={<Fantasy />} />
             <Route path="/back-office" element={<BackOffice />} />
+            <Route path="/matchup/:matchupId" element={<MatchupDeepDive />} />
             <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
             <Route path="/voice-lab" element={<VoiceLab />} />

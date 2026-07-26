@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Ticker from "@/components/Ticker";
 import LiveDesk from "@/components/LiveDesk";
+import MatchupInsight from "@/components/MatchupInsight";
 import { TEST_IDS } from "@/lib/config";
 import { api } from "@/lib/api";
 import { Mic, Trophy, LineChart } from "lucide-react";
@@ -33,12 +34,18 @@ export default function Home() {
       />
 
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-6 pb-6">
-        <LiveDesk
-          topics={topics}
-          activeTopic={activeTopic}
-          onTopicChange={(id) => setActiveTopic(id)}
-          autoFlow={true}
-        />
+        {/* Tonight's featured matchup — sits above the panel show, deep-links
+            to the full 20-category Matchup Deep Dive page. */}
+        <MatchupInsight />
+
+        <div className="mt-6">
+          <LiveDesk
+            topics={topics}
+            activeTopic={activeTopic}
+            onTopicChange={(id) => setActiveTopic(id)}
+            autoFlow={true}
+          />
+        </div>
 
         {/* Below the fold — quick nav to the other rooms */}
         <div className="mt-14 grid sm:grid-cols-3 gap-4">
