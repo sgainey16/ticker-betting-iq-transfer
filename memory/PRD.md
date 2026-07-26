@@ -1,17 +1,33 @@
 # The Ticker — PRD (Product Requirements Document)
 
-## Product Law — LOCKED 2026-02-25
+## Product Law — LOCKED 2026-02-25 (reframed 2026-02-26)
 
-### Freemium mechanic (the value ratchet)
-- **Visits 1–10 (Trial Window)**: Full show + full picks + full Presser
-  - 3 free game picks per **day** (not lifetime — habit needs runway)
-  - 1 free Pick 10 attempt per day
-- **Visit 11+ (Non-subscriber wall)**: Show reduced to snippets/jokes only, no picks, no Presser streaming
-- **All Founding Member benefits**: full show + unlimited picks + Presser + Analytics + Fantasy AI + Back Office tracking
+### Freemium model — the DEPTH GATE, not a wall
+Free tier stays generous forever. **Premium unlocks depth, not access.**
+No visit counters, no tapered show, no hard walls. Every user gets full
+show, unlimited predictions, and standard Presser — always. What they
+pay for is DEPTH: advanced analytics, historical tracking, insider
+segments, betting/fantasy intelligence, custom alerts.
+
+### Free vs. Premium mapping (first draft — iterate as we build)
+| Feature | Free | Premium |
+|---|---|---|
+| Live show / broadcast | Full | Full |
+| Presser chat | Basic replies | Extended: memory + follow-ups + longer answers |
+| Matchup Deep Dive | Hero + Ticker Intelligence summary | All 20 categories + factor drill-down |
+| Skaters/Goalies/Standings | Full | Full |
+| Predictions | Unlimited | Unlimited |
+| Edge Score | Your % only | Trend + rank + Reggie head-to-head |
+| Consensus Model | — | "Reggie says X, Marc Y, AI Z, crowd W" |
+| Prediction history | Last 10 | Full season + streak analysis |
+| Premium R&M segments | — | Insider episodes, extended Q&A |
+| Fantasy tools | Roster save | AI start/sit + waiver + trade analyzer |
+| Betting tools | — | Line movement, sharp splits, CLV |
+| Custom alerts | — | Lineup, line, injury alerts |
 
 ### Pricing (two-tier — matches the two-audience split)
 - **$3.99/mo — "The Show Pass"** — full show + banter + character canon (casual/humor audience)
-- **$14.99–24.99/mo — "The Edge"** — everything above + picks + analytics + fantasy AI + Back Office (bettor/analytics audience)
+- **$14.99–24.99/mo — "The Edge"** — everything above + all Premium features from the table (bettor/analytics audience)
 - **Founding Member locked-in-for-life at $3.99/mo** — first 5,000 users only (creates launch urgency)
 - **Annual option**: 17% off (~2 months free)
 
