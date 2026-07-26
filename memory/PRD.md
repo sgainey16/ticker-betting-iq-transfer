@@ -43,7 +43,7 @@ segments, betting/fantasy intelligence, custom alerts.
 - Post-MVP: expand to ~10 characters (Tank, Lou, Cody, Marc, etc.)
 
 ### Deferred to Post-MVP (see `/app/memory/BETTING_IQ_SPEC.md`)
-- **Personal Betting IQ** — turns The Ticker from predictor into *coach*. Bet log, tendency stats, behavioral pattern detection (revenge/tilt/overconfidence/team bias), Personal Edge Score, Betting DNA profile, "AI Betting Coach" daily surfacing. Lives in Back Office as its own tab. **Requires separate legal review** — personalized "bet this / skip this" is a different regulatory category than general prediction content. Ship phases: bet log → tendency stats → behavioral alerts → Personal Edge → Betting DNA + daily surfacing.
+- **The Ticker Betting IQ** — named proprietary product with 4 components: **Bet Log** · **Personal Edge** · **Betting DNA** · **Betting Coach**. Turns The Ticker from predictor into *coach* — analyzes both the game and the person making the prediction. Includes mandatory confidence bands, prediction-vs-profitability separation, user privacy controls, responsible-play guardrails (never says "bet heavily" / "recover losses" / etc.), and progressive-specificity comparable-bet definition. Lives in Back Office as its own tab. **Requires separate legal review** — personalized "bet this / skip this" is a different regulatory category than general prediction content.
 
 ## Vision
 AI-powered NHL broadcast MVP with a two-host panel (Reggie Banks + Marc
