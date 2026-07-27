@@ -35,6 +35,7 @@ from voice_service import ensure_audio, audio_url_for, budget_status
 from voice_picker import get_picker_state, set_active as picker_set_active, ensure_preview, CANDIDATES
 import nhl_data
 import sportradar_client as sr
+import reggie_assistant as reggie
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -740,6 +741,143 @@ async def subscription_roster_save(req: RosterReq):
         upsert=True,
     )
     return {"saved": True, **payload}
+
+
+
+# --------------------------------------------------------------------
+# Reggie Assistant — Back Office chat with talk + do.
+# Reggie can propose actions (set favorites, load roster, log bet) which
+# the frontend renders as confirm-cards. Nothing writes to DB without a
+# subsequent /assistant/reggie/action call from the user.
+# --------------------------------------------------------------------
+
+class AssistantChatReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=6, max_length=80)
+    message: str = Field(min_length=1, max_length=1200)
+
+
+class AssistantActionReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=6, max_length=80)
+    proposal_id: str
+    kind: str
+    payload: dict
+
+
+@api.get("/assistant/state")
+async def assistant_state(device_id: str):
+    state = await reggie.build_user_state(db, device_id)
+    return {"state": state, "nudges": reggie.build_nudges(state)}
+
+
+@api.get("/assistant/history")
+async def assistant_history(device_id: str):
+    doc = await db.assistant_conversations.find_one({"device_id": device_id}, {"_id": 0})
+    if not doc:
+        return {"messages": []}
+    return {"messages": (doc.get("messages") or [])[-40:]}  # last 40 turns
+
+
+@api.post("/assistant/reggie/chat")
+async def assistant_reggie_chat(req: AssistantChatReq):
+    """Non-streaming chat — Reggie's replies are short enough that a single
+    response is cleaner than SSE for this surface. Returns the assistant's
+    reply + optional action_proposal object."""
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    state = await reggie.build_user_state(db, req.device_id)
+    nudges = reggie.build_nudges(state)
+    convo = await db.assistant_conversations.find_one({"device_id": req.device_id}, {"_id": 0})
+    history: list = (convo or {}).get("messages", [])[-20:]  # keep last 20 turns hot
+
+    system_message = reggie.REGGIE_ASSISTANT_SYSTEM \
+        .replace("{user_state}", reggie.format_state_for_prompt(state)) \
+        .replace("{nudges}", "\n".join(f"- {n['label']}: {n['prompt']}" for n in nudges))
+
+    session_id = f"reggie-assist-{req.device_id}"
+
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=session_id,
+        system_message=system_message,
+    ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+
+    # Rehydrate short conversation history so Reggie has memory of the last
+    # few turns even though LlmChat is stateless per-call.
+    context_preface = ""
+    for turn in history[-8:]:  # last 8 turns = ~4 user+assistant pairs
+        role = turn.get("role", "")
+        content = turn.get("content", "")
+        if not content:
+            continue
+        if role == "user":
+            context_preface += f"\n[Previously the user said]: {content}"
+        elif role == "assistant":
+            context_preface += f"\n[Previously you replied]: {content}"
+
+    user_text = (context_preface + "\n\n[Now the user says]: " + req.message).strip() \
+        if context_preface else req.message
+
+    try:
+        resp = await chat.send_message(UserMessage(text=user_text))
+    except Exception as e:
+        logger.exception("Reggie assistant LLM call failed")
+        msg = str(e)
+        if "Budget has been exceeded" in msg or "budget_exceeded" in msg:
+            friendly = (
+                "The Universal LLM Key is out of balance. Top up under "
+                "Profile → Universal Key → Add Balance and try me again."
+            )
+        else:
+            friendly = "My headset just cut out — try me again in a second."
+        return {"reply": friendly, "action_proposal": None}
+
+    reply_raw = getattr(resp, "text", None) or str(resp)
+    clean_text, proposal = reggie.extract_action_proposal(reply_raw)
+
+    # Persist the turn.
+    now_iso = datetime.now(timezone.utc).isoformat()
+    new_turns = [
+        {"role": "user", "content": req.message, "ts": now_iso},
+        {"role": "assistant", "content": clean_text, "ts": now_iso,
+         **({"action_proposal": proposal} if proposal else {})},
+    ]
+    await db.assistant_conversations.update_one(
+        {"device_id": req.device_id},
+        {"$push": {"messages": {"$each": new_turns}},
+         "$set": {"updated_at": now_iso}},
+        upsert=True,
+    )
+
+    return {"reply": clean_text, "action_proposal": proposal}
+
+
+@api.post("/assistant/reggie/action")
+async def assistant_reggie_action(req: AssistantActionReq):
+    """Execute a confirmed action proposal. Returns {ok, message}."""
+    result = await reggie.execute_action(db, req.device_id, req.kind, req.payload)
+    # Append a system confirmation message so it lives in history.
+    now_iso = datetime.now(timezone.utc).isoformat()
+    await db.assistant_conversations.update_one(
+        {"device_id": req.device_id},
+        {"$push": {"messages": {
+            "role": "system",
+            "content": f"[action:{req.kind}:{'ok' if result.get('ok') else 'fail'}] {result.get('message','')}",
+            "ts": now_iso,
+        }}, "$set": {"updated_at": now_iso}},
+        upsert=True,
+    )
+    return result
+
+
+@api.delete("/assistant/history")
+async def assistant_history_reset(device_id: str):
+    """Clear this user's conversation with Reggie (privacy control)."""
+    await db.assistant_conversations.delete_one({"device_id": device_id})
+    return {"cleared": True}
+
 
 
 

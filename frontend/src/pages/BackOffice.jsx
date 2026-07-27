@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TEST_IDS } from "@/lib/config";
 import { getDeviceId } from "@/lib/device";
+import ReggieAssistant from "@/components/ReggieAssistant";
 import {
   Target,
   Zap,
@@ -95,6 +96,9 @@ export default function BackOffice() {
           {active === "membership" && <MembershipTab />}
         </section>
       </div>
+
+      {/* Reggie — floating assistant. Back Office only for MVP. */}
+      <ReggieAssistant />
     </div>
   );
 }
