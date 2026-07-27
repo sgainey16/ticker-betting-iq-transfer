@@ -34,6 +34,7 @@ from analysts import (
 from voice_service import ensure_audio, audio_url_for, budget_status
 from voice_picker import get_picker_state, set_active as picker_set_active, ensure_preview, CANDIDATES
 import nhl_data
+import sportradar_client as sr
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -142,26 +143,38 @@ async def list_analysts():
 
 @api.get("/ticker")
 async def ticker():
-    """Merge live NHL headlines from SportsData.io with the durable mock
+    """Live NHL headlines via Sportradar; falls back to the durable mock
     lines so the banner always feels alive."""
-    live = nhl_data.ticker_headlines(limit=6)
+    live = sr.ticker_lines(limit=6) if sr.is_available() else []
+    if not live:
+        # Legacy SportsData.io path (kept as secondary fallback if configured)
+        live = nhl_data.ticker_headlines(limit=6)
     combined = live + TICKER_ITEMS if live else TICKER_ITEMS
-    return {"items": combined, "live": bool(live)}
+    source = "sportradar" if sr.is_available() and live else ("sportsdata" if live else "mock")
+    return {"items": combined, "live": bool(live), "source": source}
 
 
 @api.get("/nhl/standings")
 async def nhl_standings():
-    """Live NHL standings from SportsData.io (5-min cached). Empty list
-    if the trial key is missing or the upstream returns nothing."""
+    """Live NHL standings (Sportradar 5-min cache; mock fallback)."""
+    if sr.is_available():
+        data = sr.teams_shape()
+        if data:
+            return {"season": sr._season_year(), "teams": data, "live": True, "source": "sportradar"}
+    # SportsData.io legacy path (usually inactive)
     data = nhl_data.standings() or []
-    return {"season": nhl_data.CURRENT_SEASON, "teams": data, "live": nhl_data.is_available()}
+    return {"season": nhl_data.CURRENT_SEASON, "teams": data, "live": nhl_data.is_available(), "source": "sportsdata" if data else "mock"}
 
 
 @api.get("/nhl/games")
 async def nhl_games():
-    """Today's scheduled/live NHL games (SportsData.io, 5-min cached)."""
+    """Today's NHL games (Sportradar 5-min cache; mock fallback)."""
+    if sr.is_available():
+        data = sr.games_shape()
+        if data is not None:
+            return {"games": data, "live": True, "source": "sportradar"}
     data = nhl_data.today_games() or []
-    return {"games": data, "live": nhl_data.is_available()}
+    return {"games": data, "live": nhl_data.is_available(), "source": "sportsdata" if data else "mock"}
 
 
 @api.get("/suggested-questions")
@@ -342,12 +355,20 @@ async def voice_lab_select(req: VoiceSelectReq):
 
 @api.get("/stats/players")
 async def stats_players():
-    return {"players": PLAYERS}
+    if sr.is_available():
+        data = sr.players_shape()
+        if data:
+            return {"players": data, "live": True, "source": "sportradar"}
+    return {"players": PLAYERS, "live": False, "source": "mock"}
 
 
 @api.get("/stats/teams")
 async def stats_teams():
-    return {"teams": TEAMS}
+    if sr.is_available():
+        data = sr.teams_shape()
+        if data:
+            return {"teams": data, "live": True, "source": "sportradar"}
+    return {"teams": TEAMS, "live": False, "source": "mock"}
 
 
 @api.get("/tts/budget")
