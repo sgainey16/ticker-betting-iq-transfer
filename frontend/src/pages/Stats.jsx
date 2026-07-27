@@ -199,6 +199,7 @@ export default function Stats() {
             sortKey={sortKey || "pts"}
             sortDir={sortDir}
             currentTab={tab}
+            rowLinkFn={(r) => `/player/${r.id}`}
           />
         )}
 
@@ -220,6 +221,7 @@ export default function Stats() {
             sortKey={sortKey || "sv_pct"}
             sortDir={sortDir}
             currentTab={tab}
+            rowLinkFn={(r) => `/player/${r.id}`}
           />
         )}
 
@@ -306,7 +308,7 @@ export default function Stats() {
   );
 }
 
-function NHLTable({ rows, columns, onSort, sortKey, sortDir, currentTab }) {
+function NHLTable({ rows, columns, onSort, sortKey, sortDir, currentTab, rowLinkFn }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm border-collapse">
@@ -333,30 +335,41 @@ function NHLTable({ rows, columns, onSort, sortKey, sortDir, currentTab }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
-            <tr
-              key={r.id || i}
-              className={`border-b border-slate-100 hover:bg-blue-50/60 transition-colors ${
-                i % 2 === 0 ? "bg-white" : "bg-slate-50/40"
-              }`}
-            >
-              {columns.map((c) => (
-                <td key={c.key} className={`px-3 py-2 text-slate-700 ${c.w}`}>
-                  {c.render ? c.render(r[c.key], r) : (r[c.key] ?? "—")}
+          {rows.map((r, i) => {
+            const href = rowLinkFn ? rowLinkFn(r) : null;
+            return (
+              <tr
+                key={r.id || i}
+                className={`border-b border-slate-100 hover:bg-blue-50/60 transition-colors ${
+                  i % 2 === 0 ? "bg-white" : "bg-slate-50/40"
+                }`}
+              >
+                {columns.map((c) => (
+                  <td key={c.key} className={`px-3 py-2 text-slate-700 ${c.w}`}>
+                    {c.key === "name" && href ? (
+                      <Link
+                        to={href}
+                        className="text-slate-900 hover:text-[#1e5dff] transition-colors"
+                        data-testid={`stats-row-link-${currentTab}-${i}`}
+                      >
+                        {c.render ? c.render(r[c.key], r) : (r[c.key] ?? "—")}
+                      </Link>
+                    ) : c.render ? c.render(r[c.key], r) : (r[c.key] ?? "—")}
+                  </td>
+                ))}
+                <td className="w-10 px-2 py-2 text-right">
+                  <Link
+                    to={`/press-conference?analyst=marc`}
+                    className="inline-flex items-center justify-center h-6 w-6 rounded-full text-slate-300 hover:text-[#1e5dff] hover:bg-blue-100 transition-all"
+                    title="Ask Marc about this"
+                    data-testid={`stats-presser-hook-${currentTab}-${i}`}
+                  >
+                    <Mic className="w-3.5 h-3.5" />
+                  </Link>
                 </td>
-              ))}
-              <td className="w-10 px-2 py-2 text-right">
-                <Link
-                  to={`/press-conference?analyst=marc`}
-                  className="inline-flex items-center justify-center h-6 w-6 rounded-full text-slate-300 hover:text-[#1e5dff] hover:bg-blue-100 transition-all"
-                  title="Ask Marc about this"
-                  data-testid={`stats-presser-hook-${currentTab}-${i}`}
-                >
-                  <Mic className="w-3.5 h-3.5" />
-                </Link>
-              </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

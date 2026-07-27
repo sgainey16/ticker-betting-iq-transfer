@@ -96,6 +96,13 @@ export const TEST_IDS = {
     upgradeBtn: "fantasy-upgrade-btn",
     saveRoster: "fantasy-save-roster",
     playerRow: (i) => `fantasy-player-${i}`,
+    healthScore: "fantasy-health-score",
+    startSit: "fantasy-start-sit",
+    waivers: "fantasy-waivers",
+    injuries: "fantasy-injuries",
+    hostTakeReggie: "fantasy-host-take-reggie",
+    hostTakeMarc: "fantasy-host-take-marc",
+    lineAlert: "fantasy-line-alert",
   },
   desk: {
     shotFrame: "desk-shot-frame",
