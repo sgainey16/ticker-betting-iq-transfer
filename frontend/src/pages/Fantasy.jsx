@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import { TEST_IDS } from "@/lib/config";
 import { Crown, Trophy, Sparkles, Flame, Save, ExternalLink, Activity, TrendingUp, AlertTriangle, PlayCircle, PauseCircle, Eye, Mic2, Calculator } from "lucide-react";
+import ReggieAssistant from "@/components/ReggieAssistant";
 
 const SCORING_OPTIONS = ["Points", "Head-to-Head", "Roto", "Custom"];
 
@@ -784,6 +785,9 @@ export default function Fantasy() {
           Loading your desk…
         </div>
       )}
+
+      {/* Reggie — floating assistant available here too, per user directive. */}
+      <ReggieAssistant />
     </div>
   );
 }
