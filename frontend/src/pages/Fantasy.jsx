@@ -140,21 +140,25 @@ const LINE_ALERTS = [
 ];
 
 function hostTakes(rosterHealthResult, favTeams) {
+  // Fantasy is an opt-in room, so we CAN reference the roster directly —
+  // but the panel-show tonal rule still holds: warm sports-desk voice, no
+  // gambling-podcast phrases (PP1 exposure, value pop, regression coming).
   const grade = rosterHealthResult.grade;
-  const fav = favTeams[0] || "your team";
+  const fav = favTeams[0] || "your favourites";
+
   const reggie =
     grade === "F" || grade === "D" || grade === "D+"
-      ? "Alright, listen — you're skating uphill with this roster, no way around it. But hockey keeps receipts. You go win the small battles this week — the waivers, the drops, the start-sits nobody else is looking at — and you drag yourself back into it. That's how it works. Don't sit on it. GO."
+      ? "Alright, listen — this roster's got some holes. That's fine. Every team I ever played on had a bad week. What you do is you show up, you fix the little things, and you don't get cute. One good pickup, one honest look at who's not earning their shift. That's it. Get back to work."
       : grade.startsWith("A")
-      ? `Attaboy. This is a HOCKEY roster. You've got real dogs in real minutes — that's how you win a league. Only thing I'd say: don't get cute. Play your guys. Trust what got you here. And keep an eye on ${fav} — if their top line shifts, you might have a value pop coming.`
-      : `Solid build, kid. Not fancy — but simple beats fancy. You've got a couple of gaps, sure. Everyone does. Show up on waivers Tuesday, don't chase last week's numbers, and let your top guys eat. That's a HOCKEY roster if you keep working.`;
+      ? `Come on. THIS is a HOCKEY roster. You've got real guys in real spots — first to the puck, first to the middle. Don't overthink it. Just keep playing your guys. And keep an eye on ${fav} — anything happens with that lineup, you're one of the first to know.`
+      : `Solid build, kid. Nothing flashy — that's why I like it. Simple beats fancy. Every week you're gonna have one guy who lets you down and one guy who saves your bacon. That's hockey. Trust the group.`;
 
   const marc =
     grade === "F" || grade === "D" || grade === "D+"
-      ? "The math on this one is unforgiving — you're carrying too many bottom-six minutes and not enough special-teams equity. Priority is PP1 exposure. Grab a top-unit forward off waivers before you do anything else. Everything else is noise until that gap closes."
+      ? "The roster's underperforming its position on the ice, and that's a fixable problem. One meaningful add — the right forward, in the right spot on the ice — closes most of the gap. I wouldn't overhaul. I'd trim."
       : grade.startsWith("A")
-      ? "The numbers back you up. Your roster is running above its projected point pace by roughly 8 per cent, and your PP1 exposure is in the 78th percentile league-wide. Only flag I'd raise: goalie variance. One bad week from your G and this grade slides. Consider a stream option for Tuesday's slate."
-      : `Your roster grades out right at the median for shot volume, but you're underweight on special-teams minutes — that's a 4-6 point/week ceiling drag. The Cooley pickup on waivers looks like a strong efficiency add. Also, ${fav}'s pace-of-play is up in February — anyone you have from that lineup has quiet 15% upside for the next four games.`;
+      ? "The tape and the numbers finally shook hands here. Your top guys are doing what they're supposed to, your depth is quiet, and that's the mark of a team that doesn't waste energy. Only thing worth watching: goalie week-to-week. Everything else can breathe."
+      : `The pieces are there. Not championship-quality yet, but a good build with a real ceiling. ${fav} has been trending in the right direction lately — anything you have from that lineup is worth holding a little longer than you think.`;
 
   return { reggie, marc };
 }

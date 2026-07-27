@@ -5,6 +5,7 @@ import {
   ArrowLeft, TrendingUp, Target, Shield, Flame,
   Mic2, Calculator, ChevronRight, Circle,
 } from "lucide-react";
+import { REGGIE_JOKES, MARC_JOKES, pickJoke, vibeForPlayer } from "@/lib/jokeBank";
 
 // Team primary colors — matches the shell aesthetic. Any team not listed
 // falls back to Ticker Blue.
@@ -77,25 +78,18 @@ function gameLogFor(p) {
 }
 
 function hostTakesForPlayer(p, rank) {
-  const pos = (p.pos || "").toUpperCase();
-  const t = (p.team || "").toUpperCase();
-  const pts = p.pts ?? 0;
-  const gp = p.gp ?? 0;
-  const isGoalie = pos === "G";
-
-  const reggie = isGoalie
-    ? `${p.name.split(" ")[0]}'s a workhorse. ${p.w ?? "?"} wins with a ${(p.sv_pct ?? 0).toFixed(3)} sv% — that's a HOCKEY goalie. When his team plays the RIGHT way in front of him, he steals nights. Simple beats fancy. Write it down.`
-    : pts / Math.max(1, gp) >= 1.5
-    ? `Attaboy. ${pts} points in ${gp} games — that's a big-goal guy in a big-goal role. First to the puck, first to the middle. Don't overthink it. That's a HOCKEY player.`
-    : pts / Math.max(1, gp) >= 0.9
-    ? `Solid contributor. Not flashy — just shows up every shift. Compete for the puck, do the right things. Then execute. He's earning his minutes.`
-    : `Kid's been quiet. But hockey keeps receipts. You watch what he does in the third period, that's where the story is. Effort's free.`;
-
-  const marc = isGoalie
-    ? `Sample size is meaningful now — ${p.gp} GP, sv% of ${(p.sv_pct ?? 0).toFixed(3)} sits ${rank.svRank || "top-quartile"} among starters. GAA of ${(p.gaa ?? 0).toFixed(2)} tracks with expected. Regression risk is minimal barring team-defensive collapse.`
-    : `The math: ${(pts / Math.max(1, gp)).toFixed(2)} PPG puts him ${rank.pptRank || "in the top group"} among ${pos === "D" ? "defensemen" : "forwards"}. Shooting percentage of ${(p.s_pct ?? 0).toFixed(1)}% is ${((p.s_pct ?? 0) > 15 ? "running hot — expect some cooling" : (p.s_pct ?? 0) > 10 ? "sustainable" : "below career norms — positive regression coming")}. Team context (${TEAM_NAMES[t] || t}) supports current usage.`;
-
-  return { reggie, marc };
+  // LIGHT-AND-FUN mode. Panel-show voice. Stories over stats, character
+  // over analytics-podcast. Technical Marc lives in Presser / Deep Dive.
+  const team = (p.team || "").toUpperCase();
+  const vibe = vibeForPlayer(p);
+  const first = (p.name || "").split(" ")[0] || "kid";
+  const seedR = `reggie-${p.id || p.name}`;
+  const seedM = `marc-${p.id || p.name}`;
+  return {
+    reggie: pickJoke(REGGIE_JOKES, { team, vibe }, seedR),
+    marc:   pickJoke(MARC_JOKES,   { team, vibe }, seedM),
+    _debug: { vibe, first },
+  };
 }
 
 function StatCard({ label, value, hint, accent }) {
