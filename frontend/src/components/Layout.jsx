@@ -65,8 +65,11 @@ export default function Layout({ children }) {
 
       <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8">{children}</main>
 
-      <footer className="max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest">
-        The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager
+      <footer className="max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5">
+        <div>The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager</div>
+        <div className="text-white/30" data-testid="sportradar-attribution">
+          NHL data provided by <span className="text-white/50">Sportradar</span>
+        </div>
       </footer>
     </div>
   );

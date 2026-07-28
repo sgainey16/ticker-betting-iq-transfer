@@ -133,7 +133,9 @@ def daily_schedule(dt: datetime | None = None) -> dict | None:
 
 def season_leaders() -> dict | None:
     yr, st = _season_year(), _season_type()
-    return _cached(f"seasons/{yr}/{st}/leaders/statistics.json", TTL_LEADERS)
+    # Sportradar v7 exposes ALL leader categories under a single endpoint.
+    # One call gets us 18 categories × ~20 players each = plenty of data.
+    return _cached(f"seasons/{yr}/{st}/leaders.json", TTL_LEADERS)
 
 
 # ---------- Adapters → internal shapes ----------
@@ -162,35 +164,48 @@ def _team_alias_map() -> dict[str, dict]:
 def teams_shape() -> list[dict] | None:
     """Return the frontend TEAMS shape from live Sportradar standings.
 
-    Shape (matches analysts.TEAMS):
+    Sportradar v7 puts stats at the TOP LEVEL of the team object
+    (team.wins, team.points, team.goals_for) — NOT nested under
+    team.statistics. Shape (matches analysts.TEAMS):
       {code, name, conf, div, gp, w, l, otl, pts, gf, ga}
     """
     st = season_standings()
     if not st:
         return None
-    tmap = _team_alias_map()
     out: list[dict] = []
     for conf in st.get("conferences", []) or []:
         cname = conf.get("name") or conf.get("alias") or ""
-        conf_short = "East" if "East" in cname else ("West" if "West" in cname else cname)
+        conf_short = "East" if "East" in cname.upper() or "EASTERN" in cname.upper() else \
+                     ("West" if "West" in cname.upper() or "WESTERN" in cname.upper() else cname)
         for div in conf.get("divisions", []) or []:
             dname = div.get("name") or div.get("alias") or ""
             for team in div.get("teams", []) or []:
-                rec = team.get("statistics", {}).get("standings", {}) or team.get("statistics", {}) or {}
-                # Sportradar sometimes nests under 'record' or top-level; try both
-                stats = team.get("statistics", {}) or {}
-                w = stats.get("wins") or rec.get("wins") or 0
-                l = stats.get("losses") or rec.get("losses") or 0
-                otl = stats.get("overtime_losses") or rec.get("overtime_losses") or 0
-                gp = stats.get("games_played") or (w + l + otl)
-                pts = stats.get("points") or (2 * w + otl)
-                gf = stats.get("goals_for") or 0
-                ga = stats.get("goals_against") or 0
-                alias = team.get("alias") or tmap.get(team.get("id", ""), {}).get("alias") or ""
-                name = team.get("name") or team.get("market") or tmap.get(team.get("id", ""), {}).get("name") or ""
+                w = team.get("wins", 0) or 0
+                l = team.get("losses", 0) or 0
+                otl = team.get("overtime_losses", 0) or 0
+                gp = team.get("games_played", 0) or (w + l + otl)
+                pts = team.get("points", 0) or (2 * w + otl)
+                gf = team.get("goals_for", 0) or 0
+                ga = team.get("goals_against", 0) or 0
+                alias = team.get("alias") or ""
+                if not alias:
+                    # Fallback: normalize from market/name mapping if alias absent
+                    market = team.get("market", "")
+                    name = team.get("name", "")
+                    alias = (market[:3] if market else name[:3]).upper()
+                # Sportradar returns different alias formats across endpoints;
+                # normalize to the codes our frontend + Joke Bank use.
+                alias_norm = {
+                    "TB": "TBL", "TAM": "TBL",
+                    "SJ": "SJS", "SA": "SJS",
+                    "LA": "LAK",
+                    "NJ": "NJD",
+                    "MON": "MTL",
+                }.get(alias, alias)
+                full_name = f"{team.get('market', '')} {team.get('name', '')}".strip() or team.get("name", "")
                 out.append({
-                    "code": alias,
-                    "name": name,
+                    "code": alias_norm,
+                    "name": full_name,
                     "conf": conf_short,
                     "div": dname,
                     "gp": gp,
@@ -232,86 +247,120 @@ def games_shape() -> list[dict] | None:
 def players_shape() -> list[dict] | None:
     """Return the frontend PLAYERS shape from season leaders.
 
-    Sportradar's leaders payload varies — we map best-effort. If unavailable,
-    return None so caller falls back to mock.
+    Sportradar `/seasons/{yr}/{type}/leaders.json` returns 18 categories.
+    We merge leaders across categories keyed by player ID — same player
+    appearing in multiple leader boards (points + goals + shots) yields
+    one enriched record.
 
-    Shape (skaters): {id, name, team, pos, gp, g, a, pts, plus_minus, toi, s, s_pct}
+    Shape (skaters): {id, name, team, pos, gp, g, a, pts, plus_minus,
+      toi, s, s_pct, ppg, shg, gwg, pim, hits, blocks}
     Shape (goalies): {id, name, team, pos, gp, w, l, sv_pct, gaa, so, sa, sv}
     """
     leaders = season_leaders()
     if not leaders:
         return None
-    tmap = _team_alias_map()
 
-    def _mk_skater(p: dict) -> dict:
-        stats = p.get("statistics", {}) or {}
-        total = stats.get("total", stats) or {}
-        team = p.get("team") or {}
+    # Team alias normalization (Sportradar returns different codes across endpoints).
+    def _norm(alias: str) -> str:
         return {
-            "id": p.get("id", ""),
-            "name": p.get("full_name") or p.get("name", ""),
-            "team": team.get("alias") or tmap.get(team.get("id", ""), {}).get("alias") or "",
-            "pos": p.get("primary_position") or p.get("position", "") or "",
-            "gp": total.get("games_played", 0),
-            "g": total.get("goals", 0),
-            "a": total.get("assists", 0),
-            "pts": total.get("points", 0),
-            "plus_minus": total.get("plus_minus", 0),
-            "toi": total.get("time_on_ice_avg", "") or "",
-            "s": total.get("shots", 0),
-            "s_pct": total.get("shooting_pct", 0),
-            "ppg": total.get("powerplay_goals", 0),
-            "shg": total.get("shorthanded_goals", 0),
-            "gwg": total.get("game_winning_goals", 0),
-            "pim": total.get("penalty_minutes", 0),
-            "hits": total.get("hits", 0),
-            "blocks": total.get("blocked_shots", 0),
-        }
+            "TB": "TBL", "TAM": "TBL",
+            "SJ": "SJS", "SA": "SJS", "SAN": "SJS",
+            "LA": "LAK",
+            "NJ": "NJD",
+            "MON": "MTL",
+            "WIN": "WPG",
+            "COL": "COL", "COR": "COL",  # some feeds truncate
+        }.get(alias, alias)
 
-    def _mk_goalie(p: dict) -> dict:
-        stats = p.get("statistics", {}) or {}
-        total = stats.get("total", stats) or {}
-        team = p.get("team") or {}
-        return {
-            "id": p.get("id", ""),
-            "name": p.get("full_name") or p.get("name", ""),
-            "team": team.get("alias") or tmap.get(team.get("id", ""), {}).get("alias") or "",
-            "pos": "G",
-            "gp": total.get("games_played", 0),
-            "w": total.get("wins", 0),
-            "l": total.get("losses", 0),
-            "sv_pct": total.get("save_pct", 0),
-            "gaa": total.get("goals_against_avg", 0),
-            "so": total.get("shutouts", 0),
-            "sa": total.get("shots_against", 0),
-            "sv": total.get("saves", 0),
-        }
+    # Build team_id → alias map from league_hierarchy for fallback.
+    def _team_alias(team_dict: dict) -> str:
+        alias = team_dict.get("alias") or ""
+        if not alias:
+            market = team_dict.get("market", "")
+            name = team_dict.get("name", "")
+            alias = (market[:3] if market else name[:3]).upper()
+        return _norm(alias)
 
-    out: list[dict] = []
+    # Goalie categories → merge separately.
+    GOALIE_CATS = {"wins", "shutouts", "goalsagainstaverage", "savepercentage"}
+    SKATER_CATS = {
+        "points", "goals", "assists", "plusminus", "shots",
+        "gamewinninggoals", "penaltyminutes", "shorthandedgoals",
+        "powerplaygoals", "hits", "rookiescoring", "rookiegoals",
+        "rookieassists", "defensivescoring",
+    }
 
-    # Sportradar leaders response typically has 'categories' or top-level lists
-    # per stat category. We flatten the union.
-    seen_ids: set[str] = set()
+    skaters: dict[str, dict] = {}
+    goalies: dict[str, dict] = {}
 
-    def _push(entry: dict, is_goalie: bool):
-        pid = entry.get("id", "")
-        if pid and pid in seen_ids:
-            return
-        seen_ids.add(pid)
-        out.append(_mk_goalie(entry) if is_goalie else _mk_skater(entry))
+    for cat in leaders.get("categories", []) or []:
+        cname = (cat.get("category") or "").lower()
+        is_goalie = cname in GOALIE_CATS
+        target = goalies if is_goalie else skaters
+        for entry in cat.get("leaders", []) or []:
+            player = entry.get("player") or {}
+            team = entry.get("team") or {}
+            pid = player.get("id") or player.get("sr_id") or player.get("reference") or ""
+            if not pid:
+                continue
+            if pid not in target:
+                target[pid] = {
+                    "id": pid,
+                    "name": player.get("full_name", ""),
+                    "team": _team_alias(team),
+                    "pos": "G" if is_goalie else "",
+                    "gp": entry.get("games_played", 0),
+                    "g": 0, "a": 0, "pts": 0, "plus_minus": 0,
+                    "s": 0, "s_pct": 0.0, "toi": "",
+                    "ppg": 0, "shg": 0, "gwg": 0, "pim": 0,
+                    "hits": 0, "blocks": 0,
+                    # goalie-specific:
+                    "w": 0, "l": 0, "sv_pct": 0.0, "gaa": 0.0,
+                    "so": 0, "sa": 0, "sv": 0,
+                }
+            # Merge fields from this leader entry (whichever are present).
+            p = target[pid]
+            for src_key, dst_key in [
+                ("games_played", "gp"),
+                ("goals", "g"),
+                ("assists", "a"),
+                ("points", "pts"),
+                ("plus_minus", "plus_minus"),
+                ("shots", "s"),
+                ("shooting_percentage", "s_pct"),
+                ("powerplay_goals", "ppg"),
+                ("shorthanded_goals", "shg"),
+                ("game_winning_goals", "gwg"),
+                ("penalty_minutes", "pim"),
+                ("hits", "hits"),
+                ("blocked_shots", "blocks"),
+                ("wins", "w"),
+                ("losses", "l"),
+                ("save_pct", "sv_pct"),
+                ("average", "gaa"),  # goalie GAA is under 'average' key
+                ("shutouts", "so"),
+                ("shots_against", "sa"),
+                ("saves", "sv"),
+            ]:
+                val = entry.get(src_key)
+                if val not in (None, 0, 0.0) and p.get(dst_key) in (0, 0.0, ""):
+                    p[dst_key] = val
 
-    # Try common shapes
-    for cat_key in ("categories", "leaders"):
-        cats = leaders.get(cat_key)
-        if not isinstance(cats, list):
-            continue
-        for cat in cats:
-            cat_name = (cat.get("name") or cat.get("category") or "").lower()
-            is_goalie_cat = "goalie" in cat_name or "save" in cat_name or "shutout" in cat_name
-            for item in cat.get("players", []) or cat.get("leaders", []) or []:
-                _push(item, is_goalie_cat)
+    # Combine — cap at 30 skaters + 15 goalies so the /stats page stays snappy.
+    def _score_skater(p):
+        return p.get("pts", 0)
 
-    return out or None
+    def _score_goalie(p):
+        return p.get("w", 0)
+
+    top_skaters = sorted(skaters.values(), key=_score_skater, reverse=True)[:30]
+    top_goalies = sorted(goalies.values(), key=_score_goalie, reverse=True)[:15]
+    for s in top_skaters:
+        # Best-guess position for the Player Detail page. Sportradar's leaders
+        # endpoint doesn't expose position — infer from category patterns:
+        # defensivescoring → D. Falls back to "F" (forward) otherwise.
+        s["pos"] = s["pos"] or "F"
+    return top_skaters + top_goalies or None
 
 
 def ticker_lines(limit: int = 6) -> list[str]:
