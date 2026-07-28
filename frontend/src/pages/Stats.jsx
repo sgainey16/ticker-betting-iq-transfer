@@ -98,7 +98,7 @@ export default function Stats() {
             The numbers · 2025-26
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl text-white mt-1">
-            Live NHL Stats
+            Stats
           </h1>
           <p className="text-white/60 text-sm mt-1 max-w-2xl">
             The full sheet — laid out the way you already read it.
