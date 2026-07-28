@@ -195,13 +195,19 @@ def teams_shape() -> list[dict] | None:
                     alias = (market[:3] if market else name[:3]).upper()
                 # Sportradar returns different alias formats across endpoints;
                 # normalize to the codes our frontend + Joke Bank use.
-                alias_norm = {
-                    "TB": "TBL", "TAM": "TBL",
-                    "SJ": "SJS", "SA": "SJS",
-                    "LA": "LAK",
-                    "NJ": "NJD",
-                    "MON": "MTL",
-                }.get(alias, alias)
+                # Note: Sportradar sends alias "COL" for BOTH Colorado Avalanche
+                # and Columbus Blue Jackets — disambiguate by market name.
+                market = team.get("market", "")
+                if alias == "COL" and market == "Columbus":
+                    alias_norm = "CBJ"
+                else:
+                    alias_norm = {
+                        "TB": "TBL", "TAM": "TBL",
+                        "SJ": "SJS", "SA": "SJS",
+                        "LA": "LAK",
+                        "NJ": "NJD",
+                        "MON": "MTL",
+                    }.get(alias, alias)
                 full_name = f"{team.get('market', '')} {team.get('name', '')}".strip() or team.get("name", "")
                 out.append({
                     "code": alias_norm,
@@ -275,10 +281,13 @@ def players_shape() -> list[dict] | None:
     # Build team_id → alias map from league_hierarchy for fallback.
     def _team_alias(team_dict: dict) -> str:
         alias = team_dict.get("alias") or ""
+        market = team_dict.get("market", "")
         if not alias:
-            market = team_dict.get("market", "")
             name = team_dict.get("name", "")
             alias = (market[:3] if market else name[:3]).upper()
+        # Disambiguate Columbus (also aliased "COL") from Colorado.
+        if alias == "COL" and market == "Columbus":
+            return "CBJ"
         return _norm(alias)
 
     # Goalie categories → merge separately.

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { TEST_IDS } from "@/lib/config";
-import { LineChart, Trophy, Shield, Calendar, Mic, Crown, ArrowRight, X, Zap, Target, Check, Circle } from "lucide-react";
+import { LineChart, Trophy, Shield, Calendar, Mic, Crown, ArrowRight, X, Zap, Target, Check, Circle, Vote } from "lucide-react";
 import { MATCHUPS } from "@/data/matchups";
 import { getDeviceId } from "@/lib/device";
 
@@ -702,6 +702,37 @@ function MatchupsTab() {
 
   return (
     <div className="p-4 space-y-4">
+      {/* Teaser card that promotes the standalone Predictions page — the
+       * full experience (tonight's live slate, panel picks, community vote)
+       * lives at /predictions. This tab keeps the demo-flavor sample games. */}
+      <Link
+        to="/predictions"
+        data-testid="stats-matchups-predictions-teaser"
+        className="block rounded-lg border border-[#1e5dff]/60 bg-gradient-to-r from-[#0b0b10] to-[#101625] hover:border-[#1e5dff] hover:shadow-[0_0_20px_-4px_rgba(30,93,255,0.6)] transition-all p-4 group"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="h-9 w-9 rounded-md bg-[#1e5dff]/15 border border-[#1e5dff]/50 flex items-center justify-center flex-shrink-0">
+              <Vote className="w-4 h-4 text-[#1e5dff]" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff]">
+                Tonight&rsquo;s card · pick against the panel
+              </div>
+              <div className="font-headline text-white text-base sm:text-lg mt-0.5">
+                Reggie says one thing. Marc says another. Call it.
+              </div>
+              <div className="text-white/50 text-xs mt-0.5">
+                Panel picks · AI consensus · community vote · your streak
+              </div>
+            </div>
+          </div>
+          <div className="text-[#1e5dff] font-accent text-[11px] uppercase tracking-widest inline-flex items-center gap-1 flex-shrink-0 group-hover:translate-x-1 transition-transform">
+            Vote now <ArrowRight className="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </Link>
+
       <div
         className="rounded-lg bg-gradient-to-r from-[#1e5dff] to-[#3a72ff] p-5 flex items-center justify-between text-white"
         data-testid={TEST_IDS.stats.accuracyBadge}

@@ -551,7 +551,35 @@ async def ask_stream(req: AskRequest):
 # ---------- Predictions ----------
 @api.get("/predictions/games")
 async def predictions_games():
-    return {"games": GAMES}
+    """Games enriched with panel picks, AI consensus, and community vote tally.
+    Community tally is a real-time aggregate from stored user picks."""
+    pipeline = [
+        {"$group": {
+            "_id": {"game_id": "$game_id", "pick": "$pick"},
+            "count": {"$sum": 1},
+        }}
+    ]
+    tally = {}
+    async for row in db.predictions.aggregate(pipeline):
+        gid = row["_id"]["game_id"]
+        side = row["_id"]["pick"]
+        tally.setdefault(gid, {"home": 0, "away": 0})[side] = row["count"]
+
+    out = []
+    for g in GAMES:
+        votes = tally.get(g["id"], {"home": 0, "away": 0})
+        total = votes["home"] + votes["away"]
+        out.append({
+            **g,
+            "community": {
+                "home_votes": votes["home"],
+                "away_votes": votes["away"],
+                "total": total,
+                "home_pct": round(100 * votes["home"] / total) if total else None,
+                "away_pct": round(100 * votes["away"] / total) if total else None,
+            },
+        })
+    return {"games": out}
 
 
 def _team(code: str):
@@ -606,14 +634,35 @@ async def my_stats(user_name: str):
     accuracy = round(100 * correct / resolved, 1) if resolved else 0.0
     # Streak: iterate most recent resolved.
     cursor = db.predictions.find(
-        {"user_name": user_name, "resolved": True}, {"_id": 0, "correct": 1, "created_at": 1}
+        {"user_name": user_name, "resolved": True}, {"_id": 0, "correct": 1, "created_at": 1, "game_id": 1, "pick": 1, "winner": 1}
     ).sort("created_at", -1)
     streak = 0
+    beat_reggie = 0
+    beat_marc = 0
+    tie_reggie = 0
+    tie_marc = 0
+    streak_broken = False
     async for d in cursor:
-        if d.get("correct"):
-            streak += 1
-        else:
-            break
+        if not streak_broken:
+            if d.get("correct"):
+                streak += 1
+            else:
+                streak_broken = True
+        # Compare user pick outcome vs Reggie/Marc for resolved games
+        g = next((x for x in GAMES if x["id"] == d.get("game_id")), None)
+        if g and d.get("winner"):
+            winner = d["winner"]
+            user_correct = d.get("correct", False)
+            reggie_correct = g.get("reggie_pick") == winner
+            marc_correct = g.get("marc_pick") == winner
+            if user_correct and not reggie_correct:
+                beat_reggie += 1
+            elif user_correct == reggie_correct:
+                tie_reggie += 1
+            if user_correct and not marc_correct:
+                beat_marc += 1
+            elif user_correct == marc_correct:
+                tie_marc += 1
     return {
         "user_name": user_name,
         "total": total,
@@ -621,6 +670,12 @@ async def my_stats(user_name: str):
         "correct": correct,
         "accuracy": accuracy,
         "streak": streak,
+        "vs_panel": {
+            "beat_reggie": beat_reggie,
+            "tie_reggie": tie_reggie,
+            "beat_marc": beat_marc,
+            "tie_marc": tie_marc,
+        },
     }
 
 

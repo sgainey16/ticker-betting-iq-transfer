@@ -14,6 +14,7 @@ const NAV = [
   { to: "/", end: true, label: "Broadcast", testid: TEST_IDS.nav.broadcast },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
+  { to: "/predictions", label: "Predictions", testid: TEST_IDS.nav.predictions },
 ];
 
 export default function Layout({ children }) {

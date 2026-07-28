@@ -274,10 +274,45 @@ TICKER_ITEMS = [
 ]
 
 GAMES = [
-    {"id": "g1", "home": "EDM", "away": "COL", "start_iso": "2026-02-18T00:30:00Z"},
-    {"id": "g2", "home": "TOR", "away": "TBL", "start_iso": "2026-02-18T00:00:00Z"},
-    {"id": "g3", "home": "MIN", "away": "WPG", "start_iso": "2026-02-18T01:00:00Z"},
-    {"id": "g4", "home": "NJD", "away": "NYR", "start_iso": "2026-02-18T00:00:00Z"},
+    # Panel picks are hand-authored per game so Reggie & Marc actually
+    # disagree on-camera. `ai_consensus` is a percent 0-100 favoring the
+    # `ai_consensus_side` team. Community votes come from DB aggregate.
+    {
+        "id": "g1", "home": "EDM", "away": "COL", "start_iso": "2026-02-18T00:30:00Z",
+        "reggie_pick": "home",  # McDavid on home ice — Reggie always trusts the room
+        "reggie_take": "McDavid at home. That's a green light in any city.",
+        "marc_pick": "away",    # Marc likes Colorado's xG differential
+        "marc_take": "Colorado's road xG is second in the league. Numbers don't lie.",
+        "ai_consensus_side": "home",
+        "ai_consensus": 58,
+    },
+    {
+        "id": "g2", "home": "TOR", "away": "TBL", "start_iso": "2026-02-18T00:00:00Z",
+        "reggie_pick": "away",
+        "reggie_take": "Vasy in a Game-7 mood. Toronto folds in April.",
+        "marc_pick": "away",
+        "marc_take": "Tampa's PDO regressed clean. This is their game to lose.",
+        "ai_consensus_side": "away",
+        "ai_consensus": 61,
+    },
+    {
+        "id": "g3", "home": "MIN", "away": "WPG", "start_iso": "2026-02-18T01:00:00Z",
+        "reggie_pick": "home",
+        "reggie_take": "Kaprizov's a wagon. Home barn, six goals easy.",
+        "marc_pick": "away",
+        "marc_take": "Winnipeg leads the league in GA. Not close.",
+        "ai_consensus_side": "away",
+        "ai_consensus": 54,
+    },
+    {
+        "id": "g4", "home": "NJD", "away": "NYR", "start_iso": "2026-02-18T00:00:00Z",
+        "reggie_pick": "away",
+        "reggie_take": "Rangers win the rivalry games. Every time.",
+        "marc_pick": "home",
+        "marc_take": "Devils' 5v5 xG since Feb 1 is top-three. I'll take Jersey.",
+        "ai_consensus_side": "home",
+        "ai_consensus": 52,
+    },
 ]
 
 
