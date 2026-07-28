@@ -24,10 +24,10 @@ import {
 const TABS = [
   { id: "picks",      label: "Your Picks",  icon: Target,   kicker: "Track record" },
   { id: "edge",       label: "Edge Score",  icon: Zap,      kicker: "Reggie's rating of you" },
-  // Betting IQ + Fantasy hidden for Phase 1 (entertainment-first focus).
+  // Betting IQ + Fantasy Tracker hidden for Phase 1 (entertainment-first focus).
   // Code preserved — flip these back on for Phase 2.
   // { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "Your personal AI betting coach" },
-  // { id: "fantasy",    label: "Fantasy",     icon: Trophy,   kicker: "Your roster + AI" },
+  // { id: "fantasy",    label: "Fantasy Tracker",     icon: Trophy,   kicker: "Studies your roster · you" },
   { id: "social",     label: "Social",      icon: Users,    kicker: "Public profile · followers" },
   { id: "prefs",      label: "Preferences", icon: Settings, kicker: "Team · pace · voice" },
   { id: "membership", label: "Membership",  icon: Crown,    kicker: "Founding Member · billing" },
@@ -332,7 +332,7 @@ function FantasyTab() {
     <div className="space-y-5">
       <SectionHeader
         kicker="Your Team"
-        title="Fantasy"
+        title="Fantasy Tracker"
         right={
           <Link
             to="/fantasy"
@@ -662,7 +662,7 @@ function MembershipTab() {
             </div>
             <div className="text-white/60 text-sm mt-3 max-w-lg">
               Founding Members unlock unlimited Presser questions, Pick 10,
-              Analytics deep dives, Fantasy AI, and your Back Office track
+              Analytics deep dives, Fantasy Tracker, and your Back Office track
               record. Locked in at $3.99/month — for life.
             </div>
           </div>

@@ -288,7 +288,7 @@ export default function Fantasy() {
       <header className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-[#1e5dff]">
-            Your team · Fantasy Desk
+            Your team · Fantasy Tracker
           </div>
           <h1 className="font-headline text-3xl sm:text-4xl text-white mt-1">
             Better decisions. No guessing.

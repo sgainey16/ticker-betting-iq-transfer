@@ -40,10 +40,10 @@ export default function Home() {
                 Deep dive · analytics
               </div>
               <div className="font-headline text-2xl text-white mt-1">
-                Press Conference
+                Every tool studies the game. We study you.
               </div>
               <div className="text-white/60 text-sm mt-1">
-                Ask Reggie or Marc anything. 1-on-1 breakdown, stat-backed.
+                Your patterns, your blind spots, your history. Coach, not casino.
               </div>
               <div className="inline-flex items-center gap-1.5 mt-3 text-[10px] font-accent uppercase tracking-widest text-[#00e5ff]">
                 <Sparkles className="w-3 h-3" />
