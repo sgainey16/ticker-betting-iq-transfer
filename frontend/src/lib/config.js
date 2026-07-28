@@ -45,6 +45,7 @@ export const TEST_IDS = {
     stats: "nav-stats",
     login: "nav-login",
     predictions: "nav-predictions",
+    recaps: "nav-recaps",
     backOffice: "nav-back-office",
   },
   home: {
@@ -78,6 +79,21 @@ export const TEST_IDS = {
     leaderboard: "pred-leaderboard",
     mine: "pred-mine",
     simulate: "pred-simulate",
+    picker: "pred-picker-strip",
+    pickerAll: "pred-picker-all",
+    pickerGame: (id) => `pred-picker-game-${id}`,
+  },
+  recaps: {
+    pageRoot: "recaps-page",
+    picker: "recaps-picker-strip",
+    pickerAll: "recaps-picker-all",
+    pickerGame: (id) => `recaps-picker-game-${id}`,
+    shortsTile: (id) => `recaps-shorts-${id}`,
+  },
+  launchZone: {
+    banner: "launch-zone-banner",
+    dismiss: "launch-zone-dismiss",
+    learnMore: "launch-zone-learn-more",
   },
   stats: {
     pageRoot: "stats-page",

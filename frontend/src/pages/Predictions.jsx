@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import { TEST_IDS, ANALYSTS } from "@/lib/config";
 import { Trophy, Flame, Target, RefreshCcw, Users, Cpu, Info } from "lucide-react";
+import GamePickerStrip from "@/components/GamePickerStrip";
 
 const teamName = (code, teams) => {
   const t = teams.find((x) => x.code === code);
@@ -26,6 +27,7 @@ export default function Predictions() {
   const [reasoning, setReasoning] = useState({});
   const [submitting, setSubmitting] = useState({});
   const [error, setError] = useState("");
+  const [pickedGameId, setPickedGameId] = useState(null); // null = show all games
 
   const refresh = useCallback(async () => {
     try {
@@ -81,8 +83,28 @@ export default function Predictions() {
 
   const alreadyPicked = new Set(myPreds.map((p) => p.game_id));
 
+  const visibleGames = useMemo(
+    () => (pickedGameId ? games.filter((g) => g.id === pickedGameId) : games),
+    [games, pickedGameId],
+  );
+
   return (
-    <div className="grid lg:grid-cols-12 gap-8" data-testid="predictions-page">
+    <div className="space-y-8" data-testid="predictions-page">
+      {/* Logo-vs-logo picker strip — jumps user to a single game or "Play All" */}
+      <GamePickerStrip
+        games={games}
+        teams={teams}
+        selectedGameId={pickedGameId}
+        onSelect={setPickedGameId}
+        playAllLabel="All Games"
+        testids={{
+          root: TEST_IDS.pred.picker,
+          all: TEST_IDS.pred.pickerAll,
+          game: TEST_IDS.pred.pickerGame,
+        }}
+      />
+
+      <div className="grid lg:grid-cols-12 gap-8">
       <div className="lg:col-span-8">
         {/* Header */}
         <div className="flex items-end justify-between flex-wrap gap-4 mb-6">
@@ -122,7 +144,7 @@ export default function Predictions() {
 
         {/* Games */}
         <div className="grid gap-4">
-          {games.map((g) => {
+          {visibleGames.map((g) => {
             const picked = alreadyPicked.has(g.id);
             const chosen = picks[g.id];
             const awayName = teamName(g.away, teams);
@@ -372,6 +394,7 @@ export default function Predictions() {
           )}
         </div>
       </aside>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import Layout from "@/components/Layout";
 import Home from "@/pages/Home";
 import PressConference from "@/pages/PressConference";
 import Predictions from "@/pages/Predictions";
+import Recaps from "@/pages/Recaps";
 import VoiceLab from "@/pages/VoiceLab";
 import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
@@ -35,6 +36,7 @@ function App() {
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
+            <Route path="/recaps" element={<Recaps />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />
             <Route path="/desk-preview" element={<DeskPreview />} />
