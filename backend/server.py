@@ -29,6 +29,7 @@ from analysts import (
     build_stat_context,
     build_stat_card,
     pick_banter,
+    infer_turn_type,
     quick_fallback_line,
 )
 from voice_service import ensure_audio, audio_url_for, budget_status
@@ -185,15 +186,37 @@ async def suggested_questions():
 
 @api.get("/banter")
 async def banter(topic: str = "league_wide"):
-    """Return a full multi-turn two-host banter script. Each turn includes
-    an audio_url (pre-generated + cached on disk via ElevenLabs) and a `shot`
-    cue that drives the frontend camera state machine."""
-    turns = pick_banter(topic)
+    """Return a full multi-turn two-host banter show as a MANIFEST.
+    Manifest shape (stable, forward-compatible with future clip-sharing):
+      { show_id, topic, generated_at, schema_version,
+        turns: [{ turn_id, index, speaker, shot, type, text, audio_url,
+                  video_url (null until Highlights lands),
+                  start_ms (client-computed), duration_ms (client-computed) }] }
+    """
+    variant_idx, turns = pick_banter(topic)
+    show_id = f"{topic}:v{variant_idx}"
+    now_iso = datetime.now(timezone.utc).isoformat()
     enriched = []
-    for t in turns:
+    for i, t in enumerate(turns):
         audio_url = ensure_audio(t["speaker"], t["text"])
-        enriched.append({**t, "audio_url": audio_url})
-    return {"topic": topic, "turns": enriched}
+        enriched.append({
+            "turn_id": f"{show_id}#t{i:02d}",
+            "index": i,
+            "speaker": t.get("speaker", ""),
+            "shot": t.get("shot", ""),
+            "type": infer_turn_type(t),
+            "text": t.get("text", ""),
+            "audio_url": audio_url,
+            "video_url": None,  # populated when Highlights vendor lands
+            "interrupt": bool(t.get("interrupt", False)),
+        })
+    return {
+        "schema_version": 2,
+        "show_id": show_id,
+        "topic": topic,
+        "generated_at": now_iso,
+        "turns": enriched,
+    }
 
 
 @api.get("/topics")

@@ -620,8 +620,34 @@ import random
 
 
 def pick_banter(topic: str = "league_wide"):
+    """Return (script_variant_index, script_turns) so callers can build a
+    stable id per turn (needed for future clip-sharing / clip export)."""
     scripts = BANTER_BY_TOPIC.get(topic) or BANTER_BY_TOPIC["league_wide"]
-    return random.choice(scripts)
+    idx = random.randrange(len(scripts))
+    return idx, scripts[idx]
+
+
+def infer_turn_type(turn: dict) -> str:
+    """Best-effort classification for a banter turn. Used at serve-time by
+    the manifest builder. Types drive future clip-sharing filters
+    ("all Reggie hot-takes", "Marc analysis moments", etc.)."""
+    text = (turn.get("text") or "").strip()
+    speaker = turn.get("speaker", "")
+    if turn.get("interrupt"):
+        return "reaction"
+    if text.endswith("?"):
+        return "setup" if speaker == "reggie" else "question"
+    # Reggie's hot-take signature moves
+    upper_words = sum(1 for w in text.split() if w.isupper() and len(w) > 2)
+    hot_take_markers = ("HOCKEY", "ATTABOY", "COME ON", "Attaboy", "hockey keeps receipts")
+    if upper_words >= 1 or any(m in text for m in hot_take_markers) or text.count("!") >= 1:
+        return "hot_take" if speaker == "reggie" else "analysis"
+    # Marc's spreadsheet moves
+    marc_analysis_markers = ("percent", "%", "expected goals", "PDO", "sample size", "share")
+    if speaker == "marc" and any(m in text.lower() for m in [x.lower() for x in marc_analysis_markers]):
+        return "analysis"
+    return "commentary"
+
 
 
 def quick_fallback_line(analyst_id: str, topic: str):
