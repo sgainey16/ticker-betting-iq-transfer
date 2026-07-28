@@ -24,8 +24,10 @@ import {
 const TABS = [
   { id: "picks",      label: "Your Picks",  icon: Target,   kicker: "Track record" },
   { id: "edge",       label: "Edge Score",  icon: Zap,      kicker: "Reggie's rating of you" },
-  { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "Your personal AI betting coach" },
-  { id: "fantasy",    label: "Fantasy",     icon: Trophy,   kicker: "Your roster + AI" },
+  // Betting IQ + Fantasy hidden for Phase 1 (entertainment-first focus).
+  // Code preserved — flip these back on for Phase 2.
+  // { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "Your personal AI betting coach" },
+  // { id: "fantasy",    label: "Fantasy",     icon: Trophy,   kicker: "Your roster + AI" },
   { id: "social",     label: "Social",      icon: Users,    kicker: "Public profile · followers" },
   { id: "prefs",      label: "Preferences", icon: Settings, kicker: "Team · pace · voice" },
   { id: "membership", label: "Membership",  icon: Crown,    kicker: "Founding Member · billing" },
@@ -96,9 +98,6 @@ export default function BackOffice() {
           {active === "membership" && <MembershipTab />}
         </section>
       </div>
-
-      {/* Reggie — floating assistant. Back Office only for MVP. */}
-      <ReggieAssistant />
     </div>
   );
 }

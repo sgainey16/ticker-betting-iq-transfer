@@ -785,9 +785,6 @@ export default function Fantasy() {
           Loading your desk…
         </div>
       )}
-
-      {/* Reggie — floating assistant available here too, per user directive. */}
-      <ReggieAssistant />
     </div>
   );
 }

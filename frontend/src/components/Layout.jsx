@@ -1,19 +1,19 @@
 import { NavLink, Link } from "react-router-dom";
 import { TEST_IDS } from "@/lib/config";
-import { Radio } from "lucide-react";
+import { Radio, Settings } from "lucide-react";
+import ReggieAssistant from "@/components/ReggieAssistant";
 
 const linkBase =
   "px-3 py-2 rounded-md font-accent text-[12px] uppercase tracking-widest transition-colors";
 const active = "text-white bg-white/5";
 const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 
+// Phase 1 nav — entertainment-first. Fantasy + Betting IQ + Login hidden
+// until Phase 2 (routes still work by direct URL; code is intact).
 const NAV = [
   { to: "/", end: true, label: "Broadcast", testid: TEST_IDS.nav.broadcast },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
-  { to: "/fantasy", label: "Fantasy", testid: TEST_IDS.nav.fantasy },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
-  { to: "/back-office", label: "Back Office", testid: TEST_IDS.nav.backOffice },
-  { to: "/login", label: "Login", testid: TEST_IDS.nav.login },
 ];
 
 export default function Layout({ children }) {
@@ -56,9 +56,23 @@ export default function Layout({ children }) {
             ))}
           </nav>
 
-          <div className="hidden sm:flex items-center gap-2 text-xs font-accent uppercase tracking-widest">
-            <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
-            <span className="text-[#1e5dff]">Live</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 text-xs font-accent uppercase tracking-widest">
+              <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
+              <span className="text-[#1e5dff]">Live</span>
+            </div>
+            <NavLink
+              to="/back-office"
+              data-testid={TEST_IDS.nav.backOffice}
+              className={({ isActive }) =>
+                `h-9 w-9 rounded-md flex items-center justify-center transition-colors ${
+                  isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                }`
+              }
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </NavLink>
           </div>
         </div>
       </header>
@@ -71,6 +85,9 @@ export default function Layout({ children }) {
           NHL data provided by <span className="text-white/50">Sportradar</span>
         </div>
       </footer>
+
+      {/* Reggie Assistant — now global. One mount point for the whole app. */}
+      <ReggieAssistant />
     </div>
   );
 }
