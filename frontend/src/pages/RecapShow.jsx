@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film,
-  ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // Recap Show — SportsCenter-style "morning line" player. Advances through:
@@ -73,7 +71,6 @@ export default function RecapShow() {
   const [beatIdx, setBeatIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [browseOpen, setBrowseOpen] = useState(false);
   const audioRef = useRef(null);
 
   const beats = useMemo(() => buildBeatSequence(episode), [episode]);
@@ -166,7 +163,7 @@ export default function RecapShow() {
   const finished = beats.length > 0 && beatIdx >= beats.length;
 
   return (
-    <div data-testid="recap-show-page" className="space-y-4">
+    <div data-testid="recap-show-page" className="space-y-2">
       {/* Slim date badge only — nothing above the frame competes with the hosts */}
       <div className="flex items-center justify-between">
         <div className="inline-flex items-center gap-2 rounded-full bg-[#F5A623]/15 border border-[#F5A623]/50 px-3 py-1">
@@ -194,26 +191,8 @@ export default function RecapShow() {
         onToggleMute={() => setMuted((m) => !m)}
       />
 
-      {/* Caption sits BELOW the frame so it never covers the hosts */}
-      {playing && currentBeat?.kind === "host" && (
-        <div className="rounded-lg border border-[#2d2d35] bg-[#0b0b10] p-4 sm:p-5">
-          <div className="flex items-center justify-between mb-2">
-            <div className="font-accent text-[10px] uppercase tracking-[0.35em]"
-                 style={{ color: ANALYSTS[currentBeat.speaker]?.accent || "#1e5dff" }}>
-              {ANALYSTS[currentBeat.speaker]?.short || currentBeat.speaker}
-            </div>
-            {currentBeat.speaker === "marc" && currentBeat.segment?.stat_line && (
-              <div className="inline-flex items-center gap-1.5 rounded-md bg-[#1e5dff]/15 border border-[#1e5dff]/50 px-2 py-0.5">
-                <span className="font-accent text-[8px] uppercase tracking-widest text-[#1e5dff]">Stat</span>
-                <span className="text-white text-xs font-headline">{currentBeat.segment.stat_line}</span>
-              </div>
-            )}
-          </div>
-          <div className="font-headline text-white text-lg sm:text-xl leading-snug">
-            {currentBeat.text}
-          </div>
-        </div>
-      )}
+      {/* Segment progress rail — logo vs logo. On landscape phones the grid
+       * packs all 8 games onto one row without horizontal scroll. */}
 
       {/* Segment progress rail */}
       <SegmentRail
@@ -230,26 +209,6 @@ export default function RecapShow() {
           }
         }}
       />
-
-      {/* Fold: browse-other-days (the old Recaps gallery) */}
-      <div className="pt-4 border-t border-[#2d2d35]">
-        <button
-          onClick={() => setBrowseOpen((v) => !v)}
-          className="w-full flex items-center justify-between text-left group"
-          data-testid="recap-browse-toggle"
-        >
-          <div className="font-accent text-[11px] uppercase tracking-[0.35em] text-white/50 group-hover:text-white transition-colors">
-            Browse other days · full clip archive
-          </div>
-          {browseOpen ? <ChevronUp className="w-4 h-4 text-white/50" /> : <ChevronDown className="w-4 h-4 text-white/50" />}
-        </button>
-        {browseOpen && (
-          <div className="mt-4 rounded-lg border border-dashed border-[#2d2d35] p-4 text-white/60 text-sm space-y-2">
-            <p>The full category-tagged clip browser lives on the <Link to="/recaps-archive" className="text-[#1e5dff] hover:underline">Recaps archive</Link>.</p>
-            <p className="text-xs text-white/40">Everything you had on the old Recaps tab is preserved — just moved so this page can be the show.</p>
-          </div>
-        )}
-      </div>
 
       {/* Hidden audio element for host lines */}
       <audio ref={audioRef} playsInline />
@@ -330,25 +289,20 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
         </div>
       )}
 
-      {/* Pre-roll cover — subtle so the hosts show through cleanly */}
+      {/* Pre-roll cover — compact bottom-anchored CTA so hosts dominate */}
       {!playing && !finished && (
         <button
           onClick={onStart}
           data-testid="recap-tap-to-start"
-          className="absolute inset-0 z-40 flex items-end justify-center pb-12 cursor-pointer group"
+          className="absolute inset-0 z-40 flex items-end justify-center pb-4 cursor-pointer group"
           style={{
-            background: "linear-gradient(to top, rgba(5,7,15,0.75) 0%, rgba(5,7,15,0.05) 55%, rgba(5,7,15,0.05) 100%)",
+            background: "linear-gradient(to top, rgba(5,7,15,0.55) 0%, rgba(5,7,15,0) 30%, rgba(5,7,15,0) 100%)",
           }}
         >
-          <div className="flex flex-col items-center gap-2 text-center transition-transform duration-500 group-hover:scale-105">
-            <div className="flex items-center gap-2 font-accent text-[10px] uppercase tracking-[0.4em] text-white/70">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 live-pulse" />
-              On Air
-            </div>
-            <h2 className="font-headline text-3xl sm:text-4xl text-white"
-                style={{ textShadow: "0 0 30px rgba(30,93,255,0.6)" }}>
-              Tap to run the tape
-            </h2>
+          <div className="flex items-center gap-2 rounded-full bg-black/60 border border-white/20 px-4 py-1.5 backdrop-blur-md transition-transform duration-500 group-hover:scale-105">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500 live-pulse" />
+            <span className="font-accent text-[10px] uppercase tracking-[0.35em] text-white/70">On Air</span>
+            <span className="font-headline text-white text-sm">Tap to run the tape</span>
           </div>
         </button>
       )}
@@ -394,10 +348,10 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
   );
 }
 
-// ---- Segment rail ----
+// ---- Segment rail — logo vs logo ----
 function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:overflow-visible">
       {episode.segments.map((s, i) => {
         const firstBeatIdx = beats.findIndex(
           (b) => b.segment && b.segment.order === s.order && b.kind === "host" && b.speaker === "reggie"
@@ -411,18 +365,18 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
             key={s.match_id}
             onClick={() => onJumpToSegment(i)}
             data-testid={`recap-segment-${s.match_id}`}
-            className={`flex-shrink-0 rounded-lg px-3 py-2 min-w-[128px] border transition-all ${
+            className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 rounded-lg px-3 landscape:px-2 py-2 min-w-[128px] border transition-all ${
               isCurrent
                 ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
                 : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
             }`}
           >
             <div className="flex items-center justify-between gap-1.5">
-              {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-6 w-6 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
+              {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-6 w-6 landscape:h-5 landscape:w-5 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
               <span className="text-[9px] font-accent uppercase tracking-widest text-white/40">@</span>
-              {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-6 w-6 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
+              {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-6 w-6 landscape:h-5 landscape:w-5 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
             </div>
-            <div className={`text-[9px] font-accent uppercase tracking-[0.25em] mt-1.5 text-center ${
+            <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1.5 text-center ${
               isCurrent ? "text-[#F5A623]" : isDone ? "text-emerald-400/70" : "text-white/40"
             }`}>
               {isCurrent ? "On air" : isDone ? "✓ done" : `Game ${i + 1}`}
