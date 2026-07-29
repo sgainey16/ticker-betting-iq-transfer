@@ -1,32 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import Ticker from "@/components/Ticker";
-import LiveDesk from "@/components/LiveDesk";
 import { TEST_IDS } from "@/lib/config";
-import { api } from "@/lib/api";
+import { useBroadcast, BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
 import { Mic, Vote, Sparkles } from "lucide-react";
 
+// Home no longer mounts LiveDesk directly — LiveDesk lives in Layout and
+// portals its full frame into <div id="broadcast-slot" /> below. This lets
+// the show keep playing when users navigate to Stats/Predict/Recaps.
 export default function Home() {
-  const [topics, setTopics] = useState([]);
-  // First-visit default: April 8 2025 Wildcard Night panel (real games, real stats)
-  const [activeTopic, setActiveTopic] = useState("wildcard_night_apr_8_2025");
+  const { topics, activeTopic, setActiveTopic } = useBroadcast();
 
   useEffect(() => {
-    api
-      .get("/topics")
-      .then((r) => setTopics(r.data.topics || []))
-      .catch(() => setTopics([]));
+    // On revisit, if user last picked a topic, respect it. Otherwise the
+    // provider already defaults to Wildcard Night — nothing to do here.
   }, []);
 
   return (
     <div className="-mx-5 sm:-mx-8 -mt-8">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-6 pb-6">
-        <LiveDesk
-          topics={topics}
-          activeTopic={activeTopic}
-          onTopicChange={(id) => setActiveTopic(id)}
-          autoFlow={true}
-        />
+        {/* LiveDesk portals its full frame into this slot */}
+        <div id={BROADCAST_SLOT_ID} data-testid="broadcast-slot" />
 
         {/* Below the fold — two tiles: Deep Dive (Presser) + Matchups voting */}
         <div className="mt-14 grid sm:grid-cols-2 gap-4">
@@ -78,12 +72,10 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Ticker moved to bottom-of-page per broadcast lower-third convention.
-       * Single-lane now (topics only) — the old dual-lane felt blurry. */}
       <Ticker
         topics={topics}
         activeTopicId={activeTopic}
-        onTopicClick={(id) => setActiveTopic(id)}
+        onTopicClick={setActiveTopic}
       />
     </div>
   );

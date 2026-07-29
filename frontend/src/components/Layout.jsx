@@ -1,16 +1,17 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation } from "react-router-dom";
 import { TEST_IDS } from "@/lib/config";
 import { Radio, Settings } from "lucide-react";
 import ReggieAssistant from "@/components/ReggieAssistant";
 import LaunchZoneBanner from "@/components/LaunchZoneBanner";
+import LiveDesk from "@/components/LiveDesk";
+import { BroadcastProvider } from "@/lib/broadcastContext";
 
 const linkBase =
   "px-3 py-2 rounded-md font-accent text-[12px] uppercase tracking-widest transition-colors";
 const active = "text-white bg-white/5";
 const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 
-// Phase 1 nav — entertainment-first, short labels. Fantasy + Betting IQ +
-// Login hidden until Phase 2 (routes still work by direct URL; code intact).
+// Phase 1 nav — entertainment-first, short labels.
 const NAV = [
   { to: "/", end: true, label: "Show", testid: TEST_IDS.nav.broadcast },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
@@ -20,6 +21,17 @@ const NAV = [
 ];
 
 export default function Layout({ children }) {
+  return (
+    <BroadcastProvider>
+      <LayoutInner>{children}</LayoutInner>
+    </BroadcastProvider>
+  );
+}
+
+function LayoutInner({ children }) {
+  const location = useLocation();
+  const isHome = location.pathname === "/";
+
   return (
     <div className="min-h-screen">
       <LaunchZoneBanner />
@@ -82,16 +94,28 @@ export default function Layout({ children }) {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-8">{children}</main>
+      {/* Off-Home routes get extra bottom padding so the fixed mini-player
+       * doesn't cover the footer / last row of content. */}
+      <main
+        className={`max-w-7xl mx-auto px-5 sm:px-8 py-8 ${
+          isHome ? "" : "pb-24"
+        }`}
+      >
+        {children}
+      </main>
 
-      <footer className="max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5">
+      <footer className={`max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5 ${isHome ? "" : "pb-24"}`}>
         <div>The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager</div>
         <div className="text-white/30" data-testid="sportradar-attribution">
           NHL data provided by <span className="text-white/50">Sportradar</span>
         </div>
       </footer>
 
-      {/* Reggie Assistant — now global. One mount point for the whole app. */}
+      {/* Mounted ONCE — audio elements survive every route change so the
+       * broadcast keeps rolling while users hop between pages. Renders as
+       * full frame (portaled into #broadcast-slot on /) or mini bar. */}
+      <LiveDesk autoFlow={true} />
+
       <ReggieAssistant />
     </div>
   );
