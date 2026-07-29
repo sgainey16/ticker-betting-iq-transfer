@@ -163,9 +163,9 @@ export default function RecapShow() {
   const finished = beats.length > 0 && beatIdx >= beats.length;
 
   return (
-    <div data-testid="recap-show-page" className="space-y-2">
+    <div data-testid="recap-show-page" className="space-y-2 landscape:space-y-1.5">
       {/* Slim date badge only — nothing above the frame competes with the hosts */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between landscape:hidden">
         <div className="inline-flex items-center gap-2 rounded-full bg-[#F5A623]/15 border border-[#F5A623]/50 px-3 py-1">
           <span className="tick-dot bg-[#F5A623] live-pulse" />
           <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
@@ -177,6 +177,10 @@ export default function RecapShow() {
         </div>
       </div>
 
+      {/* Landscape on phone: bleed the frame + rail to the device edges so
+       * the show fills the screen. Reggie & Marc still keep breathing room
+       * inside the frame (aspect-ratio does the padding for us). */}
+      <div className="landscape:-mx-5 sm:landscape:-mx-8 landscape:flex landscape:flex-col landscape:h-[calc(100dvh-180px)] landscape:pb-1">
       {/* Main show frame — Reggie & Marc are the stars */}
       <ShowFrame
         beat={currentBeat}
@@ -192,7 +196,8 @@ export default function RecapShow() {
       />
 
       {/* Segment progress rail — logo vs logo. On landscape phones the grid
-       * packs all 8 games onto one row without horizontal scroll. */}
+       * packs all 8 games onto one row without horizontal scroll and stays
+       * pinned right below the frame so it's always in view. */}
 
       {/* Segment progress rail */}
       <SegmentRail
@@ -209,6 +214,7 @@ export default function RecapShow() {
           }
         }}
       />
+      </div>
 
       {/* Hidden audio element for host lines */}
       <audio ref={audioRef} playsInline />
@@ -235,13 +241,16 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
   const seg = beat?.segment;
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11] aspect-video">
+    <div className="relative overflow-hidden border border-[#2d2d35] bg-[#0d0d11] portrait:aspect-video rounded-2xl landscape:rounded-none landscape:border-x-0 landscape:flex-1 landscape:min-h-0 landscape:w-full">
       {/* Always-mounted animated hosts — same TwoHostDesk the Predict Show
-       * uses. When speaking, the mouth animates + the speaker pane widens. */}
+       * uses. When speaking, the mouth animates + the speaker pane widens.
+       * `fill` stretches the desk to fill the frame (needed for landscape
+       * bleed where the frame is height-driven, not aspect-driven). */}
       <TwoHostDesk
         shot={shot}
         speaker={speaker}
         speaking={playing && !!speaker && !muted}
+        fill
       />
 
       {/* Segment label (top-left) — always visible when playing */}

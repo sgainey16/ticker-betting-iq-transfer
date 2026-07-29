@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { Play, ChevronLeft, ChevronRight } from "lucide-react";
+import { TeamLogo } from "@/lib/teamLogos";
 
 // Horizontal logo-vs-logo game picker strip.
 // - First tile is always "▶ Play All" (continuous show mode)
@@ -118,14 +119,13 @@ export default function GamePickerStrip({
 function TeamBadge({ code, accent = "#1e5dff" }) {
   return (
     <div
-      className="h-9 w-9 rounded-md flex items-center justify-center font-headline text-[11px] flex-shrink-0"
+      className="h-9 w-9 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
       style={{
         background: `${accent}22`,
         border: `1px solid ${accent}55`,
-        color: accent,
       }}
     >
-      {code}
+      <TeamLogo code={code} size={28} monogramClass="!bg-transparent" />
     </div>
   );
 }

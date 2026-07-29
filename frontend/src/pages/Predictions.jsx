@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { TEST_IDS, ANALYSTS } from "@/lib/config";
 import { Trophy, Flame, Target, RefreshCcw, Users, Cpu, Info } from "lucide-react";
 import GamePickerStrip from "@/components/GamePickerStrip";
+import { TeamLogo } from "@/lib/teamLogos";
 
 const teamName = (code, teams) => {
   const t = teams.find((x) => x.code === code);
@@ -222,7 +223,12 @@ export default function Predictions() {
                       <Cpu className="w-3 h-3" /> Model read
                     </div>
                     <div className="mt-1 text-white text-sm font-headline">
-                      {g.ai_consensus}% <span className="text-white/60 font-normal">on {g.ai_consensus_side === "home" ? g.home : g.away}</span>
+                      {g.ai_consensus}%{" "}
+                      <span className="text-white/60 font-normal inline-flex items-center gap-1 align-middle">
+                        on
+                        <TeamLogo code={g.ai_consensus_side === "home" ? g.home : g.away} size={14} />
+                        {g.ai_consensus_side === "home" ? g.home : g.away}
+                      </span>
                     </div>
                   </div>
                   <div className="rounded-md border border-[#2d2d35] bg-[#0b0b10] px-3 py-2.5">
@@ -239,8 +245,8 @@ export default function Predictions() {
                           <div style={{ width: `${homePct}%`, background: homeAccent }} />
                         </div>
                         <div className="flex justify-between text-[10px] font-accent uppercase tracking-widest text-white/50 mt-1">
-                          <span>{g.away} {awayPct}%</span>
-                          <span>{homePct}% {g.home}</span>
+                          <span className="inline-flex items-center gap-1"><TeamLogo code={g.away} size={12} />{g.away} {awayPct}%</span>
+                          <span className="inline-flex items-center gap-1">{homePct}% {g.home}<TeamLogo code={g.home} size={12} /></span>
                         </div>
                       </div>
                     )}
@@ -429,9 +435,9 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
           </div>
           <div className="font-headline text-xl text-white mt-1">{label}</div>
         </div>
-        <div className="h-9 w-9 rounded flex items-center justify-center font-headline text-[11px]"
-             style={{ background: `${accent}22`, border: `1px solid ${accent}55`, color: accent }}>
-          {code}
+        <div className="h-10 w-10 rounded flex items-center justify-center overflow-hidden"
+             style={{ background: `${accent}22`, border: `1px solid ${accent}55` }}>
+          <TeamLogo code={code} size={32} monogramClass="!bg-transparent" />
         </div>
       </div>
       {(reggie || marc) && (
@@ -459,7 +465,11 @@ function PanelTake({ analyst, pick, take, teamCode }) {
           {analyst.short[0]}
         </div>
         <div className="font-accent text-[10px] uppercase tracking-widest text-white/50">
-          {analyst.short} takes <span className="text-white font-headline text-xs ml-1">{teamCode}</span>
+          {analyst.short} takes
+          <span className="inline-flex items-center gap-1 ml-1 align-middle">
+            <TeamLogo code={teamCode} size={14} />
+            <span className="text-white font-headline text-xs">{teamCode}</span>
+          </span>
         </div>
       </div>
       <div className="text-white/80 text-xs mt-1.5 leading-snug italic">

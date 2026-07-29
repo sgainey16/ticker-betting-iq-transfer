@@ -86,7 +86,7 @@ function expressionUrl(shot) {
   return null;
 }
 
-export default function TwoHostDesk({ shot, speaker, speaking }) {
+export default function TwoHostDesk({ shot, speaker, speaking, fill = false }) {
   const focus = useMemo(() => focusFor(shot), [shot]);
   const soloUrl = useMemo(() => expressionUrl(shot), [shot]);
   const [soloReady, setSoloReady] = useState(false);
@@ -104,10 +104,19 @@ export default function TwoHostDesk({ shot, speaker, speaking }) {
 
   const useSolo = soloUrl && soloReady && !soloFailed;
 
+  // `fill` lets the caller stretch the desk to its parent (used in the
+  // Recap Show landscape bleed). Otherwise we keep the natural 22:10 ratio.
+  const containerStyle = fill
+    ? { background: "#050510" }
+    : { aspectRatio: "22 / 10", background: "#050510" };
+  const containerCls = fill
+    ? "relative w-full h-full overflow-hidden"
+    : "relative w-full overflow-hidden";
+
   return (
     <div
-      className="relative w-full overflow-hidden"
-      style={{ aspectRatio: "22 / 10", background: "#050510" }}
+      className={containerCls}
+      style={containerStyle}
     >
       {useSolo ? (
         <SoloFrame url={soloUrl} host={focus} speaking={speaking && speaker === focus} />

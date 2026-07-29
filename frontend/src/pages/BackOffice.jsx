@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { TEST_IDS } from "@/lib/config";
 import { getDeviceId } from "@/lib/device";
 import ReggieAssistant from "@/components/ReggieAssistant";
+import { TeamLogo } from "@/lib/teamLogos";
 import {
   Target,
   Zap,
@@ -542,12 +543,13 @@ function PreferencesTab() {
               <button
                 key={t}
                 onClick={() => toggleTeam(t)}
-                className={`rounded-md border px-3 py-1.5 font-accent text-[11px] uppercase tracking-widest transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 font-accent text-[11px] uppercase tracking-widest transition-colors ${
                   on
                     ? "border-[#1e5dff] bg-[#1e5dff]/20 text-white"
                     : "border-[#2d2d35] bg-[#0b0b10] text-white/60 hover:text-white"
                 }`}
               >
+                <TeamLogo code={t} size={16} monogramClass="!bg-white/10" />
                 {t}
               </button>
             );
@@ -963,12 +965,17 @@ function BetRow({ bet, onDelete }) {
     push: "bg-white/10 text-white/50",
     pending: "bg-yellow-500/15 text-yellow-300",
   }[bet.result] || "bg-white/10 text-white/50";
+  // Parse "BOS @ NJD" / "BOS vs NJD" / "BOS - NJD" into two 2–3 letter codes
+  const codes = (bet.matchup || "").match(/\b[A-Z]{2,3}\b/g) || [];
+  const [awayCode, homeCode] = codes;
   return (
     <div className="px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <div className="font-headline text-white text-sm truncate">
-            {bet.matchup}
+          <div className="font-headline text-white text-sm truncate inline-flex items-center gap-1.5">
+            {awayCode && <TeamLogo code={awayCode} size={18} />}
+            <span>{bet.matchup}</span>
+            {homeCode && <TeamLogo code={homeCode} size={18} />}
           </div>
           <div className={`rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-widest ${chip}`}>
             {bet.result}

@@ -13,6 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { MATCHUPS, DEFAULT_MATCHUP } from "@/data/matchups";
+import { TeamLogo } from "@/lib/teamLogos";
 import { askAnalystStream, BACKEND_URL } from "@/lib/api";
 
 export default function MatchupDeepDive() {
@@ -208,16 +209,15 @@ function TeamBlock({ team, side, won }) {
         style={{ flexDirection: side === "away" ? "row-reverse" : "row" }}
       >
         <div
-          className={`h-14 w-14 sm:h-16 sm:w-16 rounded-lg flex-shrink-0 flex items-center justify-center font-headline text-lg border-2 ${
+          className={`h-14 w-14 sm:h-16 sm:w-16 rounded-lg flex-shrink-0 flex items-center justify-center border-2 overflow-hidden ${
             won ? "shadow-[0_0_24px_rgba(255,255,255,0.15)]" : "opacity-70"
           }`}
           style={{
             background: team.accent + "22",
             borderColor: team.accent + (won ? "" : "77"),
-            color: team.accent,
           }}
         >
-          {team.abbr}
+          <TeamLogo code={team.abbr} size={52} monogramClass="!bg-transparent" />
         </div>
         <div className="min-w-0">
           <div className="font-headline text-white text-2xl sm:text-3xl leading-tight truncate">
@@ -238,7 +238,8 @@ function StorylineChip({ team }) {
       className="rounded-md border px-3 py-2"
       style={{ borderColor: team.accent + "55", background: team.accent + "10" }}
     >
-      <div className="font-accent text-[9px] uppercase tracking-widest" style={{ color: team.accent }}>
+      <div className="font-accent text-[9px] uppercase tracking-widest inline-flex items-center gap-1.5" style={{ color: team.accent }}>
+        <TeamLogo code={team.abbr} size={12} monogramClass="!bg-transparent" />
         {team.abbr} · Storyline
       </div>
       <div className="text-white text-sm mt-0.5">{team.storyline}</div>

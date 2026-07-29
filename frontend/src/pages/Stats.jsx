@@ -5,6 +5,7 @@ import { TEST_IDS } from "@/lib/config";
 import { LineChart, Trophy, Shield, Calendar, Mic, Crown, ArrowRight, X, Zap, Target, Check, Circle, Vote } from "lucide-react";
 import { MATCHUPS } from "@/data/matchups";
 import { getDeviceId } from "@/lib/device";
+import { TeamLogo } from "@/lib/teamLogos";
 
 const TABS = [
   { id: "skaters",  label: "Skaters",   icon: LineChart, testid: TEST_IDS.stats.tabSkaters },
@@ -185,7 +186,13 @@ export default function Stats() {
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
               { key: "name", label: "Player", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
-              { key: "team", label: "Team", w: "w-16 text-center", sort: null },
+              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
+                render: (v) => (
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <TeamLogo code={v} size={18} />
+                    <span className="text-[11px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                  </span>
+                ) },
               { key: "pos",  label: "Pos",  w: "w-14 text-center", sort: null },
               { key: "gp",   label: "GP",   w: "w-14 text-right",  sort: true },
               { key: "g",    label: "G",    w: "w-14 text-right",  sort: true },
@@ -209,7 +216,13 @@ export default function Stats() {
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
               { key: "name", label: "Goaltender", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
-              { key: "team", label: "Team", w: "w-16 text-center", sort: null },
+              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
+                render: (v) => (
+                  <span className="inline-flex items-center gap-1.5 justify-center">
+                    <TeamLogo code={v} size={18} />
+                    <span className="text-[11px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                  </span>
+                ) },
               { key: "gp",   label: "GP",   w: "w-14 text-right", sort: true },
               { key: "w",    label: "W",    w: "w-14 text-right", sort: true },
               { key: "l",    label: "L",    w: "w-14 text-right", sort: true },
@@ -233,7 +246,13 @@ export default function Stats() {
             ).map((t, i) => ({ ...t, rank: i + 1 }))}
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
-              { key: "name", label: "Team", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
+              { key: "name", label: "Team", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null,
+                render: (v, row) => (
+                  <span className="inline-flex items-center gap-2">
+                    <TeamLogo code={row.code} size={22} />
+                    <span>{v}</span>
+                  </span>
+                ) },
               { key: "gp",   label: "GP",  w: "w-14 text-right", sort: true },
               { key: "w",    label: "W",   w: "w-14 text-right", sort: true },
               { key: "l",    label: "L",   w: "w-14 text-right", sort: true },
@@ -271,7 +290,13 @@ export default function Stats() {
                       {fmtDate(g.start_iso)}
                     </div>
                     <div className="flex-1 text-center font-headline text-slate-900">
-                      {(g.away?.code || g.away)} <span className="text-slate-400 mx-2">@</span> {(g.home?.code || g.home)}
+                      <span className="inline-flex items-center gap-2 justify-center">
+                        <TeamLogo code={g.away?.code || g.away} size={20} />
+                        <span>{(g.away?.code || g.away)}</span>
+                        <span className="text-slate-400 mx-1">@</span>
+                        <span>{(g.home?.code || g.home)}</span>
+                        <TeamLogo code={g.home?.code || g.home} size={20} />
+                      </span>
                     </div>
                     <div className="text-[10px] font-accent uppercase tracking-widest text-slate-400 w-32 text-right flex items-center justify-end gap-2">
                       <span>{g.status || "Scheduled"}</span>
@@ -482,7 +507,10 @@ function LeaderCard({ players, cat, onOpen }) {
                 <span className={`truncate text-sm ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>
                   {p.name}
                 </span>
-                <span className="text-[10px] font-accent text-slate-400 flex-shrink-0">{p.team}</span>
+                <span className="flex items-center gap-1 flex-shrink-0">
+                  <TeamLogo code={p.team} size={14} />
+                  <span className="text-[10px] font-accent text-slate-400">{p.team}</span>
+                </span>
               </div>
               <span className={`font-headline flex-shrink-0 ${i === 0 ? "text-slate-900 text-base" : "text-slate-600 text-sm"}`}>
                 {fmt(p[cat.key])}{cat.unit || ""}
@@ -559,7 +587,12 @@ function LeaderModal({ cat, pool, group, onClose }) {
                 >
                   <td className={`px-3 py-2 font-accent ${i === 0 ? "text-[#1e5dff] font-bold" : "text-slate-400"}`}>{i + 1}</td>
                   <td className={`px-3 py-2 ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>{p.name}</td>
-                  <td className="px-3 py-2 text-center text-slate-600 text-[11px] font-accent uppercase tracking-widest">{p.team}</td>
+                  <td className="px-3 py-2 text-center text-slate-600 text-[11px] font-accent uppercase tracking-widest">
+                    <span className="inline-flex items-center gap-1.5 justify-center">
+                      <TeamLogo code={p.team} size={16} />
+                      {p.team}
+                    </span>
+                  </td>
                   <td className="px-3 py-2 text-center text-slate-500 text-[11px] font-accent uppercase tracking-widest">{p.pos || "—"}</td>
                   <td className={`px-3 py-2 text-right font-headline ${i === 0 ? "text-slate-900 text-lg" : "text-slate-700"}`}>
                     {fmt(p[cat.key])}{cat.unit || ""}
@@ -886,14 +919,13 @@ function TeamPickButton({ team, picked, isWinner, resolved, onClick, testid }) {
     >
       <div className="flex items-center gap-2">
         <div
-          className="h-8 w-8 rounded flex-shrink-0 flex items-center justify-center font-headline text-xs border"
+          className="h-8 w-8 rounded flex-shrink-0 flex items-center justify-center border overflow-hidden"
           style={{
             background: team.accent + "22",
             borderColor: team.accent + "77",
-            color: team.accent,
           }}
         >
-          {team.abbr}
+          <TeamLogo code={team.abbr} size={26} monogramClass="!bg-transparent" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-headline text-slate-900 text-sm truncate">
