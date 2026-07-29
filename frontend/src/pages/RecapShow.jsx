@@ -166,24 +166,21 @@ export default function RecapShow() {
   const finished = beats.length > 0 && beatIdx >= beats.length;
 
   return (
-    <div data-testid="recap-show-page" className="space-y-6">
-      {/* Header */}
-      <header>
-        <div className="font-accent text-xs uppercase tracking-[0.35em] text-[#F5A623]">
-          <span className="tick-dot bg-[#F5A623] live-pulse inline-block mr-2 align-middle" />
-          The Morning Line · {formatDate(episode.date)}
+    <div data-testid="recap-show-page" className="space-y-4">
+      {/* Slim date badge only — nothing above the frame competes with the hosts */}
+      <div className="flex items-center justify-between">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#F5A623]/15 border border-[#F5A623]/50 px-3 py-1">
+          <span className="tick-dot bg-[#F5A623] live-pulse" />
+          <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
+            The Morning Line · {formatDate(episode.date)}
+          </span>
         </div>
-        <h1 className="font-headline text-4xl sm:text-5xl text-white mt-1">
-          Every game. Every story. Every night.
-        </h1>
-        <p className="text-white/60 mt-2 text-sm max-w-2xl">
-          Reggie & Marc took your notebook to bed. Tap Play — they run the tape
-          on all {episode.stats.total_games_covered} games from the wildcard
-          crunch. Story hook, clip, closing stat, next.
-        </p>
-      </header>
+        <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
+          {episode.stats.total_games_covered} games
+        </div>
+      </div>
 
-      {/* Main show frame */}
+      {/* Main show frame — Reggie & Marc are the stars */}
       <ShowFrame
         beat={currentBeat}
         beatIdx={beatIdx}
@@ -196,6 +193,27 @@ export default function RecapShow() {
         onNext={next}
         onToggleMute={() => setMuted((m) => !m)}
       />
+
+      {/* Caption sits BELOW the frame so it never covers the hosts */}
+      {playing && currentBeat?.kind === "host" && (
+        <div className="rounded-lg border border-[#2d2d35] bg-[#0b0b10] p-4 sm:p-5">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-accent text-[10px] uppercase tracking-[0.35em]"
+                 style={{ color: ANALYSTS[currentBeat.speaker]?.accent || "#1e5dff" }}>
+              {ANALYSTS[currentBeat.speaker]?.short || currentBeat.speaker}
+            </div>
+            {currentBeat.speaker === "marc" && currentBeat.segment?.stat_line && (
+              <div className="inline-flex items-center gap-1.5 rounded-md bg-[#1e5dff]/15 border border-[#1e5dff]/50 px-2 py-0.5">
+                <span className="font-accent text-[8px] uppercase tracking-widest text-[#1e5dff]">Stat</span>
+                <span className="text-white text-xs font-headline">{currentBeat.segment.stat_line}</span>
+              </div>
+            )}
+          </div>
+          <div className="font-headline text-white text-lg sm:text-xl leading-snug">
+            {currentBeat.text}
+          </div>
+        </div>
+      )}
 
       {/* Segment progress rail */}
       <SegmentRail
@@ -288,27 +306,9 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
         </div>
       )}
 
-      {/* Speaker caption overlay — bottom of frame */}
-      {playing && beat?.kind === "host" && (
-        <div className="absolute inset-x-0 bottom-0 z-20 p-4 sm:p-6 pt-16 bg-gradient-to-t from-black/85 via-black/60 to-transparent">
-          <div className="max-w-3xl">
-            <div className="font-accent text-[10px] uppercase tracking-[0.35em] mb-1"
-                 style={{ color: ANALYSTS[beat.speaker]?.accent || "#1e5dff" }}>
-              {ANALYSTS[beat.speaker]?.short || beat.speaker}
-            </div>
-            <div className="font-headline text-lg sm:text-xl md:text-2xl text-white leading-snug">
-              {beat.text}
-            </div>
-            {/* Stat line lower-third — Marc outros carry a stat pop */}
-            {beat.speaker === "marc" && seg?.stat_line && (
-              <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-[#1e5dff]/15 border border-[#1e5dff]/50 px-2.5 py-1">
-                <span className="font-accent text-[9px] uppercase tracking-widest text-[#1e5dff]">Stat</span>
-                <span className="text-white text-xs font-headline">{seg.stat_line}</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Speaker caption — REMOVED from inside frame. Now sits BELOW the
+       * frame in the parent component, so it never covers Reggie & Marc.
+       * Only the tiny team logos badge stays as an on-frame lower-third. */}
 
       {/* Clip iframe — sits ON TOP of the host frame during clip beats */}
       {playing && isClipBeat && seg && (
@@ -330,29 +330,25 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
         </div>
       )}
 
-      {/* Pre-roll cover */}
+      {/* Pre-roll cover — subtle so the hosts show through cleanly */}
       {!playing && !finished && (
         <button
           onClick={onStart}
           data-testid="recap-tap-to-start"
-          className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer group"
+          className="absolute inset-0 z-40 flex items-end justify-center pb-12 cursor-pointer group"
           style={{
-            background: "radial-gradient(circle at 50% 50%, rgba(5,7,15,0.55) 0%, rgba(5,7,15,0.92) 100%)",
-            backdropFilter: "blur(4px)",
+            background: "linear-gradient(to top, rgba(5,7,15,0.75) 0%, rgba(5,7,15,0.05) 55%, rgba(5,7,15,0.05) 100%)",
           }}
         >
-          <div className="flex flex-col items-center gap-3 text-center transition-transform duration-500 group-hover:scale-105">
-            <div className="flex items-center gap-2 font-accent text-xs uppercase tracking-[0.4em] text-white/60">
-              <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
+          <div className="flex flex-col items-center gap-2 text-center transition-transform duration-500 group-hover:scale-105">
+            <div className="flex items-center gap-2 font-accent text-[10px] uppercase tracking-[0.4em] text-white/70">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 live-pulse" />
               On Air
             </div>
-            <h2 className="font-headline text-4xl sm:text-5xl lg:text-6xl text-white"
-                style={{ textShadow: "0 0 40px rgba(30,93,255,0.7)" }}>
-              Tap to run the tape.
+            <h2 className="font-headline text-3xl sm:text-4xl text-white"
+                style={{ textShadow: "0 0 30px rgba(30,93,255,0.6)" }}>
+              Tap to run the tape
             </h2>
-            <div className="mt-2 font-accent text-[11px] uppercase tracking-[0.3em] text-white/45">
-              Reggie & Marc are ready. Story → clip → stat → next.
-            </div>
           </div>
         </button>
       )}
