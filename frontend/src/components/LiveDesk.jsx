@@ -66,13 +66,18 @@ export default function LiveDesk({ autoFlow = true }) {
     location.pathname === "/" ||
     QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));
 
-  // Auto-pause when the user walks into a "quiet" route. We don't auto-resume
-  // on exit — user's next tap decides.
+  // Auto-pause when the user walks into a "quiet" route (Presser, Back
+  // Office, Recap Show landing). Auto-RESUME the moment the user arrives
+  // at /show — that's the home of the Predict Show, they came here to
+  // listen. Elsewhere (Stats, Predict, etc.) we honor whatever state the
+  // pause button last set.
   useEffect(() => {
     if (isQuietRoute) {
       setPaused(true);
       audioRef.current?.pause();
       audioRefB.current?.pause();
+    } else if (location.pathname === "/show") {
+      setPaused(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
