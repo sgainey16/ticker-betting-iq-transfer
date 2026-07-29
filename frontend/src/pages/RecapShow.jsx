@@ -105,8 +105,9 @@ export default function RecapShow() {
           if (cancelled) return;
           const url = r.data?.audio_url;
           if (!url) {
-            // No audio → hold caption for read-time then advance.
-            const ms = Math.max(2500, currentBeat.text.length * 55);
+            // No audio → hold caption for read-time then advance. Longer
+            // lines get more time (roughly 60ms per char, min 4s).
+            const ms = Math.max(4000, currentBeat.text.length * 60);
             const t = setTimeout(() => setBeatIdx((i) => i + 1), ms);
             return () => clearTimeout(t);
           }
@@ -118,7 +119,7 @@ export default function RecapShow() {
           el.onerror = () => setBeatIdx((i) => i + 1);
           try { await el.play(); } catch { /* autoplay blocked */ }
         } catch (e) {
-          const ms = Math.max(2500, (currentBeat.text || "").length * 55);
+          const ms = Math.max(4000, (currentBeat.text || "").length * 60);
           const t = setTimeout(() => setBeatIdx((i) => i + 1), ms);
           return () => clearTimeout(t);
         }
@@ -295,9 +296,16 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
                  style={{ color: ANALYSTS[beat.speaker]?.accent || "#1e5dff" }}>
               {ANALYSTS[beat.speaker]?.short || beat.speaker}
             </div>
-            <div className="font-headline text-xl sm:text-2xl text-white leading-tight">
+            <div className="font-headline text-lg sm:text-xl md:text-2xl text-white leading-snug">
               {beat.text}
             </div>
+            {/* Stat line lower-third — Marc outros carry a stat pop */}
+            {beat.speaker === "marc" && seg?.stat_line && (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-md bg-[#1e5dff]/15 border border-[#1e5dff]/50 px-2.5 py-1">
+                <span className="font-accent text-[9px] uppercase tracking-widest text-[#1e5dff]">Stat</span>
+                <span className="text-white text-xs font-headline">{seg.stat_line}</span>
+              </div>
+            )}
           </div>
         </div>
       )}

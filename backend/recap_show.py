@@ -2,68 +2,182 @@
 
 Builds a fully-produced "morning show" manifest for any past NHL date:
 - Cold open: Reggie + Marc welcome the audience
-- Per-game segments: host hook → clip → host outro → stat pop → next
+- Per-game segments: host hook → clip → host outro → next
 - Close: sign-off + tomorrow tease
+
+Two script tracks:
+  1) LLM (Claude 4.5 via Emergent LLM key) — richer 2-3 line hooks with
+     insight + joke + character voice. One batched call per episode.
+  2) Templated — safety fallback if LLM fails or Emergent key missing.
 
 Data sources
 - Game clips: Highlightly (verified + embeddable filtered)
-- Team logos: Highlightly team map (unblocks the Imagn wait)
+- Team logos: Highlightly team map
 - Host voice audio: existing voice_service.ensure_audio() (ElevenLabs)
-
-Manifest is cached in Mongo per-date so we only generate each show once.
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
+import re
 from datetime import datetime, timezone
-from typing import Any
 
 from highlightly_client import highlightly
 
 log = logging.getLogger(__name__)
 
 
-# --- Templated hook lines. Kept short, personality-first. LLM-scripted lines
-# can layer on top later — this is the MVP that ships with the show.
+# =========================================================================
+# HOST CHARACTER PROMPTS — short, personality-first, curated for the desk.
+# =========================================================================
+
+REGGIE_VOICE = """REGGIE BANKS — former NHL forward. Fast, confident, streetwise. Loves stars and skill.
+Chirps players affectionately. Locker-room humour, family/travel/beer-league references. Emotional, bold hot takes.
+Uses "buddy", "kid", "the boys", "that's a real one". NEVER sounds like ChatGPT. NEVER "furthermore/moreover/however."
+Talks like he's on a barstool. Drops a hockey insight in the middle of a joke — never just facts, never just comedy.
+Sees the human in the play. Ends thoughts with a punch, not a period."""
+
+MARC_VOICE = """MARC COLLINS — former NHL analyst-type defenseman. Calm, respected, laughs BEFORE he speaks.
+Protects players from over-criticism. Explains coaching decisions. Redirects Reggie's hot takes with a stat that gives
+the story weight — xG, CF%, PDO, save %, zone starts, faceoff wins, blocks, high-danger chances. Warm but sharp.
+Never lectures. Uses "look", "here's the thing", "watch the D-pair", "over the sample". Never sounds like ChatGPT."""
+
+CE_RULES = """COMMENTARY ENGINE RULES:
+- Layer 1: state what happened plainly. Layer 2: instant reaction ("Ooof", "Oh!", "Yikes"). Layer 3: character voice.
+- Content mix target: 60% analysis / 20% story / 10% humor / 5% history / 5% prediction.
+- NEVER joke during injuries, memorials, tragedies. NO gambling promotion — coach, not casino.
+- No repetition of the same comparison across segments. Fresh every game.
+- Two, maybe three sentences per host beat. Punchy. Broadcast rhythm."""
+
+
+def _emergent_llm_key() -> str | None:
+    return os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("EMERGENT_API_KEY")
+
+
+async def _llm_script_all_games(date_str: str, segments: list[dict]) -> dict | None:
+    """Batched Claude call → Reggie/Marc lines for all games at once."""
+    key = _emergent_llm_key()
+    if not key or not segments:
+        return None
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+    except Exception as e:  # noqa: BLE001
+        log.warning("emergentintegrations import failed: %s", e)
+        return None
+
+    game_lines = []
+    for s in segments:
+        away = s["away"].get("name") or s["away"].get("code")
+        home = s["home"].get("name") or s["home"].get("code")
+        cat = s["clip"].get("category") or "match-highlights"
+        title = (s["clip"].get("title") or "").strip()
+        game_lines.append(
+            f'  {{"match_id": {s["match_id"]}, "away": "{away}", "home": "{home}", '
+            f'"category": "{cat}", "clip_title": "{title[:120]}"}}'
+        )
+    games_json = ",\n".join(game_lines)
+
+    system_message = (
+        f"You are the writing staff for THE TICKER, an AI-hosted hockey sports desk. "
+        f"You write dialogue for two hosts breaking down NHL games from {date_str}.\n\n"
+        f"{REGGIE_VOICE}\n\n{MARC_VOICE}\n\n{CE_RULES}\n\n"
+        "OUTPUT STRICT JSON — no prose, no markdown. Schema:\n"
+        "{\n"
+        '  "cold_open": {"reggie": "...", "marc": "..."},\n'
+        '  "segments":  [{"match_id": <int>, "reggie_hook": "...", "marc_outro": "...", "stat_line": "..."}],\n'
+        '  "close":     {"marc": "...", "reggie": "..."}\n'
+        "}\n\n"
+        "GUIDELINES:\n"
+        "- Cold open (Reggie): welcomes audience with energy + teases what's coming. Marc: grounds it with the night's stakes (wildcard race tightening).\n"
+        "- Each `reggie_hook`: 2-3 sentences. Hooks the viewer with a story, a chirp, or a bold take that primes the highlight. Personality FIRST.\n"
+        "- Each `marc_outro`: 2 sentences. Drops ONE real-sounding advanced stat that makes the story true, then tees up the next game.\n"
+        "- `stat_line`: 4-8 word standalone stat for a lower-third graphic (e.g. \"McDavid: 3rd multi-point night in a row\").\n"
+        "- Every line must sound like a broadcast, never a chatbot. If a line has 'furthermore', 'moreover', or 'in conclusion' — rewrite it.\n"
+        "- No two games use the same joke framing.\n"
+    )
+
+    user_prompt = (
+        f"Date: {date_str} (wildcard-race Saturday, playoff picture tightening)\n\n"
+        f"Games to script, in order:\n[\n{games_json}\n]\n\n"
+        "Return the JSON now."
+    )
+
+    try:
+        chat = LlmChat(
+            api_key=key,
+            session_id=f"recap-script-{date_str}",
+            system_message=system_message,
+        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
+        resp = await chat.send_message(UserMessage(text=user_prompt))
+        text = resp if isinstance(resp, str) else str(resp)
+    except Exception as e:  # noqa: BLE001
+        log.warning("recap LLM call failed: %s", e)
+        return None
+
+    cleaned = re.sub(r"```(?:json)?\s*", "", text).replace("```", "").strip()
+    m = re.search(r"\{[\s\S]*\}", cleaned)
+    if m:
+        cleaned = m.group(0)
+    try:
+        payload = json.loads(cleaned)
+    except Exception as e:  # noqa: BLE001
+        log.warning("recap LLM JSON parse failed: %s | body head: %s", e, cleaned[:200])
+        return None
+
+    if not isinstance(payload, dict) or not isinstance(payload.get("segments"), list):
+        return None
+    segs_by_id = {}
+    for row in payload["segments"]:
+        try:
+            mid = int(row.get("match_id"))
+        except Exception:  # noqa: BLE001
+            continue
+        segs_by_id[mid] = {
+            "reggie_hook": (row.get("reggie_hook") or "").strip(),
+            "marc_outro": (row.get("marc_outro") or "").strip(),
+            "stat_line": (row.get("stat_line") or "").strip(),
+        }
+    return {
+        "cold_open": payload.get("cold_open") or {},
+        "segments": segs_by_id,
+        "close": payload.get("close") or {},
+    }
+
+
+# =========================================================================
+# TEMPLATED FALLBACK — used only if the LLM call fails / key missing.
+# =========================================================================
 
 REGGIE_COLD_OPENS = [
     "Welcome to The Ticker. Big night around the league — let's roll the tape.",
     "You're on The Ticker. Coffee's on, tape's cued up, let's get to it.",
-    "Ticker's live. Let's see what happened out there last night.",
 ]
-
 MARC_COLD_OPENS = [
-    "Wildcard math got interesting. We'll walk you through every game — story, stat, highlight, next.",
-    "Playoff picture shifted. Same format as always — story, tape, number, on we go.",
-    "Some real hockey played last night. Story, clip, stat, next game — let's go.",
+    "Wildcard math got interesting. Story, tape, stat, next — let's go.",
+    "Playoff picture shifted. Same format as always. Let's roll.",
 ]
-
-REGGIE_HOOKS_BY_CATEGORY = {
+REGGIE_HOOKS_BY_CAT = {
     "goals": "{away} at {home} — this one had teeth. Watch what {away_short} did on that rush.",
-    "match-highlights": "{away} rolls into {home}. Full recap coming — you're gonna wanna see the third.",
+    "match-highlights": "{away} rolls into {home}. Full recap coming.",
     "hits-fights": "{away} at {home} got chippy. Real hockey. Roll it.",
     "saves": "{home} goalie stood on his head against {away}. Let it play.",
     "default": "{away} at {home} — worth your time. Watch this.",
 }
-
-MARC_OUTROS_BY_CATEGORY = {
+MARC_OUTROS_BY_CAT = {
     "goals": "That's the third {away_short} goal like it this month. Habits over hope. Next.",
     "match-highlights": "Special teams told the whole story there. On we go.",
-    "hits-fights": "Momentum shifted right after the scrum — you could feel it. Next matchup.",
-    "saves": "That save changes the game. That's your difference-maker. Coming up next.",
+    "hits-fights": "Momentum shifted after the scrum — you could feel it. Next matchup.",
+    "saves": "That save changes the game. Difference-maker. Coming up next.",
     "default": "Numbers back it up. Watch the tape twice, you'll see it. Next game.",
 }
-
 REGGIE_CLOSES = [
     "That's the tape. Tomorrow: bigger night, tighter races. See you at the desk.",
-    "Cards on the table for tomorrow. We'll be here. Coach, not casino.",
-    "Rest up. Big card tomorrow. Ticker signing off.",
+    "Cards on the table for tomorrow. Coach, not casino.",
 ]
-
 MARC_CLOSES = [
-    "Standings updated on the Stats tab if you want the full picture. Take it easy.",
-    "Predictions open on the Predict tab — don't sleep on tomorrow's Vegas game. Later.",
-    "Full stats on the Stats tab. See you tomorrow.",
+    "Standings updated on the Stats tab. Take it easy.",
+    "Predictions open on the Predict tab. See you tomorrow.",
 ]
 
 
@@ -71,7 +185,7 @@ def _pick(bucket: list[str], seed: int) -> str:
     return bucket[seed % len(bucket)]
 
 
-def _category_bucket(cat: str) -> str:
+def _category_bucket(cat: str | None) -> str:
     if not cat:
         return "default"
     if cat in {"goal", "power-play-goal", "shorthanded-goal",
@@ -86,7 +200,7 @@ def _category_bucket(cat: str) -> str:
     return "default"
 
 
-def _short_name(team_name: str | None, code: str) -> str:
+def _short_name(team_name: str | None, code: str | None) -> str:
     if not team_name:
         return code or "the visitors"
     parts = team_name.split()
@@ -94,14 +208,8 @@ def _short_name(team_name: str | None, code: str) -> str:
 
 
 async def _group_by_game(clips: list[dict], logo_map: dict) -> list[dict]:
-    """Fold the flat clip list into one segment per game.
-
-    We pick ONE hero clip per game — priority order:
-      1. match-highlights (full recap) with embed
-      2. any embeddable verified clip
-    Games with zero embeddable clips are skipped entirely (user's call — no
-    fallback UI, "nobody will know").
-    """
+    """Fold flat clip list into one segment per game. Skip games with no
+    embeddable clip (user rule: 'nobody will know')."""
     by_match: dict[int, dict] = {}
     for c in clips:
         mid = c.get("match_id")
@@ -115,8 +223,7 @@ async def _group_by_game(clips: list[dict], logo_map: dict) -> list[dict]:
     for mid, bucket in by_match.items():
         embeddable = [c for c in bucket["clips"] if c.get("embeddable") and c.get("embed_url")]
         if not embeddable:
-            continue  # skip — user said nobody will know
-        # Prefer match-highlights, else first embeddable.
+            continue
         hero = next((c for c in embeddable if c.get("category") == "match-highlights"), embeddable[0])
         home_meta = logo_map.get(bucket["home"] or "") or {}
         away_meta = logo_map.get(bucket["away"] or "") or {}
@@ -144,8 +251,7 @@ async def _group_by_game(clips: list[dict], logo_map: dict) -> list[dict]:
     return segments
 
 
-def _build_hook_and_outro(seg: dict, idx: int) -> tuple[str, str]:
-    """Templated host lines using team metadata. Personality first, brevity always."""
+def _templated_hook_outro(seg: dict) -> tuple[str, str]:
     cat_bucket = _category_bucket(seg["clip"].get("category"))
     away_short = _short_name(seg["away"].get("name"), seg["away"].get("code"))
     ctx = {
@@ -153,24 +259,20 @@ def _build_hook_and_outro(seg: dict, idx: int) -> tuple[str, str]:
         "home": seg["home"].get("name") or seg["home"].get("code") or "the home team",
         "away_short": away_short,
     }
-    hook_tmpl = REGGIE_HOOKS_BY_CATEGORY.get(cat_bucket, REGGIE_HOOKS_BY_CATEGORY["default"])
-    outro_tmpl = MARC_OUTROS_BY_CATEGORY.get(cat_bucket, MARC_OUTROS_BY_CATEGORY["default"])
-    return hook_tmpl.format(**ctx), outro_tmpl.format(**ctx)
+    hook = REGGIE_HOOKS_BY_CAT.get(cat_bucket, REGGIE_HOOKS_BY_CAT["default"]).format(**ctx)
+    outro = MARC_OUTROS_BY_CAT.get(cat_bucket, MARC_OUTROS_BY_CAT["default"]).format(**ctx)
+    return hook, outro
 
 
 async def generate_episode(date_str: str) -> dict:
-    """Produce a full recap show episode for a given YYYY-MM-DD date.
-    Returns { date, ready, segments, cold_open, close, stats }.
-    """
+    """Produce a full recap show episode for a given YYYY-MM-DD date."""
     if not highlightly.is_ready():
         return {"date": date_str, "ready": False, "reason": "Highlightly not enabled", "segments": []}
 
-    # 1) Pull clips for the date (verified only, up to 40 per Highlightly max)
     clips = await highlightly.get_by_date(date_str, limit=40)
     if not clips:
         return {"date": date_str, "ready": False, "reason": "No clips found for date", "segments": []}
 
-    # 2) Team logo map (uses in-memory client cache)
     await highlightly._load_teams_if_stale()
     logo_map: dict[str, dict] = {}
     for t in highlightly._team_by_code.values():
@@ -181,26 +283,43 @@ async def generate_episode(date_str: str) -> dict:
                 "logo_url": t.get("logo"),
             }
 
-    # 3) Group clips → per-game segments (only games with embeddable clips)
     segments = await _group_by_game(clips, logo_map)
 
-    # 4) Layer host hook + outro on each segment
-    for i, seg in enumerate(segments):
-        hook, outro = _build_hook_and_outro(seg, i)
-        seg["reggie_hook"] = hook
-        seg["marc_outro"] = outro
-        seg["order"] = i + 1
+    # Try LLM script first — richer, better voice. Templated fallback if it fails.
+    llm_script = await _llm_script_all_games(date_str, segments)
+    used_llm = bool(llm_script)
 
-    # 5) Cold open + close (deterministic by date so same day = same lines)
     seed = int(date_str.replace("-", ""))
-    cold_open = {
-        "reggie": _pick(REGGIE_COLD_OPENS, seed),
-        "marc":   _pick(MARC_COLD_OPENS, seed),
-    }
-    close = {
-        "marc":   _pick(MARC_CLOSES, seed),
-        "reggie": _pick(REGGIE_CLOSES, seed),
-    }
+    if used_llm:
+        for i, seg in enumerate(segments):
+            override = llm_script["segments"].get(seg["match_id"])
+            if override and override["reggie_hook"] and override["marc_outro"]:
+                seg["reggie_hook"] = override["reggie_hook"]
+                seg["marc_outro"] = override["marc_outro"]
+                seg["stat_line"] = override.get("stat_line") or ""
+            else:
+                hook, outro = _templated_hook_outro(seg)
+                seg["reggie_hook"] = hook
+                seg["marc_outro"] = outro
+                seg["stat_line"] = ""
+            seg["order"] = i + 1
+        cold_open = {
+            "reggie": (llm_script["cold_open"].get("reggie") or _pick(REGGIE_COLD_OPENS, seed)).strip(),
+            "marc":   (llm_script["cold_open"].get("marc")   or _pick(MARC_COLD_OPENS, seed)).strip(),
+        }
+        close = {
+            "marc":   (llm_script["close"].get("marc")   or _pick(MARC_CLOSES, seed)).strip(),
+            "reggie": (llm_script["close"].get("reggie") or _pick(REGGIE_CLOSES, seed)).strip(),
+        }
+    else:
+        for i, seg in enumerate(segments):
+            hook, outro = _templated_hook_outro(seg)
+            seg["reggie_hook"] = hook
+            seg["marc_outro"] = outro
+            seg["stat_line"] = ""
+            seg["order"] = i + 1
+        cold_open = {"reggie": _pick(REGGIE_COLD_OPENS, seed), "marc": _pick(MARC_COLD_OPENS, seed)}
+        close     = {"marc":   _pick(MARC_CLOSES, seed),      "reggie": _pick(REGGIE_CLOSES, seed)}
 
     return {
         "date": date_str,
@@ -211,5 +330,6 @@ async def generate_episode(date_str: str) -> dict:
         "stats": {
             "total_games_covered": len(segments),
             "total_clips_available": len(clips),
+            "scripting": "llm" if used_llm else "template",
         },
     }
