@@ -50,7 +50,7 @@ function LayoutInner({ children }) {
         className="sticky top-0 z-40 glass border-b border-[#2d2d35]"
         role="banner"
       >
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 landscape:h-12 flex items-center justify-between gap-4">
           <Link
             to="/"
             className="flex items-center gap-3 group"
@@ -105,9 +105,10 @@ function LayoutInner({ children }) {
       </header>
 
       {/* Off-Home routes get extra bottom padding so the fixed mini-player
-       * doesn't cover the footer / last row of content. */}
+       * doesn't cover the footer / last row of content. Landscape shrinks
+       * the vertical padding so the show frame gets more real estate. */}
       <main
-        className={`max-w-7xl mx-auto px-5 sm:px-8 py-8 ${
+        className={`max-w-7xl mx-auto px-5 sm:px-8 py-8 landscape:py-2 ${
           needsMiniBarPadding ? "pb-24" : ""
         }`}
       >

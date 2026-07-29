@@ -39,7 +39,7 @@ export default function LaunchZoneBanner() {
   return (
     <div
       data-testid={TEST_IDS.launchZone.banner}
-      className="relative border-b border-[#1e5dff]/40 bg-gradient-to-r from-[#0b0b10] via-[#101625] to-[#0b0b10]"
+      className="relative border-b border-[#1e5dff]/40 bg-gradient-to-r from-[#0b0b10] via-[#101625] to-[#0b0b10] landscape:hidden"
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-2.5 flex items-center gap-3 flex-wrap">
         <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-[#1e5dff]/15 border border-[#1e5dff]/60">

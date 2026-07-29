@@ -178,9 +178,10 @@ export default function RecapShow() {
       </div>
 
       {/* Landscape on phone: bleed the frame + rail to the device edges so
-       * the show fills the screen. Reggie & Marc still keep breathing room
-       * inside the frame (aspect-ratio does the padding for us). */}
-      <div className="landscape:-mx-5 sm:landscape:-mx-8 landscape:flex landscape:flex-col landscape:h-[calc(100dvh-180px)] landscape:pb-1">
+       * the show fills the screen. Wrapper claims most of the viewport
+       * (only reserving the header) and frame flex-1's inside it so the
+       * hosts stay big and the logo rail is pinned right below. */}
+      <div className="landscape:-mx-5 sm:landscape:-mx-8 landscape:flex landscape:flex-col landscape:h-[calc(100dvh-64px)] landscape:pb-1">
       {/* Main show frame — Reggie & Marc are the stars */}
       <ShowFrame
         beat={currentBeat}
@@ -241,7 +242,7 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
   const seg = beat?.segment;
 
   return (
-    <div className="relative overflow-hidden border border-[#2d2d35] bg-[#0d0d11] portrait:aspect-video rounded-2xl landscape:rounded-none landscape:border-x-0 landscape:flex-1 landscape:min-h-0 landscape:w-full">
+    <div className="relative overflow-hidden border border-[#2d2d35] bg-[#0d0d11] portrait:aspect-video rounded-2xl landscape:rounded-none landscape:border-x-0 landscape:w-full landscape:flex-1 landscape:min-h-0">
       {/* Always-mounted animated hosts — same TwoHostDesk the Predict Show
        * uses. When speaking, the mouth animates + the speaker pane widens.
        * `fill` stretches the desk to fill the frame (needed for landscape
