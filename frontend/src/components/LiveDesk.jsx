@@ -59,7 +59,7 @@ export default function LiveDesk({ autoFlow = true }) {
   // Routes where the show competes with a 1-on-1 or settings flow. Audio
   // auto-pauses on entry and the mini-bar is hidden entirely so nothing
   // is competing with the current experience.
-  const QUIET_ROUTES = ["/press-conference", "/back-office"];
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/recap"];
   const isQuietRoute = QUIET_ROUTES.some((r) => location.pathname.startsWith(r));
 
   // Auto-pause when the user walks into a "quiet" route. We don't auto-resume

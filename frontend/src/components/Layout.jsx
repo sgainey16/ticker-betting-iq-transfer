@@ -13,11 +13,11 @@ const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 
 // Phase 1 nav — entertainment-first, short labels.
 const NAV = [
+  { to: "/recap", label: "Recap", testid: TEST_IDS.nav.recaps },
   { to: "/", end: true, label: "Show", testid: TEST_IDS.nav.broadcast },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
   { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
-  { to: "/recaps", label: "Recaps", testid: TEST_IDS.nav.recaps },
 ];
 
 export default function Layout({ children }) {
@@ -35,7 +35,8 @@ function LayoutInner({ children }) {
   // Back Office is settings — neither wants a floating player over it).
   const isQuietRoute =
     location.pathname.startsWith("/press-conference") ||
-    location.pathname.startsWith("/back-office");
+    location.pathname.startsWith("/back-office") ||
+    location.pathname.startsWith("/recap");
   const needsMiniBarPadding = !isHome && !isQuietRoute;
 
   return (

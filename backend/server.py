@@ -38,6 +38,7 @@ import nhl_data
 import sportradar_client as sr
 import reggie_assistant as reggie
 from highlightly_client import highlightly, TAB_GROUPS
+from recap_show import generate_episode as generate_recap_episode
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -663,6 +664,56 @@ async def team_logos_all():
     logos = await highlightly.all_team_logos()
     _cache_set(cache_key, logos)
     return {"ready": True, "cached": False, "teams": logos}
+
+
+@api.get("/recap-show/episode")
+async def recap_show_episode(date: str, voice: bool = False):
+    """Full recap show episode manifest for a given YYYY-MM-DD.
+    - voice=false (default): text-only host lines; frontend fetches audio
+      per-segment on demand as segments play.
+    - voice=true: pre-renders all Reggie/Marc lines via ElevenLabs. Slow but
+      warm-cached — useful for the initial Apr 12 demo pre-warm.
+    Cached in-process per (date,voice) so we render each show once.
+    """
+    cache_key = ("recap-show", date, voice)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return {"cached": True, **cached}
+
+    ep = await generate_recap_episode(date)
+
+    if voice and ep.get("ready"):
+        # Warm host audio for cold open + close (fast wins); per-segment audio
+        # streams on demand via /recap-show/line-audio.
+        try:
+            ep["cold_open"]["reggie_audio_url"] = ensure_audio("reggie", ep["cold_open"]["reggie"])
+            ep["cold_open"]["marc_audio_url"]   = ensure_audio("marc",   ep["cold_open"]["marc"])
+            ep["close"]["marc_audio_url"]       = ensure_audio("marc",   ep["close"]["marc"])
+            ep["close"]["reggie_audio_url"]     = ensure_audio("reggie", ep["close"]["reggie"])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("recap warm-audio failed: %s", e)
+
+    _cache_set(cache_key, ep)
+    return {"cached": False, **ep}
+
+
+@api.get("/recap-show/line-audio")
+async def recap_show_line_audio(speaker: str, text: str):
+    """Return audio URL for a specific host line. Frontend requests this
+    per-segment as the show plays, so we don't burn 24 ElevenLabs calls on
+    initial page load."""
+    speaker = (speaker or "").lower()
+    if speaker not in ("reggie", "marc"):
+        raise HTTPException(status_code=400, detail="speaker must be reggie or marc")
+    text = (text or "").strip()
+    if not text:
+        return {"audio_url": None}
+    try:
+        url = ensure_audio(speaker, text)
+        return {"audio_url": url, "speaker": speaker}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("recap line audio failed: %s", e)
+        return {"audio_url": None, "error": str(e)[:200]}
 
 
 # ---------- Predictions ----------

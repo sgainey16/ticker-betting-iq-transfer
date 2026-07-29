@@ -5,6 +5,7 @@ import Home from "@/pages/Home";
 import PressConference from "@/pages/PressConference";
 import Predictions from "@/pages/Predictions";
 import Recaps from "@/pages/Recaps";
+import RecapShow from "@/pages/RecapShow";
 import VoiceLab from "@/pages/VoiceLab";
 import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
@@ -36,7 +37,9 @@ function App() {
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
+            <Route path="/recap" element={<RecapShow />} />
             <Route path="/recaps" element={<Recaps />} />
+            <Route path="/recaps-archive" element={<Recaps />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />
             <Route path="/desk-preview" element={<DeskPreview />} />
