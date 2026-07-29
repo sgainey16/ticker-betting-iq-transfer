@@ -37,6 +37,7 @@ from voice_picker import get_picker_state, set_active as picker_set_active, ensu
 import nhl_data
 import sportradar_client as sr
 import reggie_assistant as reggie
+from highlightly_client import highlightly, TAB_GROUPS
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -546,6 +547,122 @@ async def ask_stream(req: AskRequest):
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Connection": "keep-alive"},
     )
+
+
+# ---------- Recaps · Highlightly ----------
+_recaps_cache: dict = {}  # in-memory, 24h TTL; keyed by (kind, param)
+_RECAPS_TTL_SEC = 24 * 60 * 60
+
+
+def _cache_get(key: tuple):
+    row = _recaps_cache.get(key)
+    if not row:
+        return None
+    if (datetime.now(timezone.utc) - row["at"]).total_seconds() > _RECAPS_TTL_SEC:
+        _recaps_cache.pop(key, None)
+        return None
+    return row["value"]
+
+
+def _cache_set(key: tuple, value):
+    _recaps_cache[key] = {"at": datetime.now(timezone.utc), "value": value}
+
+
+@api.get("/recaps/highlights")
+async def recaps_highlights(
+    date: Optional[str] = None,
+    match_id: Optional[int] = None,
+    tab: Optional[str] = None,
+    limit: int = 60,
+):
+    """Verified NHL clips for /recaps page.
+    - date: YYYY-MM-DD (mutually exclusive with match_id)
+    - match_id: Highlightly match id
+    - tab: one of {all, goals, saves, hits, recaps, postgame, viral}
+    """
+    if not highlightly.is_ready():
+        return {"ready": False, "reason": "Highlightly disabled or key missing.", "highlights": []}
+
+    tab_key = (tab or "all").lower()
+    if tab_key not in TAB_GROUPS:
+        raise HTTPException(status_code=400, detail=f"invalid tab '{tab_key}'")
+
+    cache_key = ("highlights", match_id or "", date or "", tab_key, limit)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return {"ready": True, "cached": True, **cached}
+
+    if match_id is not None:
+        clips = await highlightly.get_by_match(match_id, limit=limit)
+        used_date = None
+    elif date:
+        clips = await highlightly.get_by_date(date, limit=limit)
+        used_date = date
+    else:
+        latest = await highlightly.get_latest_populated(days_back=90, limit=limit)
+        clips = latest["highlights"]
+        used_date = latest["date"]
+
+    allowed = TAB_GROUPS[tab_key]
+    if allowed is not None:
+        clips = [c for c in clips if c.get("category") in allowed]
+
+    result = {"date": used_date, "tab": tab_key, "highlights": clips}
+    _cache_set(cache_key, result)
+    return {"ready": True, "cached": False, **result}
+
+
+@api.get("/recaps/latest-games")
+async def recaps_latest_games():
+    """Distinct game headers from the most recent populated date — powers the
+    logo-vs-logo picker strip on /recaps."""
+    if not highlightly.is_ready():
+        return {"ready": False, "games": []}
+    cache_key = ("latest-games",)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return {"ready": True, "cached": True, **cached}
+
+    latest = await highlightly.get_latest_populated(days_back=90, limit=100)
+    games = {}
+    for c in latest["highlights"]:
+        mid = c.get("match_id")
+        if not mid or mid in games:
+            continue
+        games[mid] = {
+            "match_id": mid,
+            "home": c.get("home_team"),
+            "away": c.get("away_team"),
+        }
+
+    result = {"date": latest["date"], "games": list(games.values())}
+    _cache_set(cache_key, result)
+    return {"ready": True, "cached": False, **result}
+
+
+@api.get("/images/team-logo/{code}")
+async def team_logo(code: str):
+    """Highlightly team logo URL — fills the Imagn gap for Phase 1."""
+    if not highlightly.is_ready():
+        return {"ready": False, "logo_url": None}
+    meta = await highlightly.get_team_logo(code.upper())
+    if not meta or not meta.get("logo_url"):
+        return {"ready": True, "logo_url": None, "code": code.upper()}
+    return {"ready": True, **meta}
+
+
+@api.get("/images/team-logos")
+async def team_logos_all():
+    """All 32 NHL team logos in one call — frontend caches on first load."""
+    if not highlightly.is_ready():
+        return {"ready": False, "teams": []}
+    cache_key = ("team-logos",)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return {"ready": True, "cached": True, "teams": cached}
+    logos = await highlightly.all_team_logos()
+    _cache_set(cache_key, logos)
+    return {"ready": True, "cached": False, "teams": logos}
 
 
 # ---------- Predictions ----------
