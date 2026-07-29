@@ -31,6 +31,12 @@ export default function Layout({ children }) {
 function LayoutInner({ children }) {
   const location = useLocation();
   const isHome = location.pathname === "/";
+  // Routes where the mini broadcast bar is hidden (Presser is a 1-on-1,
+  // Back Office is settings — neither wants a floating player over it).
+  const isQuietRoute =
+    location.pathname.startsWith("/press-conference") ||
+    location.pathname.startsWith("/back-office");
+  const needsMiniBarPadding = !isHome && !isQuietRoute;
 
   return (
     <div className="min-h-screen">
@@ -98,13 +104,13 @@ function LayoutInner({ children }) {
        * doesn't cover the footer / last row of content. */}
       <main
         className={`max-w-7xl mx-auto px-5 sm:px-8 py-8 ${
-          isHome ? "" : "pb-24"
+          needsMiniBarPadding ? "pb-24" : ""
         }`}
       >
         {children}
       </main>
 
-      <footer className={`max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5 ${isHome ? "" : "pb-24"}`}>
+      <footer className={`max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5 ${needsMiniBarPadding ? "pb-24" : ""}`}>
         <div>The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager</div>
         <div className="text-white/30" data-testid="sportradar-attribution">
           NHL data provided by <span className="text-white/50">Sportradar</span>

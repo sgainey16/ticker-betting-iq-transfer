@@ -56,6 +56,23 @@ export default function LiveDesk({ autoFlow = true }) {
   const [slotEl, setSlotEl] = useState(null);
   const isHome = location.pathname === "/";
 
+  // Routes where the show competes with a 1-on-1 or settings flow. Audio
+  // auto-pauses on entry and the mini-bar is hidden entirely so nothing
+  // is competing with the current experience.
+  const QUIET_ROUTES = ["/press-conference", "/back-office"];
+  const isQuietRoute = QUIET_ROUTES.some((r) => location.pathname.startsWith(r));
+
+  // Auto-pause when the user walks into a "quiet" route. We don't auto-resume
+  // on exit — user's next tap decides.
+  useEffect(() => {
+    if (isQuietRoute) {
+      setPaused(true);
+      audioRef.current?.pause();
+      audioRefB.current?.pause();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   // Track the Home broadcast slot — appears when Home mounts, disappears
   // when user leaves. We portal the full frame into it; when it goes away
   // we render the mini bar in Layout's flow.
@@ -385,12 +402,12 @@ export default function LiveDesk({ autoFlow = true }) {
   );
 
   // Portal the full frame into Home's slot when available; otherwise render
-  // the mini bar in Layout's flow. Audio tags render *once* at the top
-  // regardless of mode so they never unmount.
+  // the mini bar in Layout's flow — unless we're on a "quiet" route (Presser,
+  // Back Office) where the show would compete with the current experience.
   return (
     <>
       {AudioTags}
-      {slotEl ? createPortal(fullFrame, slotEl) : miniBar}
+      {slotEl ? createPortal(fullFrame, slotEl) : (isQuietRoute ? null : miniBar)}
     </>
   );
 }
