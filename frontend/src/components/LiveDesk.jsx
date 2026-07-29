@@ -54,13 +54,17 @@ export default function LiveDesk({ autoFlow = true }) {
   const advancedRef = useRef(new Set());
 
   const [slotEl, setSlotEl] = useState(null);
-  const isHome = location.pathname === "/";
+  // Predict Show now lives at /show. Landing (/) is the Recap Show, which
+  // owns its own audio flow — the persistent Predict player is paused there.
+  const isHome = location.pathname === "/show";
 
-  // Routes where the show competes with a 1-on-1 or settings flow. Audio
-  // auto-pauses on entry and the mini-bar is hidden entirely so nothing
-  // is competing with the current experience.
-  const QUIET_ROUTES = ["/press-conference", "/back-office", "/recap"];
-  const isQuietRoute = QUIET_ROUTES.some((r) => location.pathname.startsWith(r));
+  // Routes where the persistent Predict Show competes with something else.
+  // Recap Show (/) has its own audio flow — pause the Predict-show mini-bar.
+  // Presser (/press-conference) and Back Office are 1-on-1/settings flows.
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/"];
+  const isQuietRoute =
+    location.pathname === "/" ||
+    QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));
 
   // Auto-pause when the user walks into a "quiet" route. We don't auto-resume
   // on exit — user's next tap decides.

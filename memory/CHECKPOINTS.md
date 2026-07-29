@@ -6,6 +6,27 @@ For fast rollback within a session, use Emergent's **Rollback** feature (chat in
 
 ---
 
+## 2026-07-29 · Recap Show becomes the landing page + real animated hosts
+
+**Correction from user:** "The recap show doesn't look like the panel and the prediction show. Get the guys talking with their faces to bring it to life. I said landing page was to be the panel doing sports desk recap. Now it's a tab."
+
+**Fix shipped:**
+- **Recap Show is now the landing page at `/`.** The old Home (Predict/Panel show) moves to `/show`. The `/recap` route redirects to `/` for compatibility. Nav order stays `Recap · Show · Presser · Stats · Predict` — Recap is now the leftmost AND the default.
+- **Real animated hosts** — `RecapShow.jsx` now embeds `<TwoHostDesk>` inside the show frame, same illustrated Reggie & Marc portraits the Predict Show uses. When Reggie speaks: his face animates with a category-appropriate expression (pointing on a goal, chirping on a fight, celebrating on a hat trick). Marc same — analyzing_stats, explaining, serious. During clip beats the YouTube iframe overlays the host frame (z-30) so the hosts sit behind the clip.
+- **Speaker caption** now sits as a broadcast-style lower-third at the bottom of the frame instead of a giant letter-in-circle placeholder.
+- **Team logos as a top-right lower-third** during host beats — always visible which game is being discussed.
+- **LiveDesk (Predict) `isHome` moved to `/show`** — persistent audio broadcast slot detection now points to the new Predict route. `/` (Recap) is in QUIET_ROUTES so no competing audio.
+
+**Files touched:**
+- `frontend/src/pages/RecapShow.jsx` — full ShowFrame refactor to use TwoHostDesk
+- `frontend/src/App.js` — `/` → RecapShow, `/show` → Home (Predict), `/recap` → redirect to `/`
+- `frontend/src/components/Layout.jsx` — Nav labels updated, quiet-route logic updated
+- `frontend/src/components/LiveDesk.jsx` — isHome detection moved to `/show`
+
+**Recommended savepoint:** "Save to GitHub" — call it `Recap Show landing page · animated hosts wired`.
+
+---
+
 ## 2026-07-29 · Recap Show landing day 🎬
 
 **Milestone:** The Ticker's flagship recap experience is live at `/recap`.

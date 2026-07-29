@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
+import TwoHostDesk from "@/components/TwoHostDesk";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film,
-  ChevronDown, ChevronUp, ExternalLink,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 
 // Recap Show — SportsCenter-style "morning line" player. Advances through:
@@ -17,6 +18,37 @@ import {
 // flat sequence built at load time.
 
 const DEMO_DATE = "2025-04-12";
+
+// Reggie & Marc pose rotation — each category picks a fitting expression so
+// the same face doesn't hold across every game. resolveShot() in TwoHostDesk
+// converts these into the actual portrait PNG.
+const REGGIE_EXP_BY_CAT = {
+  goals: ["pointing", "hot_take", "celebrating"],
+  "match-highlights": ["explaining", "leaning", "hands_open"],
+  "hits-fights": ["chirping", "smirking", "yelling"],
+  saves: ["hot_take", "pointing"],
+  default: ["explaining", "leaning", "hands_open"],
+};
+const MARC_EXP_BY_CAT = {
+  goals: ["explaining", "analyzing_stats", "serious"],
+  "match-highlights": ["explaining", "analyzing_stats", "counting"],
+  "hits-fights": ["serious", "skeptical"],
+  saves: ["analyzing_stats", "explaining"],
+  default: ["explaining", "analyzing_stats", "counting"],
+};
+
+function shotForBeat(beat, seedNum) {
+  if (!beat || beat.kind !== "host") return "side_two_shot";
+  const cat = beat.segment?.clip?.category || "";
+  const bucket = cat.includes("hit") || cat.includes("fight") ? "hits-fights"
+    : cat.includes("goal") ? "goals"
+    : cat === "save" ? "saves"
+    : cat === "match-highlights" ? "match-highlights"
+    : "default";
+  const bank = beat.speaker === "reggie" ? REGGIE_EXP_BY_CAT : MARC_EXP_BY_CAT;
+  const options = bank[bucket] || bank.default;
+  return `${beat.speaker}_${options[seedNum % options.length]}`;
+}
 
 function buildBeatSequence(episode) {
   const beats = [];
@@ -153,6 +185,7 @@ export default function RecapShow() {
       {/* Main show frame */}
       <ShowFrame
         beat={currentBeat}
+        beatIdx={beatIdx}
         playing={playing}
         finished={finished}
         muted={muted}
@@ -214,17 +247,87 @@ function formatDate(iso) {
 }
 
 // ---- Show frame ----
-function ShowFrame({ beat, playing, finished, muted, onStart, onPause, onResume, onNext, onToggleMute }) {
+function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, onResume, onNext, onToggleMute }) {
+  // The current shot for the animated hosts. Between beats the two-shot
+  // hangs (looks like a broadcast cut). During a clip we hold the two-shot
+  // silently behind the iframe overlay.
+  const shot = shotForBeat(beat, beatIdx);
+  const speaker = beat?.kind === "host" ? beat.speaker : null;
+  const isClipBeat = beat?.kind === "clip";
+  const seg = beat?.segment;
+
   return (
     <div className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11] aspect-video">
-      {!beat || (!playing && !finished && beat === undefined) ? null : null}
+      {/* Always-mounted animated hosts — same TwoHostDesk the Predict Show
+       * uses. When speaking, the mouth animates + the speaker pane widens. */}
+      <TwoHostDesk
+        shot={shot}
+        speaker={speaker}
+        speaking={playing && !!speaker && !muted}
+      />
+
+      {/* Segment label (top-left) — always visible when playing */}
+      {(playing || finished) && beat && (
+        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 border border-white/15 px-3 py-1.5 backdrop-blur-md">
+          <span className="tick-dot bg-red-500 live-pulse" />
+          <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/80">
+            {beat.label}
+          </span>
+        </div>
+      )}
+
+      {/* Team lower-third — shows during host beats that have a segment */}
+      {playing && beat?.kind === "host" && seg && (
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-2 rounded-full bg-black/60 border border-white/15 px-3 py-1.5 backdrop-blur-md">
+          {seg.away.logo_url && <img src={seg.away.logo_url} alt={seg.away.code} className="h-5 w-5 object-contain" />}
+          <span className="font-accent text-[10px] uppercase tracking-widest text-white/80">
+            {seg.away.code} @ {seg.home.code}
+          </span>
+          {seg.home.logo_url && <img src={seg.home.logo_url} alt={seg.home.code} className="h-5 w-5 object-contain" />}
+        </div>
+      )}
+
+      {/* Speaker caption overlay — bottom of frame */}
+      {playing && beat?.kind === "host" && (
+        <div className="absolute inset-x-0 bottom-0 z-20 p-4 sm:p-6 pt-16 bg-gradient-to-t from-black/85 via-black/60 to-transparent">
+          <div className="max-w-3xl">
+            <div className="font-accent text-[10px] uppercase tracking-[0.35em] mb-1"
+                 style={{ color: ANALYSTS[beat.speaker]?.accent || "#1e5dff" }}>
+              {ANALYSTS[beat.speaker]?.short || beat.speaker}
+            </div>
+            <div className="font-headline text-xl sm:text-2xl text-white leading-tight">
+              {beat.text}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clip iframe — sits ON TOP of the host frame during clip beats */}
+      {playing && isClipBeat && seg && (
+        <div className="absolute inset-0 z-30 bg-black">
+          <iframe
+            src={seg.clip.embed_url}
+            title={seg.clip.title || "Highlight"}
+            className="w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
+          />
+          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full bg-black/60 border border-white/15 px-3 py-1.5 backdrop-blur-md">
+            {seg.away.logo_url && <img src={seg.away.logo_url} alt={seg.away.code} className="h-4 w-4 object-contain" />}
+            <span className="font-accent text-[10px] uppercase tracking-widest text-white/80">{seg.away.code} @ {seg.home.code}</span>
+            {seg.home.logo_url && <img src={seg.home.logo_url} alt={seg.home.code} className="h-4 w-4 object-contain" />}
+          </div>
+        </div>
+      )}
 
       {/* Pre-roll cover */}
       {!playing && !finished && (
         <button
           onClick={onStart}
           data-testid="recap-tap-to-start"
-          className="absolute inset-0 z-30 flex items-center justify-center cursor-pointer group"
+          className="absolute inset-0 z-40 flex items-center justify-center cursor-pointer group"
           style={{
             background: "radial-gradient(circle at 50% 50%, rgba(5,7,15,0.55) 0%, rgba(5,7,15,0.92) 100%)",
             backdropFilter: "blur(4px)",
@@ -246,132 +349,43 @@ function ShowFrame({ beat, playing, finished, muted, onStart, onPause, onResume,
         </button>
       )}
 
-      {/* Playing states */}
-      {playing && beat?.kind === "host" && <HostBeat beat={beat} />}
-      {playing && beat?.kind === "clip" && <ClipBeat beat={beat} />}
-
-      {/* End-of-show state */}
+      {/* End-of-show */}
       {finished && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/80">
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 bg-black/80">
           <div className="font-headline text-3xl text-white text-center px-4">That's the tape.</div>
           <button onClick={onStart} className="px-5 py-2 rounded-full bg-[#1e5dff] text-white font-accent text-xs uppercase tracking-widest hover:bg-[#3a72ff]">Replay</button>
         </div>
       )}
 
-      {/* Controls overlay */}
+      {/* Controls overlay (bottom-right) */}
       {(playing || finished) && (
-        <div className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5">
+        <div className="absolute bottom-3 right-3 z-50 flex items-center gap-1.5">
           {playing && (
-            <button
-              onClick={onPause}
-              data-testid="recap-pause"
-              className="h-8 w-8 rounded-full flex items-center justify-center bg-black/60 hover:bg-black/80 border border-white/20 text-white transition-colors"
-              title="Pause"
-            >
+            <button onClick={onPause} data-testid="recap-pause"
+              className="h-8 w-8 rounded-full flex items-center justify-center bg-black/70 hover:bg-black border border-white/20 text-white transition-colors"
+              title="Pause">
               <Pause className="w-3.5 h-3.5" />
             </button>
           )}
           {!playing && !finished && (
-            <button
-              onClick={onResume}
-              className="h-8 w-8 rounded-full flex items-center justify-center bg-black/60 hover:bg-black/80 border border-white/20 text-white transition-colors"
-              title="Resume"
-            >
+            <button onClick={onResume}
+              className="h-8 w-8 rounded-full flex items-center justify-center bg-black/70 hover:bg-black border border-white/20 text-white transition-colors"
+              title="Resume">
               <Play className="w-3.5 h-3.5" />
             </button>
           )}
-          <button
-            onClick={onNext}
-            data-testid="recap-next"
-            className="h-8 w-8 rounded-full flex items-center justify-center bg-black/60 hover:bg-black/80 border border-white/20 text-white transition-colors"
-            title="Skip forward"
-          >
+          <button onClick={onNext} data-testid="recap-next"
+            className="h-8 w-8 rounded-full flex items-center justify-center bg-black/70 hover:bg-black border border-white/20 text-white transition-colors"
+            title="Skip forward">
             <SkipForward className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={onToggleMute}
-            className="h-8 w-8 rounded-full flex items-center justify-center bg-black/60 hover:bg-black/80 border border-white/20 text-white transition-colors"
-            title={muted ? "Unmute" : "Mute"}
-          >
+          <button onClick={onToggleMute}
+            className="h-8 w-8 rounded-full flex items-center justify-center bg-black/70 hover:bg-black border border-white/20 text-white transition-colors"
+            title={muted ? "Unmute" : "Mute"}>
             {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-// ---- Beat renderers ----
-function HostBeat({ beat }) {
-  const analyst = ANALYSTS[beat.speaker];
-  const accent = analyst?.accent || "#1e5dff";
-  const seg = beat.segment;
-  return (
-    <div className="absolute inset-0 flex flex-col justify-between p-6 sm:p-10">
-      {/* Segment label */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="tick-dot bg-red-500 live-pulse" />
-          <span className="font-accent text-[10px] uppercase tracking-[0.35em] text-white/50">
-            {beat.label}
-          </span>
-        </div>
-        {seg && (
-          <div className="flex items-center gap-2 opacity-90">
-            {seg.away.logo_url && <img src={seg.away.logo_url} alt={seg.away.code} className="h-8 w-8 object-contain" />}
-            <span className="text-white/50 text-xs font-accent uppercase tracking-widest">@</span>
-            {seg.home.logo_url && <img src={seg.home.logo_url} alt={seg.home.code} className="h-8 w-8 object-contain" />}
-          </div>
-        )}
-      </div>
-
-      {/* Middle: host portrait glow + caption */}
-      <div className="flex-1 flex items-center gap-6">
-        <div
-          className="h-28 w-28 sm:h-36 sm:w-36 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{
-            background: `${accent}22`,
-            border: `2px solid ${accent}88`,
-            boxShadow: `0 0 60px -8px ${accent}`,
-          }}
-        >
-          <div className="font-headline text-5xl" style={{ color: accent }}>{analyst?.short?.[0] || "?"}</div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-accent text-[10px] uppercase tracking-[0.35em]" style={{ color: accent }}>
-            {analyst?.short || beat.speaker}
-          </div>
-          <div className="font-headline text-2xl sm:text-3xl text-white mt-2 leading-tight">
-            {beat.text}
-          </div>
-        </div>
-      </div>
-
-      {/* Empty bottom slot (controls sit on the overlay) */}
-      <div className="h-4" />
-    </div>
-  );
-}
-
-function ClipBeat({ beat }) {
-  const seg = beat.segment;
-  return (
-    <div className="absolute inset-0 bg-black">
-      <iframe
-        src={seg.clip.embed_url}
-        title={seg.clip.title || "Highlight"}
-        className="w-full h-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowFullScreen
-        referrerPolicy="strict-origin-when-cross-origin"
-        sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
-      />
-      {/* Small lower-third with team logos */}
-      <div className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 border border-white/15 px-3 py-1.5 backdrop-blur-md">
-        {seg.away.logo_url && <img src={seg.away.logo_url} alt={seg.away.code} className="h-4 w-4 object-contain" />}
-        <span className="font-accent text-[10px] uppercase tracking-widest text-white/80">{seg.away.code} @ {seg.home.code}</span>
-        {seg.home.logo_url && <img src={seg.home.logo_url} alt={seg.home.code} className="h-4 w-4 object-contain" />}
-      </div>
     </div>
   );
 }

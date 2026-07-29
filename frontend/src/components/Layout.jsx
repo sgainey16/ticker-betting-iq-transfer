@@ -11,10 +11,10 @@ const linkBase =
 const active = "text-white bg-white/5";
 const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 
-// Phase 1 nav — entertainment-first, short labels.
+// Phase 1 nav — Recap Show IS the landing page. Predict Show at /show.
 const NAV = [
-  { to: "/recap", label: "Recap", testid: TEST_IDS.nav.recaps },
-  { to: "/", end: true, label: "Show", testid: TEST_IDS.nav.broadcast },
+  { to: "/", end: true, label: "Recap", testid: TEST_IDS.nav.recaps },
+  { to: "/show", label: "Show", testid: TEST_IDS.nav.broadcast },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
   { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
@@ -30,13 +30,16 @@ export default function Layout({ children }) {
 
 function LayoutInner({ children }) {
   const location = useLocation();
-  const isHome = location.pathname === "/";
+  // Both "flagship show" routes: Recap at / and Predict at /show. Neither
+  // wants the mini-bar hovering — Recap has its own player, Predict has
+  // the full frame inline.
+  const isHome = location.pathname === "/" || location.pathname === "/show";
   // Routes where the mini broadcast bar is hidden (Presser is a 1-on-1,
-  // Back Office is settings — neither wants a floating player over it).
+  // Back Office is settings, / is the Recap Show landing).
   const isQuietRoute =
+    location.pathname === "/" ||
     location.pathname.startsWith("/press-conference") ||
-    location.pathname.startsWith("/back-office") ||
-    location.pathname.startsWith("/recap");
+    location.pathname.startsWith("/back-office");
   const needsMiniBarPadding = !isHome && !isQuietRoute;
 
   return (

@@ -25,7 +25,10 @@ function App() {
       <BrowserRouter>
         <Layout>
           <Routes>
-            <Route path="/" element={<Home />} />
+            {/* Landing = Recap Show. The old Panel/Predict Show lives at /show. */}
+            <Route path="/" element={<RecapShow />} />
+            <Route path="/show" element={<Home />} />
+            <Route path="/recap" element={<Navigate to="/" replace />} />
             <Route path="/press-conference" element={<PressConference />} />
             {/* legacy alias */}
             <Route path="/ask" element={<Navigate to="/press-conference" replace />} />
@@ -37,7 +40,6 @@ function App() {
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/predictions" element={<Predictions />} />
-            <Route path="/recap" element={<RecapShow />} />
             <Route path="/recaps" element={<Recaps />} />
             <Route path="/recaps-archive" element={<Recaps />} />
             <Route path="/voice-lab" element={<VoiceLab />} />
