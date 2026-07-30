@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
 import PostGameStats from "@/components/PostGameStats";
+import { playStinger, playStingerSoft } from "@/lib/stinger";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film, Smartphone,
 } from "lucide-react";
@@ -147,12 +148,34 @@ export default function RecapShow() {
   }, [beatIdx, beats.length]);
 
   const start = () => {
+    // Soft stinger on show open — signals we're going live without
+    // stepping on Reggie's first line.
+    playStingerSoft();
     setBeatIdx(0);
     setPlaying(true);
   };
   const pause = () => setPlaying(false);
   const resume = () => setPlaying(true);
   const next = () => setBeatIdx((i) => Math.min(i + 1, beats.length));
+
+  // Fire the full network stinger whenever we cross from one segment
+  // (game) into the next while the show is playing. `prevSegmentOrder`
+  // tracks the last segment we heard so we don't double-fire on beat
+  // advances inside the same game.
+  const prevSegmentOrderRef = useRef(null);
+  useEffect(() => {
+    if (!playing) return;
+    const order = currentBeat?.segment?.order;
+    if (order == null) return;
+    if (prevSegmentOrderRef.current == null) {
+      prevSegmentOrderRef.current = order;
+      return;
+    }
+    if (order !== prevSegmentOrderRef.current) {
+      playStinger();
+      prevSegmentOrderRef.current = order;
+    }
+  }, [currentBeat, playing]);
 
   if (!episode) {
     return <div className="text-white/60 text-sm">Loading morning show…</div>;
