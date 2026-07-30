@@ -15,20 +15,25 @@ import { ChevronDown } from "lucide-react";
 const PRIMARY = [
   { key: "Shots",                 label: "Shots on Goal" },
   { key: "Hits",                  label: "Hits" },
-  { key: "Blocked Shots",         label: "Blocked Shots" },
+  { key: "__chances__",           label: "Scoring Chances", derived: (own, opp) => {
+      const s = Number(own?.["Shots"] ?? 0);
+      const b = Number(opp?.["Blocked Shots"] ?? 0);
+      if (own?.["Shots"] == null && opp?.["Blocked Shots"] == null) return "—";
+      return s + b;
+    } },
   { key: "Faceoff Win Percent",   label: "Faceoffs",   fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
-  { key: "__pp_ratio__",          label: "Power Play", derived: (t) => {
-      const g = t?.["Power Play Goals"];
-      const opp = t?.["Power Play Opportunities"];
+  { key: "__pp_ratio__",          label: "Power Play", derived: (own) => {
+      const g = own?.["Power Play Goals"];
+      const opp = own?.["Power Play Opportunities"];
       if (g == null || opp == null) return "—";
       return `${Number(g)}/${Number(opp)}`;
     } },
 ];
 
 const SECONDARY = [
+  { key: "Blocked Shots",         label: "Blocked Shots" },
   { key: "Power Play Percentage", label: "PP %",       fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
   { key: "Short Handed Goals",    label: "Shorthanded Goals" },
-  { key: "Faceoffs Won",          label: "Faceoffs Won" },
   { key: "Takeaways",             label: "Takeaways" },
   { key: "Giveaways",             label: "Giveaways" },
   { key: "Total Penalties",       label: "Penalties" },
@@ -117,8 +122,8 @@ export default function PostGameStats({ segment }) {
               <div className="space-y-2.5">
                 {PRIMARY.map((m) => (
                   <StatLine key={m.key} label={m.label}
-                    away={m.derived ? m.derived(data.away?.stats) : data.away?.stats?.[m.key]}
-                    home={m.derived ? m.derived(data.home?.stats) : data.home?.stats?.[m.key]}
+                    away={m.derived ? m.derived(data.away?.stats, data.home?.stats) : data.away?.stats?.[m.key]}
+                    home={m.derived ? m.derived(data.home?.stats, data.away?.stats) : data.home?.stats?.[m.key]}
                     fmt={m.fmt}
                     derived={!!m.derived} />
                 ))}
@@ -138,8 +143,8 @@ export default function PostGameStats({ segment }) {
                 <div className="space-y-2.5 mt-3">
                   {SECONDARY.map((m) => (
                     <StatLine key={m.key} label={m.label}
-                      away={m.derived ? m.derived(data.away?.stats) : data.away?.stats?.[m.key]}
-                      home={m.derived ? m.derived(data.home?.stats) : data.home?.stats?.[m.key]}
+                      away={m.derived ? m.derived(data.away?.stats, data.home?.stats) : data.away?.stats?.[m.key]}
+                      home={m.derived ? m.derived(data.home?.stats, data.away?.stats) : data.home?.stats?.[m.key]}
                       fmt={m.fmt}
                       derived={!!m.derived} />
                   ))}
@@ -147,7 +152,7 @@ export default function PostGameStats({ segment }) {
               )}
 
               <div className="pt-3 text-[9px] font-accent uppercase tracking-widest text-white/25 text-right">
-                Source · Highlightly
+                Source · Highlightly · Scoring Chances = SoG + Opp Blocks
               </div>
             </>
           )}
