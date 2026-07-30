@@ -2,28 +2,31 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { ChevronDown } from "lucide-react";
 
-// Highlightly's raw display names, normalized into the row order Reggie &
-// Marc actually reference on-air. Each entry maps to a rendering strategy:
-//   - "bar": numeric compare with a proportional bar
-//   - "pct": show as X.X% with a bar based on the percent value (0-100)
-// The list is short by design — the panel is a glance, not a spreadsheet.
-const METRICS = [
-  { key: "Shots",                  label: "Shots on Goal", mode: "bar" },
-  { key: "Blocked Shots",          label: "Blocked Shots", mode: "bar" },
-  { key: "Hits",                   label: "Hits",          mode: "bar" },
-  { key: "Faceoff Win Percent",    label: "Faceoffs %",    mode: "pct" },
-  { key: "Power Play Percentage",  label: "PP %",          mode: "pct" },
-  { key: "Takeaways",              label: "Takeaways",     mode: "bar" },
-  { key: "Giveaways",              label: "Giveaways",     mode: "bar", lowerIsBetter: true },
-  { key: "Penalty Minutes",        label: "PIM",           mode: "bar", lowerIsBetter: true },
+// Post-Game Stats — simple two-column comparison.
+//   `<away>   Label   <home>`
+// PRIMARY rows show on first tap. SECONDARY rows only after "Show more".
+// One game at a time — follows whatever segment is currently on-air.
+
+const PRIMARY = [
+  { key: "Shots",                 label: "Shots on Goal" },
+  { key: "Hits",                  label: "Hits" },
+  { key: "Blocked Shots",         label: "Blocked Shots" },
+  { key: "Faceoff Win Percent",   label: "Faceoffs",   fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
 ];
 
-// Fetch + memoize per match_id so tapping between segments is instant.
-const _cache = new Map();
+const SECONDARY = [
+  { key: "Power Play Percentage", label: "Power Play", fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
+  { key: "Takeaways",             label: "Takeaways" },
+  { key: "Giveaways",             label: "Giveaways" },
+  { key: "Penalty Minutes",       label: "PIM" },
+];
 
-export default function PostGameStats({ segment, defaultOpen = false }) {
+const _cache = new Map(); // match_id → response
+
+export default function PostGameStats({ segment }) {
   const matchId = segment?.match_id;
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [data, setData] = useState(() => _cache.get(matchId) || null);
   const [loading, setLoading] = useState(false);
 
@@ -33,18 +36,13 @@ export default function PostGameStats({ segment, defaultOpen = false }) {
     let cancelled = false;
     setLoading(true);
     api.get(`/recap-show/post-game-stats?match_id=${matchId}`)
-      .then((r) => {
-        if (cancelled) return;
-        _cache.set(matchId, r.data);
-        setData(r.data);
-      })
+      .then((r) => { if (!cancelled) { _cache.set(matchId, r.data); setData(r.data); } })
       .catch(() => {})
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [matchId]);
 
   if (!segment) return null;
-
   const away = segment.away || {};
   const home = segment.home || {};
 
@@ -53,7 +51,7 @@ export default function PostGameStats({ segment, defaultOpen = false }) {
       className="rounded-2xl border border-[#2d2d35] bg-[#0b0b10] overflow-hidden landscape:rounded-none landscape:border-x-0"
       data-testid="post-game-stats-panel"
     >
-      {/* Header — tap to expand/collapse; big matchup line + verdict */}
+      {/* Tappable header — matchup + score + chevron */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors"
@@ -63,26 +61,21 @@ export default function PostGameStats({ segment, defaultOpen = false }) {
           <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
             Post-Game Stats
           </div>
-          <div className="hidden sm:flex items-center gap-2 min-w-0">
+          <div className="hidden sm:flex items-center gap-2">
             {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-5 h-5 object-contain" />}
             <span className="font-headline text-white text-sm">{away.code}</span>
             <span className="text-white/30">·</span>
-            <span className="font-headline text-white text-sm">
-              {data?.score?.current || "Final"}
-            </span>
+            <span className="font-headline text-white text-sm">{data?.score?.current || "Final"}</span>
             <span className="text-white/30">·</span>
             <span className="font-headline text-white text-sm">{home.code}</span>
             {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-5 h-5 object-contain" />}
           </div>
         </div>
-        <ChevronDown
-          className={`w-4 h-4 text-white/60 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Comparison table — one row per metric */}
       {open && (
-        <div className="border-t border-[#2d2d35] px-4 py-3 space-y-2" data-testid="post-game-stats-body">
+        <div className="border-t border-[#2d2d35] px-4 py-4" data-testid="post-game-stats-body">
           {loading && !data && (
             <div className="text-white/50 text-sm font-accent py-4 text-center">Loading box score…</div>
           )}
@@ -93,25 +86,47 @@ export default function PostGameStats({ segment, defaultOpen = false }) {
           )}
           {data?.ready && (
             <>
-              {/* Team header row — big logos + names */}
-              <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center pb-2 border-b border-white/10">
-                <TeamHeader team={away} align="left" logo={data.away?.team?.logo} />
-                <div className="font-accent text-[9px] uppercase tracking-widest text-white/40">vs</div>
-                <TeamHeader team={home} align="right" logo={data.home?.team?.logo} />
+              {/* Team header row — big logos + team names */}
+              <div className="grid grid-cols-3 items-center pb-3 mb-2 border-b border-white/10">
+                <div className="flex items-center gap-2 justify-start">
+                  {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-9 h-9 object-contain" />}
+                  <span className="font-headline text-white text-base">{away.code}</span>
+                </div>
+                <div className="text-center font-accent text-[10px] uppercase tracking-[0.3em] text-white/40">vs</div>
+                <div className="flex items-center gap-2 justify-end">
+                  <span className="font-headline text-white text-base">{home.code}</span>
+                  {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-9 h-9 object-contain" />}
+                </div>
               </div>
-              {METRICS.map((m) => (
-                <StatRow
-                  key={m.key}
-                  label={m.label}
-                  mode={m.mode}
-                  lowerIsBetter={!!m.lowerIsBetter}
-                  awayVal={data.away?.stats?.[m.key]}
-                  homeVal={data.home?.stats?.[m.key]}
-                  awayAccent={away.accent || "#1e5dff"}
-                  homeAccent={home.accent || "#1e5dff"}
-                />
-              ))}
-              <div className="pt-2 text-[10px] font-accent uppercase tracking-widest text-white/30 text-right">
+
+              {/* Primary rows — biggest / most important */}
+              <div className="space-y-2.5">
+                {PRIMARY.map((m) => (
+                  <StatLine key={m.key} label={m.label}
+                    away={data.away?.stats?.[m.key]} home={data.home?.stats?.[m.key]} fmt={m.fmt} />
+                ))}
+              </div>
+
+              {/* Show-more toggle */}
+              <button
+                onClick={() => setShowMore((v) => !v)}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-md border border-white/10 hover:border-white/25 py-2 font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 hover:text-white transition-colors"
+                data-testid="post-game-stats-more"
+              >
+                {showMore ? "Show less" : "Show more"}
+                <ChevronDown className={`w-3 h-3 transition-transform ${showMore ? "rotate-180" : ""}`} />
+              </button>
+
+              {showMore && (
+                <div className="space-y-2.5 mt-3">
+                  {SECONDARY.map((m) => (
+                    <StatLine key={m.key} label={m.label}
+                      away={data.away?.stats?.[m.key]} home={data.home?.stats?.[m.key]} fmt={m.fmt} />
+                  ))}
+                </div>
+              )}
+
+              <div className="pt-3 text-[9px] font-accent uppercase tracking-widest text-white/25 text-right">
                 Source · Highlightly
               </div>
             </>
@@ -122,55 +137,25 @@ export default function PostGameStats({ segment, defaultOpen = false }) {
   );
 }
 
-function TeamHeader({ team, logo, align }) {
+// One row: `[big away number]   [label]   [big home number]`
+// The winning side gets full opacity; the trailing side dims slightly so
+// the eye reads the delta without any chart.
+function StatLine({ label, away, home, fmt }) {
+  const a = numeric(away);
+  const h = numeric(home);
+  const awayWin = a > h;
+  const homeWin = h > a;
+  const format = fmt || ((v) => (v == null ? "—" : String(v)));
   return (
-    <div className={`flex items-center gap-2 ${align === "right" ? "justify-end" : "justify-start"}`}>
-      {align === "left" && logo && <img src={logo} alt={team.code} className="w-8 h-8 object-contain" />}
-      <div className="font-headline text-white text-sm">{team.name || team.code}</div>
-      {align === "right" && logo && <img src={logo} alt={team.code} className="w-8 h-8 object-contain" />}
-    </div>
-  );
-}
-
-// One row: [away number] [label + bar] [home number]. The bar leans toward
-// whichever side has the better value on that metric so the eye instantly
-// reads who "won" that stat category.
-function StatRow({ label, mode, lowerIsBetter, awayVal, homeVal, awayAccent, homeAccent }) {
-  const a = numeric(awayVal);
-  const h = numeric(homeVal);
-  let awayShare = 50, homeShare = 50;
-  if (mode === "pct") {
-    // For percentages we anchor at 50/50 baseline so bars grow proportionally
-    // to the actual value, but sum still stops at 100 for visual clarity.
-    const total = (a || 0) + (h || 0);
-    awayShare = total > 0 ? (a / total) * 100 : 50;
-    homeShare = 100 - awayShare;
-  } else {
-    const total = (a || 0) + (h || 0);
-    if (total > 0) {
-      awayShare = (a / total) * 100;
-      homeShare = 100 - awayShare;
-    }
-  }
-  const awayLead = lowerIsBetter ? a < h : a > h;
-  const homeLead = lowerIsBetter ? h < a : h > a;
-  const fmt = (v) => (mode === "pct" && v != null ? `${Number(v).toFixed(1)}%` : (v ?? "—"));
-  return (
-    <div className="grid grid-cols-[3.5rem_1fr_3.5rem] gap-3 items-center">
-      <div className={`text-right font-headline text-lg ${awayLead ? "text-white" : "text-white/50"}`}>
-        {fmt(awayVal)}
+    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className={`text-right font-headline text-2xl sm:text-3xl leading-none ${awayWin ? "text-white" : "text-white/50"}`}>
+        {format(away)}
       </div>
-      <div>
-        <div className="text-center font-accent text-[10px] uppercase tracking-widest text-white/50 mb-1">
-          {label}
-        </div>
-        <div className="flex h-2 rounded-full overflow-hidden bg-white/5">
-          <div style={{ width: `${awayShare}%`, background: awayAccent, opacity: awayLead ? 1 : 0.55 }} />
-          <div style={{ width: `${homeShare}%`, background: homeAccent, opacity: homeLead ? 1 : 0.55 }} />
-        </div>
+      <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 px-2 min-w-[92px]">
+        {label}
       </div>
-      <div className={`text-left font-headline text-lg ${homeLead ? "text-white" : "text-white/50"}`}>
-        {fmt(homeVal)}
+      <div className={`text-left font-headline text-2xl sm:text-3xl leading-none ${homeWin ? "text-white" : "text-white/50"}`}>
+        {format(home)}
       </div>
     </div>
   );
