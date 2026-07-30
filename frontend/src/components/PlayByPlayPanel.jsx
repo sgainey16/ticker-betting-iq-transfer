@@ -58,76 +58,76 @@ export default function PlayByPlayPanel({ segment }) {
 
   return (
     <div className="rounded-lg border border-white/10 bg-[#0d0d13] p-4">
-      {/* Section label */}
-      <div className="flex items-center justify-between mb-3">
-        <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.3em", color: C.blue }}>
-          PLAY BY PLAY
+      {/* Section header — big, bold, unmissable */}
+      <div className="flex items-baseline justify-between mb-4 pb-3 border-b border-white/10">
+        <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: C.white, letterSpacing: "0.02em", lineHeight: 1 }}
+             data-testid="pbp-header">
+          INDIVIDUAL HIGHLIGHTS
         </div>
-        <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.25em", color: C.gray }}>
+        <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.25em", color: C.blue }}>
           {plays.length} GOALS
         </div>
       </div>
 
       {plays.length === 0 && (
-        <div className="text-xs text-white/40 py-4 text-center">No play-by-play available</div>
+        <div className="text-sm text-white/40 py-4 text-center">No play-by-play available</div>
       )}
 
-      <div className="space-y-2" data-testid="pbp-list">
+      {/* Scrollable list — first 4 rows visible full-size, rest scroll into view */}
+      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 no-scrollbar" data-testid="pbp-list">
         {plays.map((p, i) => {
           const sit = SITUATION_STYLE[p.situation] || SITUATION_STYLE.EV;
           const hasClip = !!p.clip;
-          // Only clip-having plays can open the modal. `clipIdxInPool` is
-          // the index within `clipsForModal` since it filters out stats-only.
           const clipIdxInPool = clipsForModal.findIndex((c) => c.id === p.clip?.id);
           return (
             <button
               key={i}
               onClick={() => hasClip && setModalIdx(clipIdxInPool)}
               disabled={!hasClip}
-              className={`w-full flex items-center gap-3 p-2 rounded-md border transition-all ${
+              className={`w-full flex items-center gap-3 p-3 rounded-md border transition-all ${
                 hasClip
                   ? "border-white/10 hover:border-[#1E5BFF] hover:bg-white/5 cursor-pointer"
                   : "border-white/5 bg-black/20 opacity-60"
               }`}
               data-testid={`pbp-row-${i}`}
             >
-              {/* Team logo + play overlay */}
-              <div className="relative flex-shrink-0 h-11 w-11 rounded-md bg-black/60 flex items-center justify-center border border-white/10">
-                <TeamLogo code={p.team_code} className="h-8 w-8 object-contain" />
+              {/* Team logo + play overlay — bigger */}
+              <div className="relative flex-shrink-0 h-14 w-14 rounded-md bg-black/60 flex items-center justify-center border border-white/10">
+                <TeamLogo code={p.team_code} className="h-11 w-11 object-contain" />
                 {hasClip && (
-                  <span className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
-                        style={{ boxShadow: "0 0 10px -2px rgba(239,68,68,0.9)" }}>
-                    <Play className="w-2.5 h-2.5 text-white translate-x-[0.5px]" fill="currentColor" />
+                  <span className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
+                        style={{ boxShadow: "0 0 12px -2px rgba(239,68,68,0.9)" }}>
+                    <Play className="w-3 h-3 text-white translate-x-[0.5px]" fill="currentColor" />
                   </span>
                 )}
               </div>
-              {/* Middle: scorer + assists */}
+              {/* Middle: scorer + assists — bigger and bolder */}
               <div className="flex-1 min-w-0 text-left">
                 <div className="flex items-center gap-2">
-                  <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: C.white, letterSpacing: "0.02em" }}
+                  <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: C.white, letterSpacing: "0.02em", lineHeight: 1.1 }}
                         className="truncate">
                     {p.scorer || "Unknown scorer"}
                   </span>
-                  <span className="px-1 py-0.5 rounded-sm font-accent text-[8px] uppercase tracking-widest"
-                        style={{ background: sit.color + "33", color: sit.color, border: `1px solid ${sit.color}55` }}>
+                  <span className="px-1.5 py-0.5 rounded-sm font-accent text-[10px] uppercase tracking-widest flex-shrink-0"
+                        style={{ background: sit.color + "33", color: sit.color, border: `1px solid ${sit.color}55`, fontFamily: "Oswald", fontWeight: 600 }}>
                     {sit.label}
                   </span>
                 </div>
                 {(p.assist1 || p.assist2) && (
-                  <div className="text-[10px] text-white/50 truncate mt-0.5">
+                  <div className="text-[13px] text-white/70 truncate mt-1" style={{ fontFamily: "Inter", fontWeight: 400 }}>
                     {[p.assist1, p.assist2].filter(Boolean).join(" · ")}
                   </div>
                 )}
                 {!p.assist1 && !p.assist2 && (
-                  <div className="text-[10px] text-white/30 italic mt-0.5">unassisted</div>
+                  <div className="text-[12px] text-white/40 italic mt-1">unassisted</div>
                 )}
               </div>
-              {/* Right: score-at-time + period-time */}
+              {/* Right: score-at-time + period-time — bigger */}
               <div className="flex-shrink-0 text-right">
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: C.white, lineHeight: 1 }}>
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: C.white, lineHeight: 1 }}>
                   {p.away_score}–{p.home_score}
                 </div>
-                <div className="mt-0.5" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.2em", color: C.gray }}>
+                <div className="mt-1" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "11px", letterSpacing: "0.2em", color: C.silver }}>
                   P{p.period} · {p.time}
                 </div>
               </div>
