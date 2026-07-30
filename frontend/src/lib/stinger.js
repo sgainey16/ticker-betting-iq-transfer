@@ -135,3 +135,46 @@ export function playStingerSoft() {
   click(t + 0.02, 0.12, 5500);
   bumpPlayCount();
 }
+
+// ---- Goal horn ----
+// Familiar arena goal-horn feel — a low fat pedal tone with a couple
+// stacked harmonics on top. Not tied to the stinger play-cap — a goal
+// is worth hearing every time it happens (respecting the user's global
+// mute preference which is checked by the caller).
+export function playGoalHorn() {
+  const a = ctx();
+  if (!a) return;
+  if (a.state === "suspended") a.resume().catch(() => {});
+  const t = a.currentTime;
+
+  // Layered detuned sawtooths with a slight portamento — that's the
+  // classic stadium horn character.
+  const dur = 1.6;
+  const notes = [110, 220, 330]; // A2, A3, E4 — pedal + octave + fifth
+  const gains = [0.22, 0.18, 0.10];
+  notes.forEach((freq, i) => {
+    const osc = a.createOscillator();
+    osc.type = "sawtooth";
+    // Slight upward pitch swell for the "revving up" feel of a horn.
+    osc.frequency.setValueAtTime(freq * 0.98, t);
+    osc.frequency.linearRampToValueAtTime(freq, t + 0.12);
+
+    const filt = a.createBiquadFilter();
+    filt.type = "lowpass";
+    filt.frequency.setValueAtTime(1400, t);
+    filt.Q.value = 6;
+
+    const g = a.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gains[i], t + 0.08);
+    g.gain.setValueAtTime(gains[i], t + dur - 0.25);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+    osc.connect(filt).connect(g).connect(a.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  });
+
+  // Kick a short "sub thump" at the start — chest hit.
+  whoosh(t, 0.35, 160, 40, 0.28);
+}

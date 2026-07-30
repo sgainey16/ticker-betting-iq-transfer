@@ -39,6 +39,7 @@ import sportradar_client as sr
 import reggie_assistant as reggie
 from highlightly_client import highlightly, TAB_GROUPS
 from recap_show import generate_episode as generate_recap_episode
+from live import live_engine
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -739,6 +740,31 @@ async def recap_show_post_game_stats(match_id: int):
     payload = {"ready": True, **stats}
     _cache_set(cache_key, payload)
     return {"cached": False, **payload}
+
+
+# ---------- Live scoreboard (demo mode today, real feed later) ----------
+
+@api.get("/live/state")
+async def live_state(since: str | None = None):
+    """Current scoreboard snapshot + events (optionally only newer than
+    the given ISO timestamp). Frontend polls this every ~5s."""
+    live_engine.start()  # idempotent — kicks the demo ticker on first hit
+    return live_engine.state(since=since)
+
+
+@api.post("/live/force-goal")
+async def live_force_goal(game_id: str | None = None):
+    """Manual trigger — fires a goal on the given game (or any live one).
+    Handy for investor demos and QA."""
+    return live_engine.force_goal(game_id)
+
+
+@api.post("/live/reset")
+async def live_reset():
+    """Rewind the demo back to fresh 0-0 games."""
+    live_engine.reset()
+    return {"ok": True}
+
 
 
 

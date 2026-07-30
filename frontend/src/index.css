@@ -154,6 +154,24 @@ body {
   animation: livePulse 1.4s ease-in-out infinite;
 }
 
+/* Goal alert bar — slides down with a subtle red flash on entry, and
+ * gently pulses while shown so it feels alive without stealing focus. */
+@keyframes goalAlertSlide {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { transform: translateY(0);     opacity: 1; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+@keyframes goalAlertGlow {
+  0%, 100% { box-shadow: 0 10px 40px -10px rgba(239, 68, 68, 0.55); }
+  50%      { box-shadow: 0 12px 55px -6px  rgba(239, 68, 68, 0.95); }
+}
+.goal-alert-slide {
+  animation:
+    goalAlertSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    goalAlertGlow  1.4s ease-in-out infinite;
+}
+
+
 /* Blinking caret for streaming text */
 @keyframes caret {
   0%, 100% { opacity: 1; }

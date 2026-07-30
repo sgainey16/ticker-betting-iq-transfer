@@ -9,6 +9,7 @@ import RecapShow from "@/pages/RecapShow";
 import VoiceLab from "@/pages/VoiceLab";
 import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
+import Scoreboard from "@/pages/Scoreboard";
 import Fantasy from "@/pages/Fantasy";
 import Login from "@/pages/Login";
 import BackOffice from "@/pages/BackOffice";
@@ -33,6 +34,7 @@ function App() {
             {/* legacy alias */}
             <Route path="/ask" element={<Navigate to="/press-conference" replace />} />
             <Route path="/stats" element={<Stats />} />
+            <Route path="/scoreboard" element={<Scoreboard />} />
             <Route path="/fantasy" element={<Fantasy />} />
             <Route path="/back-office" element={<BackOffice />} />
             <Route path="/matchup/:matchupId" element={<MatchupDeepDive />} />

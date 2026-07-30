@@ -99,6 +99,30 @@ These *may* stay bare because they're mainstream enough:
 | Mini audio bar at bottom | **The Mini Bar** / Persistent Player |
 | Top nav | **The Marquee** |
 
+## 🚨 Live Scoreboard + Red Light alert
+
+Foundation shipped in demo mode — real NHL feed swaps in when the season resumes.
+
+- **Backend** `/app/backend/live.py` — `LiveEngine` singleton with 4 mock
+  games. Ticks every 10-14s with goals, PP starts/ends, period advances,
+  clock. Emits `events` (goal, pp_start, period_start, game_final).
+- **Endpoints**: `GET /api/live/state?since=<iso>`, `POST /api/live/force-goal`,
+  `POST /api/live/reset`.
+- **Frontend** `/app/frontend/src/lib/liveContext.jsx` polls every 5s, diffs
+  events, fires alerts on new goals.
+- **`<GoalAlertBar>`** — global fixed alert under the header, pulses red on
+  each new goal for 7s.
+- **Goal horn** — synthesized in `stinger.js` (`playGoalHorn`). Layered
+  detuned sawtooths + sub thump. Bypasses stinger session-cap (goals
+  always audible unless muted).
+- **Mute toggle** — speaker icon in header next to Settings, persists in
+  localStorage as `ticker.goalhorn.muted`.
+- **`/scoreboard` page** with 4 live cards — code+logo, score, period,
+  clock, SOG, expandable "Show analytics" (xG / possession placeholders
+  wait on NHL EDGE feed).
+- **Real feed swap** (October): replace `_tick_demo` with a poller against
+  `https://api-web.nhle.com/v1/scoreboard/now`. Frontend needs no changes.
+
 ## 🔔 Stinger
 
 Client-synthesized via Web Audio API — no external file, no API cost.

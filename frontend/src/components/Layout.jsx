@@ -1,10 +1,12 @@
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { TEST_IDS } from "@/lib/config";
-import { Radio, Settings } from "lucide-react";
+import { Radio, Settings, Volume2, VolumeX } from "lucide-react";
 import ReggieAssistant from "@/components/ReggieAssistant";
 import LaunchZoneBanner from "@/components/LaunchZoneBanner";
 import LiveDesk from "@/components/LiveDesk";
+import GoalAlertBar from "@/components/GoalAlertBar";
 import { BroadcastProvider } from "@/lib/broadcastContext";
+import { LiveProvider, useLive } from "@/lib/liveContext";
 
 const linkBase =
   "px-3 py-2 rounded-md font-accent text-[12px] uppercase tracking-widest transition-colors";
@@ -12,9 +14,11 @@ const active = "text-white bg-white/5";
 const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 
 // Phase 1 nav — Recap Show IS the landing page. Predict Show at /show.
+// SCORE is the new live scoreboard (Red Light ticker feed).
 const NAV = [
   { to: "/", end: true, label: "Recap", testid: TEST_IDS.nav.recaps },
   { to: "/show", label: "Show", testid: TEST_IDS.nav.broadcast },
+  { to: "/scoreboard", label: "Score", testid: "nav-scoreboard" },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
   { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
@@ -23,7 +27,9 @@ const NAV = [
 export default function Layout({ children }) {
   return (
     <BroadcastProvider>
-      <LayoutInner>{children}</LayoutInner>
+      <LiveProvider>
+        <LayoutInner>{children}</LayoutInner>
+      </LiveProvider>
     </BroadcastProvider>
   );
 }
@@ -38,6 +44,7 @@ function LayoutInner({ children }) {
   // Back Office is settings, / is the Recap Show landing).
   const isQuietRoute =
     location.pathname === "/" ||
+    location.pathname.startsWith("/scoreboard") ||
     location.pathname.startsWith("/press-conference") ||
     location.pathname.startsWith("/back-office");
   const needsMiniBarPadding = !isHome && !isQuietRoute;
@@ -100,9 +107,15 @@ function LayoutInner({ children }) {
             >
               <Settings className="w-4 h-4" />
             </NavLink>
+            <GoalHornToggle />
           </div>
         </div>
       </header>
+
+      {/* Global Red Light alert — fixed under the header, appears when a
+       * goal event flows through the LiveProvider (demo mode ticks every
+       * ~10-15s). */}
+      <GoalAlertBar />
 
       {/* Off-Home routes get extra bottom padding so the fixed mini-player
        * doesn't cover the footer / last row of content. Landscape shrinks
@@ -129,5 +142,24 @@ function LayoutInner({ children }) {
 
       <ReggieAssistant />
     </div>
+  );
+}
+
+
+// Tiny header control — toggle the goal horn on/off. Kept next to Settings
+// so it's reachable from every route (any tab can hear the alert).
+function GoalHornToggle() {
+  const { muted, setMuted } = useLive();
+  return (
+    <button
+      data-testid="goal-horn-toggle"
+      onClick={() => setMuted(!muted)}
+      className={`h-9 w-9 rounded-md flex items-center justify-center transition-colors ${
+        muted ? "text-white/40 hover:text-white/70" : "text-red-400 hover:text-red-300"
+      } hover:bg-white/5`}
+      title={muted ? "Goal horn is off — click to enable" : "Goal horn on — click to mute"}
+    >
+      {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+    </button>
   );
 }
