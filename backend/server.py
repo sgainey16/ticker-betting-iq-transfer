@@ -40,6 +40,7 @@ import reggie_assistant as reggie
 from highlightly_client import highlightly, TAB_GROUPS
 from recap_show import generate_episode as generate_recap_episode
 from live import live_engine
+from radio_stations import lookup as radio_lookup, list_all as radio_list_all
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -764,6 +765,24 @@ async def live_reset():
     """Rewind the demo back to fresh 0-0 games."""
     live_engine.reset()
     return {"ok": True}
+
+
+# ---------- Radio stations ----------
+
+@api.get("/radio/station/{team_code}")
+async def radio_station(team_code: str):
+    """Return the flagship radio station for a team (if seeded)."""
+    station = radio_lookup(team_code)
+    if not station:
+        return {"team_code": team_code.upper(), "available": False}
+    return {"team_code": team_code.upper(), "available": True, **station}
+
+
+@api.get("/radio/stations")
+async def radio_stations():
+    """All seeded stations, keyed by team code."""
+    return {"stations": radio_list_all()}
+
 
 
 

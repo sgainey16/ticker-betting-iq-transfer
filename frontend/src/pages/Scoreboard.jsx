@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown, VolumeX, Volume2, Radio } from "lucide-react";
 import { useLive } from "@/lib/liveContext";
 import { TeamLogo } from "@/lib/teamLogos";
+import RadioPicker from "@/components/RadioPicker";
 
 // The Scoreboard tab. In demo mode this shows 4 mock games with a live
 // ticker feel — clock, period, PP/PK, score updating every ~12s. When we
@@ -133,6 +134,11 @@ function GameCard({ game }) {
           <MiniStat label="Possession %" away="—" home="—" placeholder />
           <div className="text-[9px] font-accent uppercase tracking-widest text-white/25 text-right pt-1">
             xG / possession wire to NHL EDGE feed at puck drop
+          </div>
+
+          {/* Team radio — tune in to whichever crew you want to hear */}
+          <div className="pt-2">
+            <RadioPicker awayCode={game.away.code} homeCode={game.home.code} />
           </div>
         </div>
       )}
