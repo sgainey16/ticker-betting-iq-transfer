@@ -173,6 +173,19 @@ body {
 
 
 /* Blinking caret for streaming text */
+
+/* Odds ticker marquee — slow horizontal scroll like the bottom crawl on
+ * a real broadcast. Two duplicated rows so the scroll wraps seamlessly. */
+@keyframes oddsMarquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.odds-marquee {
+  animation: oddsMarquee 60s linear infinite;
+  will-change: transform;
+}
+.odds-marquee:hover { animation-play-state: paused; }
+
 @keyframes caret {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }

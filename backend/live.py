@@ -44,19 +44,33 @@ _MOCK_MATCHUPS = [
 
 
 def _fresh_games() -> list[dict[str, Any]]:
-    """Kick off a fresh set of games at 20:00 of the first period."""
+    """Seed 4 mock games at varied states so the board reads as a real
+    mid-evening slate — one late-game, one mid, one just started, one
+    close-and-critical. Feels alive on first paint, not a fresh 0-0 grid."""
+    seeds = [
+        # (period, clock secs remaining, away_score, home_score, situation)
+        (3,  7 * 60 + 22, 3, 2, "5v5"),      # tight 3rd period
+        (2, 14 * 60 + 5,  1, 1, "PP-HOME"),  # mid-game, home on the man advantage
+        (1, 18 * 60 + 30, 0, 0, "5v5"),      # just underway
+        (3,  2 * 60 + 15, 4, 3, "PK-AWAY"),  # end-of-3rd, empty net looming
+    ]
     games = []
-    for away_code, home_code, away_name, home_name in _MOCK_MATCHUPS:
+    for (away_code, home_code, away_name, home_name), seed in zip(_MOCK_MATCHUPS, seeds):
+        period, secs, away_score, home_score, situation = seed
+        mins, s = divmod(secs, 60)
+        clock = f"{mins}:{s:02d}"
         games.append({
             "game_id": f"demo-{away_code}-{home_code}",
-            "away": {"code": away_code, "name": away_name, "score": 0, "shots": 0},
-            "home": {"code": home_code, "name": home_name, "score": 0, "shots": 0},
-            "period": 1,
-            "clock": "20:00",
-            "period_seconds_remaining": 20 * 60,
-            "situation": "5v5",        # or "PP-AWAY", "PP-HOME", "PK-AWAY"
-            "situation_until_sec": None,
-            "state": "LIVE",           # LIVE | FINAL | PREGAME
+            "away": {"code": away_code, "name": away_name,
+                     "score": away_score, "shots": away_score * 8 + 12},
+            "home": {"code": home_code, "name": home_name,
+                     "score": home_score, "shots": home_score * 8 + 14},
+            "period": period,
+            "clock": clock,
+            "period_seconds_remaining": secs,
+            "situation": situation,
+            "situation_until_sec": 90 if situation != "5v5" else None,
+            "state": "LIVE",
         })
     return games
 

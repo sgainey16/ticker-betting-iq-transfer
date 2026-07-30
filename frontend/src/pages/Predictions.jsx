@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { TEST_IDS, ANALYSTS } from "@/lib/config";
 import { Trophy, Flame, Target, RefreshCcw, Users, Cpu, Info } from "lucide-react";
 import GamePickerStrip from "@/components/GamePickerStrip";
+import OddsTicker from "@/components/OddsTicker";
 import { TeamLogo } from "@/lib/teamLogos";
 
 const teamName = (code, teams) => {
@@ -411,6 +412,10 @@ export default function Predictions() {
         </div>
       </aside>
       </div>
+
+      {/* Sportsbook odds ticker — bottom crawl. Deterministic mock lines
+       * for now (real Highlightly odds swap in with one endpoint call). */}
+      <OddsTicker games={games} />
     </div>
   );
 }
