@@ -61,7 +61,9 @@ export default function LiveDesk({ autoFlow = true }) {
   // Routes where the persistent Predict Show competes with something else.
   // Recap Show (/) has its own audio flow — pause the Predict-show mini-bar.
   // Presser (/press-conference) and Back Office are 1-on-1/settings flows.
-  const QUIET_ROUTES = ["/press-conference", "/back-office", "/scoreboard", "/"];
+  // Audition (/audition/*) plays raw broadcast clips — hosts must be silent
+  // so the user can actually hear the clip audio.
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/scoreboard", "/audition", "/"];
   const isQuietRoute =
     location.pathname === "/" ||
     QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));
