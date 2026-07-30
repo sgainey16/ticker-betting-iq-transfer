@@ -10,9 +10,9 @@ import { Volume2, VolumeX, PlayCircle, PauseCircle, ExternalLink } from "lucide-
 
 // ---- Timing ----
 const DEFAULT_OVERLAP_MS = 400;
-const END_OF_TOPIC_GAP_MS = 320;
+const END_OF_TOPIC_GAP_MS = 150;
 const PACE_MS = {
-  cutoff: -700, quick: -500, relaxed: -400, beat: 60, land: 180, breath: 320,
+  cutoff: -700, quick: -500, relaxed: -400, beat: 20, land: 60, breath: 100,
 };
 
 function paceGapMs(paceKey, isInterrupt) {

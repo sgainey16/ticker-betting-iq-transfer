@@ -37,7 +37,7 @@ ANALYST_VOICES = {
     # mature US male voice ("Bill" from the pre-made ElevenLabs library).
     "marc": {
         "voice_id": "pqHfZKP75CvOlQylNhV4",  # Bill — mature, warm
-        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 1.08},
+        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 0.95},
     },
 }
 
