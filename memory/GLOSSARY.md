@@ -101,19 +101,19 @@ These *may* stay bare because they're mainstream enough:
 
 ## 🔔 Stinger
 
-Client-synthesized via Web Audio API — no external file, no API cost. Two
-intensities live at `/app/frontend/src/lib/stinger.js`:
+Client-synthesized via Web Audio API — no external file, no API cost.
+Lives at `/app/frontend/src/lib/stinger.js`.
 
-- `playStinger()` — full network sting. Fires when the show crosses from
-  one segment (game) into the next.
-- `playStingerSoft()` — subtler version. Fires on show open so we
-  announce "we're live" without stepping on Reggie's first line.
-
-Vibe: deep sub-bass whoosh (SportsCenter DNA) + high-frequency synth
-click (modern signature) + short sine riser (the punch-out cue).
-
-Tune the feel by nudging the numbers inside the file — no rebuild
-needed beyond hot-reload.
+- **Fires on show open** — full network sting when the user taps "Tap to
+  run the tape" on the Recap Show.
+- **Self-caps at 3 plays per browser session** via `sessionStorage`, so
+  the effect stays fun and doesn't wear out. Fresh count on each new
+  browser session.
+- Vibe: deep sub-bass whoosh (SportsCenter DNA) + high-frequency synth
+  click (modern signature) + short sine riser (the punch-out cue).
+- Two intensities exported (`playStinger`, `playStingerSoft`); only the
+  full one is wired today. Between-segment stingers are parked for now.
+- Tune the feel by nudging the numbers inside the file — hot-reload only.
 
 ## ✍️ Handy phrasing shortcuts
 
