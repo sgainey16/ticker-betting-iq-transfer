@@ -51,6 +51,28 @@ function buildEmbed(url) {
   );
 }
 
+// Short Reggie one-liners that plug into the transition bumper. Category-
+// agnostic so any line works for any clip type — cached forever by the
+// backend once first generated (hashed on text). Keep these ~2-4 seconds
+// each so the reel keeps its shorts-show pace.
+const REGGIE_TRANSITION_LINES = [
+  "Ohhh, what a snipe.",
+  "Are you kidding me right now?",
+  "Top shelf. Cellophane.",
+  "That is a highlight-reel goal.",
+  "Nasty finish. Wow.",
+  "Absolute rocket.",
+  "Look at that setup.",
+  "Give me another one.",
+  "Marc's gonna have something to say about that.",
+  "Alright, watch this one.",
+  "Here comes another beauty.",
+  "How about this next one.",
+  "Set up like clockwork.",
+  "Backhand, top corner.",
+  "Boys, don't blink.",
+];
+
 export default function FastReelAudition() {
   const { matchId } = useParams();
   const [reel, setReel] = useState(null);
@@ -60,6 +82,11 @@ export default function FastReelAudition() {
   const [showBumper, setShowBumper] = useState(false);
   const iframeRef = useRef(null);
   const audioCtxRef = useRef(null);
+  // Pre-cached Reggie transition audio URLs. Warmed on mount so bumpers
+  // never have to wait on ElevenLabs generation.
+  const reggieLinesRef = useRef([]);
+  const lastReggieIdxRef = useRef(-1);
+  const bumperAudioRef = useRef(null);
 
   // Lazy-init a single Web Audio context (browsers require a user gesture).
   function getAudioCtx() {
@@ -79,6 +106,34 @@ export default function FastReelAudition() {
       .catch(() => { if (alive) setReel({ short_clips: [], long_clip: null }); });
     return () => { alive = false; };
   }, [matchId]);
+
+  // Warm the Reggie bumper-line audio cache on mount. All 15 lines fire in
+  // parallel — after this resolves, transitions can play a line instantly.
+  useEffect(() => {
+    let alive = true;
+    Promise.all(
+      REGGIE_TRANSITION_LINES.map((text) =>
+        axios.get(`${API}/recap-show/line-audio`, { params: { speaker: "reggie", text } })
+          .then((r) => r.data?.audio_url)
+          .catch(() => null)
+      )
+    ).then((urls) => {
+      if (alive) reggieLinesRef.current = urls.filter(Boolean);
+    });
+    return () => { alive = false; };
+  }, []);
+
+  function pickReggieLineUrl() {
+    const urls = reggieLinesRef.current;
+    if (!urls.length) return null;
+    // Avoid repeating the same line back-to-back.
+    let i = Math.floor(Math.random() * urls.length);
+    if (i === lastReggieIdxRef.current && urls.length > 1) {
+      i = (i + 1) % urls.length;
+    }
+    lastReggieIdxRef.current = i;
+    return urls[i];
+  }
 
   const clips = reel?.short_clips || [];
   const current = clips[idx];
@@ -122,18 +177,43 @@ export default function FastReelAudition() {
       setPaused(true);
       return;
     }
-    // 1) fade-to-black (300ms) → 2) branded bumper (900ms) → 3) new clip auto-plays
-    // Sting fires at the start of the fade so audio bridges the video swap.
+    // 1) Sting fires immediately (whoosh bridges the video swap).
+    // 2) Fade to bumper card.
+    // 3) Reggie speaks a random one-liner over the bumper.
+    // 4) When his line ends, next clip fires. Fallback: 1.6s if audio isn't
+    //    ready yet (first bumper on cold cache).
     setTransitioning(true);
-    playBumperSting(getAudioCtx(), 0.5);
+    playBumperSting(getAudioCtx(), 0.4);
+
     setTimeout(() => {
       setShowBumper(true);
-      setTimeout(() => {
+      const url = pickReggieLineUrl();
+      // Stop any lingering audio from a rapid manual-Next tap.
+      if (bumperAudioRef.current) {
+        try { bumperAudioRef.current.pause(); } catch { /* noop */ }
+      }
+      const finish = () => {
         setIdx((i) => i + 1);
         setShowBumper(false);
         setTransitioning(false);
-      }, 900);
-    }, 300);
+        bumperAudioRef.current = null;
+      };
+      if (url) {
+        const audio = new Audio(`${process.env.REACT_APP_BACKEND_URL}${url}`);
+        audio.volume = 0.9;
+        audio.onended = finish;
+        // Safety net: if audio fails/times out, advance after 3.5s anyway
+        // so a broken line never traps the show.
+        const safety = setTimeout(finish, 3800);
+        audio.onerror = () => { clearTimeout(safety); finish(); };
+        audio.onplay  = () => { clearTimeout(safety); };
+        audio.play().catch(() => { clearTimeout(safety); finish(); });
+        bumperAudioRef.current = audio;
+      } else {
+        // Cache not warm yet — hold the branded bumper for a beat and move on.
+        setTimeout(finish, 1200);
+      }
+    }, 250);
   }
 
   function goPrev() {
