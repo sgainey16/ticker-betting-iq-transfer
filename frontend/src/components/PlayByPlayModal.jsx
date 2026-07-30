@@ -150,7 +150,16 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
         if (watchdog) clearTimeout(watchdog);
         hasReachedPlaying = false;
         watchdog = setTimeout(() => {
-          if (!hasReachedPlaying) advance();
+          if (!hasReachedPlaying) {
+            // If we're already on the last clip, closing is the only sane
+            // exit — advance() can't do anything and we don't want a
+            // "Video unavailable" dead-end frame.
+            if (idx >= (clips?.length || 0) - 1) {
+              onClose?.();
+            } else {
+              advance();
+            }
+          }
         }, 8000);
       };
 
