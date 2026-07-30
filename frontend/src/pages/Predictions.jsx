@@ -115,12 +115,12 @@ export default function Predictions() {
               Call It · Tonight{"\u2019"}s card
             </div>
             <h1 className="font-headline text-4xl sm:text-5xl text-white mt-1">
-              Pick against the panel
+              Pick a winner. Build your score.
             </h1>
             <p className="text-white/60 mt-2 text-sm max-w-xl">
-              Reggie says one thing. Marc says another. The model has its own
-              read. You have to <em className="not-italic text-white">call it</em>.
-              We track your record vs the desk — no wallet, just bragging rights.
+              Tap the team you think will win. Every hit adds to your streak,
+              every miss keeps you honest. No wallet — just how sharp you are
+              vs the desk and the room.
             </p>
           </div>
 
@@ -200,23 +200,9 @@ export default function Predictions() {
                   />
                 </div>
 
-                {/* Panel takes — Reggie & Marc quotes */}
-                <div className="mt-4 grid sm:grid-cols-2 gap-2" data-testid={`pred-panel-${g.id}`}>
-                  <PanelTake
-                    analyst={ANALYSTS.reggie}
-                    pick={g.reggie_pick}
-                    take={g.reggie_take}
-                    teamCode={g.reggie_pick === "home" ? g.home : g.away}
-                  />
-                  <PanelTake
-                    analyst={ANALYSTS.marc}
-                    pick={g.marc_pick}
-                    take={g.marc_take}
-                    teamCode={g.marc_pick === "home" ? g.home : g.away}
-                  />
-                </div>
-
-                {/* AI consensus + community vote */}
+                {/* AI consensus + community vote (Reggie/Marc quotes removed —
+                 * their takes now live in the Desk Preview audio segment,
+                 * making the card lighter and quicker to scan). */}
                 <div className="mt-4 grid sm:grid-cols-2 gap-3" data-testid={`pred-consensus-${g.id}`}>
                   <div className="rounded-md border border-[#2d2d35] bg-[#0b0b10] px-3 py-2.5">
                     <div className="flex items-center gap-1.5 text-[10px] font-accent uppercase tracking-widest text-white/40">
@@ -252,6 +238,18 @@ export default function Predictions() {
                     )}
                   </div>
                 </div>
+
+                {/* Head-to-head dropdown — season snapshot for both teams,
+                 * hidden by default so it doesn't crowd the card. Data is
+                 * already loaded via /api/stats/teams so the reveal is
+                 * instant. */}
+                <HeadToHead
+                  awayCode={g.away}
+                  homeCode={g.home}
+                  awayAccent={awayAccent}
+                  homeAccent={homeAccent}
+                  teams={teams}
+                />
 
                 {!picked && (
                   <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -417,31 +415,65 @@ function StatTile({ icon: Icon, label, value }) {
 }
 
 function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc, onClick, side }) {
+  const locked = picked && chosen;
   return (
     <button
       data-testid={testid}
       disabled={picked}
       onClick={onClick}
-      className="text-left rounded-lg border p-4 transition-all disabled:opacity-70 disabled:cursor-not-allowed relative overflow-hidden"
+      className={`text-left rounded-lg border-2 p-4 transition-all disabled:cursor-not-allowed relative overflow-hidden ${
+        chosen ? "scale-[1.01]" : "hover:border-white/25"
+      }`}
       style={{
-        borderColor: chosen ? "#1e5dff" : "#2d2d35",
-        background: chosen ? "rgba(30,93,255,0.08)" : "transparent",
+        borderColor: chosen ? accent : "#2d2d35",
+        background: chosen
+          ? `linear-gradient(135deg, ${accent}33 0%, ${accent}11 60%, transparent 100%)`
+          : "transparent",
+        boxShadow: chosen ? `0 0 0 1px ${accent}55, 0 8px 30px -8px ${accent}77` : "none",
       }}
     >
-      <div className="flex items-center justify-between">
+      {/* Glow ring when chosen */}
+      {chosen && (
+        <span
+          className="absolute inset-0 pointer-events-none"
+          style={{ boxShadow: `inset 0 0 22px ${accent}44` }}
+        />
+      )}
+      <div className="flex items-center justify-between relative">
         <div>
           <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
             {side === "home" ? "Home" : "Away"} · {code}
           </div>
           <div className="font-headline text-xl text-white mt-1">{label}</div>
+          {chosen && (
+            <div
+              className="mt-2 inline-flex items-center gap-1 font-accent text-[10px] uppercase tracking-[0.25em]"
+              style={{ color: accent }}
+              data-testid={`${testid}-chosen`}
+            >
+              <span
+                className="inline-flex items-center justify-center w-4 h-4 rounded-full"
+                style={{ background: accent, color: "#0b0b10" }}
+              >
+                ✓
+              </span>
+              {locked ? "Locked" : "Your pick"}
+            </div>
+          )}
         </div>
-        <div className="h-10 w-10 rounded flex items-center justify-center overflow-hidden"
-             style={{ background: `${accent}22`, border: `1px solid ${accent}55` }}>
-          <TeamLogo code={code} size={32} monogramClass="!bg-transparent" />
+        <div
+          className="h-12 w-12 rounded flex items-center justify-center overflow-hidden transition-transform"
+          style={{
+            background: `${accent}${chosen ? "44" : "22"}`,
+            border: `1px solid ${accent}${chosen ? "aa" : "55"}`,
+            transform: chosen ? "scale(1.05)" : "scale(1)",
+          }}
+        >
+          <TeamLogo code={code} size={38} monogramClass="!bg-transparent" />
         </div>
       </div>
       {(reggie || marc) && (
-        <div className="mt-3 flex gap-1.5 flex-wrap">
+        <div className="mt-3 flex gap-1.5 flex-wrap relative">
           {reggie && <span className="inline-flex items-center gap-1 text-[9px] font-accent uppercase tracking-widest px-1.5 py-0.5 rounded"
                            style={{ background: ANALYSTS.reggie.accent + "22", color: ANALYSTS.reggie.accent, border: `1px solid ${ANALYSTS.reggie.accent}44` }}>
             Reggie
@@ -456,28 +488,7 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
   );
 }
 
-function PanelTake({ analyst, pick, take, teamCode }) {
-  return (
-    <div className="rounded-md border border-[#2d2d35] bg-[#0b0b10] px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        <div className="h-6 w-6 rounded-full flex items-center justify-center font-headline text-[10px]"
-             style={{ background: `${analyst.accent}22`, color: analyst.accent, border: `1px solid ${analyst.accent}55` }}>
-          {analyst.short[0]}
-        </div>
-        <div className="font-accent text-[10px] uppercase tracking-widest text-white/50">
-          {analyst.short} takes
-          <span className="inline-flex items-center gap-1 ml-1 align-middle">
-            <TeamLogo code={teamCode} size={14} />
-            <span className="text-white font-headline text-xs">{teamCode}</span>
-          </span>
-        </div>
-      </div>
-      <div className="text-white/80 text-xs mt-1.5 leading-snug italic">
-        &ldquo;{take}&rdquo;
-      </div>
-    </div>
-  );
-}
+function PanelTake() { return null; } // kept as placeholder shim — Reggie/Marc quotes moved to Desk Preview audio
 
 function VsPanelRow({ analyst, beat, tie }) {
   return (
@@ -502,6 +513,68 @@ function VsPanelRow({ analyst, beat, tie }) {
           {beat}<span className="text-white/40"> · </span>{tie}
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ---- Head-to-Head dropdown ----
+// A tap-to-reveal panel that compares the two teams' season snapshots
+// side-by-side. Data comes from /api/stats/teams (already loaded by the
+// parent). We render the same simple format Reggie & Marc reference on-air:
+//   record · goals for/against · PP% · PK%.
+function HeadToHead({ awayCode, homeCode, awayAccent, homeAccent, teams }) {
+  const [open, setOpen] = useState(false);
+  const away = teams.find((t) => t.code === awayCode);
+  const home = teams.find((t) => t.code === homeCode);
+  if (!away || !home) return null;
+  const rec = (t) => `${t.w ?? 0}-${t.l ?? 0}-${t.otl ?? 0}`;
+  const rows = [
+    { label: "Record",   a: rec(away),          h: rec(home) },
+    { label: "Points",   a: away.pts ?? "—",    h: home.pts ?? "—" },
+    { label: "Goals For",     a: away.gf ?? "—", h: home.gf ?? "—" },
+    { label: "Goals Against", a: away.ga ?? "—", h: home.ga ?? "—" },
+  ];
+  return (
+    <div className="mt-3 rounded-md border border-[#2d2d35] bg-[#0b0b10] overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-white/[0.04] transition-colors"
+        data-testid={`h2h-toggle-${awayCode}-${homeCode}`}
+      >
+        <div className="font-accent text-[10px] uppercase tracking-[0.25em] text-white/60">
+          Head to Head · Season Snapshot
+        </div>
+        <span className={`text-white/50 text-xs transition-transform ${open ? "rotate-180" : ""}`}>
+          ⌄
+        </span>
+      </button>
+      {open && (
+        <div className="px-4 py-3 border-t border-[#2d2d35]">
+          <div className="grid grid-cols-3 items-center pb-2 mb-2 border-b border-white/10">
+            <div className="flex items-center gap-2 justify-start">
+              <TeamLogo code={awayCode} size={22} />
+              <span className="font-headline text-white text-sm">{awayCode}</span>
+            </div>
+            <div className="text-center font-accent text-[9px] uppercase tracking-[0.3em] text-white/40">vs</div>
+            <div className="flex items-center gap-2 justify-end">
+              <span className="font-headline text-white text-sm">{homeCode}</span>
+              <TeamLogo code={homeCode} size={22} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            {rows.map((r) => (
+              <div key={r.label} className="grid grid-cols-3 items-center">
+                <div className="text-right font-headline text-lg text-white">{r.a}</div>
+                <div className="text-center font-accent text-[10px] uppercase tracking-widest text-white/50">
+                  {r.label}
+                </div>
+                <div className="text-left font-headline text-lg text-white">{r.h}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
