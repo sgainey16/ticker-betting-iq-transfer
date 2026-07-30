@@ -20,6 +20,7 @@ import DeskPreview from "@/pages/DeskPreview";
 import ComingSoon from "@/pages/ComingSoon";
 import FastReelAudition from "@/pages/FastReelAudition";
 import BrandAudition from "@/pages/BrandAudition";
+import TeamRoomAudition from "@/pages/TeamRoomAudition";
 import { Toaster } from "sonner";
 
 function App() {
@@ -51,6 +52,8 @@ function App() {
             <Route path="/desk-preview" element={<DeskPreview />} />
             <Route path="/audition/fast-reel/:matchId" element={<FastReelAudition />} />
             <Route path="/audition/brand" element={<BrandAudition />} />
+            <Route path="/audition/team-room" element={<TeamRoomAudition />} />
+            <Route path="/audition/team-room/:code" element={<TeamRoomAudition />} />
             <Route path="/soon/:slug" element={<ComingSoon />} />
           </Routes>
         </Layout>
