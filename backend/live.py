@@ -84,6 +84,10 @@ class LiveEngine:
         self.last_tick_at: float = 0.0
         self.demo_mode: bool = True
         self._task: asyncio.Task | None = None
+        # Goal-rate gating: first 2 goals fire ~every 2 min, then space out
+        # to ~every 4 min so the red-light alert stays exciting, not spammy.
+        self._goal_count: int = 0
+        self._last_goal_at: float = 0.0
 
     # ------------- lifecycle -------------
     def start(self) -> None:
@@ -113,8 +117,16 @@ class LiveEngine:
         """Rewind everything to fresh 0-0 games (used by the demo toggle)."""
         self.games = _fresh_games()
         self.events = []
+        self._goal_count = 0
+        self._last_goal_at = 0.0
 
     # ------------- demo mechanics -------------
+    def _min_goal_gap_sec(self) -> float:
+        """First 2 goals ~2 min apart, after that ~4 min apart.
+        Small jitter (±15s) so it doesn't feel metronomic."""
+        base = 120.0 if self._goal_count < 2 else 240.0
+        return base + random.uniform(-15, 15)
+
     def _tick_demo(self) -> None:
         self.last_tick_at = time.time()
         # Pick an action weighted so goals feel frequent but not silly.
@@ -123,6 +135,13 @@ class LiveEngine:
             weights=[45, 8, 12, 12, 23],
             k=1,
         )[0]
+        # Gate goals by real elapsed time so the red-light alert doesn't spam.
+        # If the random draw picked "goal" but we haven't waited long enough,
+        # downgrade to a quiet clock tick.
+        if action == "goal":
+            elapsed = time.time() - self._last_goal_at
+            if self._last_goal_at > 0 and elapsed < self._min_goal_gap_sec():
+                action = "clock_only"
         # Pick a game that's still live (or reset if all are FINAL).
         live_games = [g for g in self.games if g["state"] == "LIVE"]
         if not live_games:
@@ -155,6 +174,9 @@ class LiveEngine:
         if is_pp:
             g["situation"] = "5v5"
             g["situation_until_sec"] = None
+        # Track rate-gating state
+        self._goal_count += 1
+        self._last_goal_at = time.time()
         self._push_event({
             "kind": "goal",
             "game_id": g["game_id"],
