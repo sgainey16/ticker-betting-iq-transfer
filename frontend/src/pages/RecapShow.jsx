@@ -180,7 +180,7 @@ export default function RecapShow() {
         <div className="inline-flex items-center gap-2 rounded-full bg-[#F5A623]/15 border border-[#F5A623]/50 px-3 py-1">
           <span className="tick-dot bg-[#F5A623] live-pulse" />
           <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
-            The Morning Line · {formatDate(episode.date)}
+            Last Night's Games · {formatDate(episode.date)}
           </span>
         </div>
         <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
