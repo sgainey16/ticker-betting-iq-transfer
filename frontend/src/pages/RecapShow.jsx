@@ -3,7 +3,7 @@ import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
 import {
-  Play, Pause, SkipForward, Volume2, VolumeX, Film,
+  Play, Pause, SkipForward, Volume2, VolumeX, Film, Smartphone,
 } from "lucide-react";
 
 // Recap Show — SportsCenter-style "morning line" player. Advances through:
@@ -254,6 +254,11 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
         fill
       />
 
+      {/* Rotate-your-phone nudge — portrait phones only, sits on-frame like
+       * a camera app's orientation hint. Auto-hides after 6s or when user
+       * taps it. Vanishes forever in landscape via `portrait:flex`. */}
+      <RotateHint />
+
       {/* Segment label (top-left) — always visible when playing */}
       {(playing || finished) && beat && (
         <div className="absolute top-3 left-3 z-20 flex items-center gap-2 rounded-full bg-black/60 border border-white/15 px-3 py-1.5 backdrop-blur-md">
@@ -395,5 +400,44 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
         );
       })}
     </div>
+  );
+}
+
+
+// ---- Rotate-your-phone hint ----
+// Small camera-app-style chip that nudges portrait viewers to flip
+// horizontal for the full broadcast. Dismisses permanently once tapped
+// (per-device via localStorage) and auto-hides after 6 seconds so it
+// never blocks the show.
+const ROTATE_HINT_KEY = "ticker.recap.rotate_hint_dismissed";
+function RotateHint() {
+  const [visible, setVisible] = useState(() => {
+    try { return !localStorage.getItem(ROTATE_HINT_KEY); } catch { return true; }
+  });
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(() => setVisible(false), 6000);
+    return () => clearTimeout(t);
+  }, [visible]);
+  const dismiss = () => {
+    try { localStorage.setItem(ROTATE_HINT_KEY, String(Date.now())); } catch {}
+    setVisible(false);
+  };
+  if (!visible) return null;
+  return (
+    <button
+      onClick={dismiss}
+      data-testid="recap-rotate-hint"
+      className="portrait:flex landscape:hidden absolute top-3 left-1/2 -translate-x-1/2 z-30 items-center gap-2 rounded-full bg-black/70 border border-[#1e5dff]/60 px-3 py-1.5 backdrop-blur-md shadow-[0_6px_20px_-8px_rgba(30,93,255,0.7)] animate-pulse"
+      aria-label="Rotate phone for full broadcast"
+    >
+      <Smartphone
+        className="w-3.5 h-3.5 text-[#1e5dff]"
+        style={{ transform: "rotate(90deg)" }}
+      />
+      <span className="font-accent text-[10px] uppercase tracking-[0.25em] text-white/90">
+        Flip for full broadcast
+      </span>
+    </button>
   );
 }
