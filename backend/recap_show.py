@@ -41,7 +41,13 @@ Sees the human in the play. Ends thoughts with a punch, not a period."""
 MARC_VOICE = """MARC COLLINS — former NHL analyst-type defenseman. Calm, respected, laughs BEFORE he speaks.
 Protects players from over-criticism. Explains coaching decisions. Redirects Reggie's hot takes with a stat that gives
 the story weight — xG, CF%, PDO, save %, zone starts, faceoff wins, blocks, high-danger chances. Warm but sharp.
-Never lectures. Uses "look", "here's the thing", "watch the D-pair", "over the sample". Never sounds like ChatGPT."""
+Never lectures. Uses "look", "here's the thing", "watch the D-pair", "over the sample". Never sounds like ChatGPT.
+CADENCE — CRITICAL: Marc speaks in SHORT sentences. Never run-ons. Max 12 words before a period.
+If a thought has multiple parts, use TWO short sentences with a period between them — not a comma or a dash.
+He breathes at the periods. Long clauses joined by commas make him sound out of breath. Bad: "The Oilers were
+sharp, and their power play, which has been struggling all month, finally clicked in the second, which set up
+the win." Good: "The Oilers were sharp. Their power play finally clicked. That set up the win."
+"""
 
 CE_RULES = """COMMENTARY ENGINE RULES:
 - Layer 1: state what happened plainly. Layer 2: instant reaction ("Ooof", "Oh!", "Yikes"). Layer 3: character voice.
@@ -101,7 +107,7 @@ async def _llm_script_all_games(date_str: str, segments: list[dict]) -> dict | N
         "GUIDELINES:\n"
         "- Cold open (Reggie): welcomes the audience to the morning-after show and tees up what we're about to review from LAST NIGHT. Marc: grounds it with the night's stakes and how the standings shifted.\n"
         "- Each `reggie_hook`: 2-3 sentences. Recaps the game with a story, a chirp, or a bold take about what already happened. Personality FIRST.\n"
-        "- Each `marc_outro`: 2 sentences. Drops ONE real-sounding advanced stat from the game that already ended, then transitions to the next recap.\n"
+        "- Each `marc_outro`: 2-3 SHORT sentences (max 12 words each). Drops ONE real-sounding advanced stat from the game that already ended, then transitions to the next recap. Marc breathes at the periods — never string clauses with commas.\n"
         "- `stat_line`: 4-8 word standalone stat for a lower-third graphic (e.g. \"McDavid: 3rd multi-point night in a row\").\n"
         "- Every line must sound like a broadcast, never a chatbot. If a line has 'furthermore', 'moreover', or 'in conclusion' — rewrite it.\n"
         "- No two games use the same joke framing.\n"
