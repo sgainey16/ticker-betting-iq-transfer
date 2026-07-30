@@ -91,9 +91,9 @@ export default function PlayByPlayPanel({ segment }) {
               }`}
               data-testid={`pbp-row-${i}`}
             >
-              {/* Team logo + play overlay — bigger */}
-              <div className="relative flex-shrink-0 h-14 w-14 rounded-md bg-black/60 flex items-center justify-center border border-white/10">
-                <TeamLogo code={p.team_code} className="h-11 w-11 object-contain" />
+              {/* Team logo + play overlay — bigger tile, near-edge-to-edge logo */}
+              <div className="relative flex-shrink-0 h-16 w-16 rounded-md bg-black/60 flex items-center justify-center border border-white/10">
+                <TeamLogo code={p.team_code} className="h-[54px] w-[54px] object-contain" />
                 {hasClip && (
                   <span className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
                         style={{ boxShadow: "0 0 12px -2px rgba(239,68,68,0.9)" }}>
