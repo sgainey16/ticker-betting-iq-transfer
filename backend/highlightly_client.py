@@ -205,6 +205,61 @@ class HighlightlyClient:
         raw = await self._fetch_highlights({"matchId": match_id, "limit": limit})
         return [self._normalize(h) for h in raw if h.get("type") == "VERIFIED"]
 
+    async def get_match_stats(self, match_id: int) -> dict | None:
+        """Fetches the /matches/{id} endpoint and normalizes each team's
+        `overallStatistics` into a flat comparison map. Returns:
+            {
+              "match_id": 12345,
+              "home": {"team": {...}, "stats": {"shots": 32, ...}},
+              "away": {"team": {...}, "stats": {"shots": 28, ...}},
+            }
+        Returns None if not available or the API is disabled.
+        """
+        if not self.is_ready():
+            return None
+        url = f"{self.base_url}/matches/{match_id}"
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                r = await client.get(url, headers=self._headers())
+                if r.status_code != 200:
+                    return None
+                data = r.json()
+        except Exception as e:  # noqa: BLE001
+            log.warning("highlightly match stats failed for %s: %s", match_id, e)
+            return None
+        # Highlightly returns a list wrapping a single match; unwrap.
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        if not isinstance(data, dict):
+            return None
+        home_team = data.get("homeTeam") or {}
+        away_team = data.get("awayTeam") or {}
+        stats_by_team = {}
+        for block in (data.get("overallStatistics") or []):
+            team = block.get("team") or {}
+            tid = team.get("id")
+            flat = {}
+            for row in block.get("data") or []:
+                name = (row.get("displayName") or "").strip()
+                if not name:
+                    continue
+                # Convert numeric strings to floats where possible.
+                val = row.get("value")
+                try:
+                    if val is not None and str(val).replace(".", "", 1).replace("-", "", 1).isdigit():
+                        val = float(val) if "." in str(val) else int(val)
+                except Exception:
+                    pass
+                flat[name] = val
+            stats_by_team[tid] = flat
+        return {
+            "match_id": match_id,
+            "home": {"team": home_team, "stats": stats_by_team.get(home_team.get("id")) or {}},
+            "away": {"team": away_team, "stats": stats_by_team.get(away_team.get("id")) or {}},
+            "score": (data.get("state") or {}).get("score", {}),
+            "state": (data.get("state") or {}).get("description"),
+        }
+
     async def get_latest_populated(self, days_back: int = 90, limit: int = 40) -> dict:
         """Walk backwards day by day until we find a date with verified clips.
         Returns { date, highlights[] }. Bounded scan so we don't burn quota

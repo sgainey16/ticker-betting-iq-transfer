@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
+import PostGameStats from "@/components/PostGameStats";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film, Smartphone,
 } from "lucide-react";
@@ -75,6 +76,12 @@ export default function RecapShow() {
 
   const beats = useMemo(() => buildBeatSequence(episode), [episode]);
   const currentBeat = beats[beatIdx];
+  // Which segment (game) is currently on-air? The post-game stats panel
+  // follows this — swap boxes as we move between games.
+  const currentSegment = currentBeat?.segment
+    || (episode?.segments || []).find((s) => s.order === (currentBeat?.segment_order || 1))
+    || (episode?.segments || [])[0]
+    || null;
 
   // Fetch episode
   useEffect(() => {
@@ -216,6 +223,13 @@ export default function RecapShow() {
         }}
       />
       </div>
+
+      {/* Post-Game Stats — sits beneath the fixed-height show wrapper so
+       * users scroll down (portrait) or swipe (landscape) to see the box
+       * score while Reggie & Marc are still discussing the game. */}
+      {currentSegment && (
+        <PostGameStats segment={currentSegment} />
+      )}
 
       {/* Hidden audio element for host lines */}
       <audio ref={audioRef} playsInline />

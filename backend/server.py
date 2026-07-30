@@ -716,6 +716,32 @@ async def recap_show_line_audio(speaker: str, text: str):
         return {"audio_url": None, "error": str(e)[:200]}
 
 
+# ---- Post-game stats ----
+# Highlightly's /matches/{id} returns rich per-team box score numbers
+# (shots, hits, faceoff %, PP %, blocks, PIM, giveaways/takeaways). We
+# normalize to the compact shape the RecapShow panel expects: two team
+# blocks with a `stats` object keyed by human-friendly display name.
+
+POSTGAME_STATS_TTL = 6 * 3600  # (informational — uses default cache TTL)
+
+
+@api.get("/recap-show/post-game-stats")
+async def recap_show_post_game_stats(match_id: int):
+    """Comparison box score for a completed match. Returns null-safe
+    empty payload if Highlightly is disabled or the game has no stats."""
+    cache_key = ("postgame-stats", match_id)
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return {"cached": True, **cached}
+    stats = await highlightly.get_match_stats(match_id)
+    if not stats:
+        return {"ready": False, "match_id": match_id}
+    payload = {"ready": True, **stats}
+    _cache_set(cache_key, payload)
+    return {"cached": False, **payload}
+
+
+
 # ---------- Predictions ----------
 @api.get("/predictions/games")
 async def predictions_games():
