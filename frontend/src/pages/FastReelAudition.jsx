@@ -21,9 +21,9 @@ function ytIdFromUrl(url) {
   return watch ? watch[1] : null;
 }
 
-function ytThumb(url) {
+function ytThumb(url, quality = "mqdefault") {
   const id = ytIdFromUrl(url);
-  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
+  return id ? `https://img.youtube.com/vi/${id}/${quality}.jpg` : null;
 }
 
 // Build an iframe URL that (a) autoplays, (b) hides YouTube branding,
@@ -118,6 +118,10 @@ export default function FastReelAudition() {
   const [paused, setPaused] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [showBumper, setShowBumper] = useState(false);
+  // Track whether the user has actually started playback. Until they tap
+  // once, we show a poster (YouTube thumbnail + big Play button) so the
+  // page never lands on a black rectangle. Auto-set to true on YT state=1.
+  const [hasStarted, setHasStarted] = useState(false);
   const playerRef = useRef(null);
   const playerContainerId = "reel-yt-player";
   const currentIdxRef = useRef(0);
@@ -215,7 +219,9 @@ export default function FastReelAudition() {
         events: {
           onReady: (e) => { try { e.target.playVideo(); } catch { /* noop */ } },
           onStateChange: (e) => {
-            // state 0 = ENDED — auto-advance with the branded bumper.
+            // state 1 = PLAYING → hide the poster if it was still showing.
+            if (e.data === 1) setHasStarted(true);
+            // state 0 = ENDED → auto-advance with the branded bumper.
             if (e.data === 0) advance();
           },
           onError: () => {
@@ -343,6 +349,49 @@ export default function FastReelAudition() {
           data-testid={`reel-player`}
         />
 
+        {/* POSTER · shown on arrival until first play. Real YouTube thumbnail
+         *  (hqdefault ~ 480×360) + big glowing Play button + game meta strip.
+         *  Tapping fires playback (which mobile browsers need anyway to
+         *  unlock audio) and this poster hides on YT state=1. */}
+        {!hasStarted && current && !transitioning && (
+          <button
+            onClick={() => {
+              try { playerRef.current?.playVideo(); } catch { /* noop */ }
+              // Optimistic hide — even if YT state event is delayed the
+              // user still gets instant feedback that their tap worked.
+              setHasStarted(true);
+            }}
+            className="absolute inset-0 z-20 group"
+            data-testid="reel-poster"
+            aria-label="Tap to play"
+          >
+            <img
+              src={ytThumb(current.embed_url, "hqdefault")}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/50" />
+            {/* Big red Play button — dead center */}
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span
+                className="h-16 w-16 landscape:h-14 landscape:w-14 rounded-full bg-red-600 group-active:bg-red-500 flex items-center justify-center transition-colors"
+                style={{ boxShadow: "0 0 32px -4px rgba(239,68,68,0.9)" }}
+              >
+                <Play className="w-6 h-6 text-white translate-x-[2px]" fill="currentColor" />
+              </span>
+            </span>
+            {/* Bottom overlay strip — "TAP TO START · 11 CLIPS" */}
+            <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between">
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: "#fff", letterSpacing: "0.05em" }}>
+                TAP TO START THE REEL
+              </div>
+              <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.28em", color: "#1E5BFF" }}>
+                {total} CLIPS · {reel?.matchup || ""}
+              </div>
+            </div>
+          </button>
+        )}
+
         {/* Transition scrim (fade to black) */}
         {transitioning && !showBumper && (
           <div className="absolute inset-0 bg-black transition-opacity duration-300 opacity-100" />
@@ -438,11 +487,11 @@ export default function FastReelAudition() {
               >
                 <div className="aspect-video bg-black/60 relative">
                   {t && <img src={t} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                   <span className="absolute top-1 left-1 font-accent text-[8px] uppercase tracking-widest bg-red-600 text-white px-1 py-0.5 rounded-sm">
                     {labels[i] || (CATEGORY_LABEL_BASE[c.category] || c.category).split(" ")[0]}
                   </span>
-                  <span className="absolute bottom-1 right-1 font-accent text-[9px] text-white/85">
+                  <span className="absolute bottom-1 right-1 font-accent text-[9px] text-white/90 bg-black/60 px-1 rounded-sm">
                     {i + 1}
                   </span>
                 </div>
