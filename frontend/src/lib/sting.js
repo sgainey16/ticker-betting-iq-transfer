@@ -115,3 +115,56 @@ export function playTickerSting(ctx, volume = 0.4) {
     console.warn("Ticker sting failed", e);
   }
 }
+
+/**
+ * Compact between-clip bumper — a fast whoosh + kick + shimmer designed for
+ * the fast-reel audition. ~0.7 seconds total, tight enough to overlay a
+ * 900ms transition card without dead air. Louder mid-range than the main
+ * sting so it cuts through even after a broadcast clip's tail.
+ */
+export function playBumperSting(ctx, volume = 0.5) {
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime + 0.01;
+    const master = ctx.createGain();
+    master.gain.value = volume;
+    master.connect(ctx.destination);
+
+    // Rising whoosh
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.45, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.7;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.Q.value = 1.1;
+    bp.frequency.setValueAtTime(280, now);
+    bp.frequency.exponentialRampToValueAtTime(6200, now + 0.4);
+    const ng = ctx.createGain();
+    envelope(ctx, ng, now, 0.42, 0.4, { attack: 0.01, release: 0.9 });
+    noise.connect(bp).connect(ng).connect(master);
+    noise.start(now);
+    noise.stop(now + 0.5);
+
+    // Kick punch
+    const k = makeOsc(ctx, "sine", 120, now + 0.36, 0.15, {
+      freqEndAt: { value: 45, t: 0.13 },
+    });
+    const kg = ctx.createGain();
+    envelope(ctx, kg, now + 0.36, 0.15, 0.7, { attack: 0.002, release: 0.9 });
+    k.connect(kg).connect(master);
+    k.start(now + 0.36);
+    k.stop(now + 0.55);
+
+    // Shimmer tail
+    const shim = makeOsc(ctx, "triangle", 1600, now + 0.42, 0.35);
+    const sg = ctx.createGain();
+    envelope(ctx, sg, now + 0.42, 0.35, 0.09, { attack: 0.02, release: 0.95 });
+    shim.connect(sg).connect(master);
+    shim.start(now + 0.42);
+    shim.stop(now + 0.8);
+  } catch (e) {
+    console.warn("Bumper sting failed", e);
+  }
+}

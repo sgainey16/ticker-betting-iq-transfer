@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import { ChevronLeft, ChevronRight, Play, Pause, SkipForward, ExternalLink } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
+import { TMark, C } from "@/lib/brand";
+import { playBumperSting } from "@/lib/sting";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -57,6 +59,18 @@ export default function FastReelAudition() {
   const [transitioning, setTransitioning] = useState(false);
   const [showBumper, setShowBumper] = useState(false);
   const iframeRef = useRef(null);
+  const audioCtxRef = useRef(null);
+
+  // Lazy-init a single Web Audio context (browsers require a user gesture).
+  function getAudioCtx() {
+    if (!audioCtxRef.current) {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        audioCtxRef.current = new Ctx();
+      } catch { /* noop */ }
+    }
+    return audioCtxRef.current;
+  }
 
   useEffect(() => {
     let alive = true;
@@ -108,16 +122,18 @@ export default function FastReelAudition() {
       setPaused(true);
       return;
     }
-    // 1) fade-to-black (400ms) → 2) NEXT UP bumper (700ms) → 3) new clip auto-plays
+    // 1) fade-to-black (300ms) → 2) branded bumper (900ms) → 3) new clip auto-plays
+    // Sting fires at the start of the fade so audio bridges the video swap.
     setTransitioning(true);
+    playBumperSting(getAudioCtx(), 0.5);
     setTimeout(() => {
       setShowBumper(true);
       setTimeout(() => {
         setIdx((i) => i + 1);
         setShowBumper(false);
         setTransitioning(false);
-      }, 700);
-    }, 400);
+      }, 900);
+    }, 300);
   }
 
   function goPrev() {
@@ -174,20 +190,33 @@ export default function FastReelAudition() {
           <div className="absolute inset-0 bg-black transition-opacity duration-300 opacity-100" />
         )}
 
-        {/* NEXT-UP bumper */}
+        {/* NEXT-UP bumper — branded T-mark reveal */}
         {showBumper && nextClip && (
-          <div className="absolute inset-0 bg-black flex items-center justify-center">
-            <div className="text-center animate-[fadeIn_400ms_ease-out]">
-              <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-[#1E5BFF]">Next up</div>
-              <div className="mt-2 flex items-center justify-center gap-3">
-                <TeamLogo code={nextClip.away_team} className="h-10 w-10 object-contain" />
-                <span className="font-headline text-2xl">
+          <div
+            className="absolute inset-0 flex items-center justify-center overflow-hidden"
+            style={{
+              background: `radial-gradient(ellipse at center, rgba(30,91,255,0.35), ${C.black} 68%)`,
+            }}
+          >
+            {/* Blue speed-line sweep across the frame */}
+            <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 opacity-70"
+                 style={{
+                   background: `linear-gradient(90deg, transparent 0%, ${C.blue} 40%, ${C.white} 50%, ${C.blue} 60%, transparent 100%)`,
+                   animation: "sweep 700ms ease-out both",
+                 }}
+            />
+            <div className="relative flex flex-col items-center gap-4 z-10"
+                 style={{ animation: "bumperIn 500ms cubic-bezier(0.16,1,0.3,1) both" }}>
+              <TMark size={130} variant="light" />
+              <div className="flex items-center gap-3">
+                <TeamLogo code={nextClip.away_team} className="h-8 w-8 object-contain" />
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: C.white, letterSpacing: "0.05em" }}>
                   {CATEGORY_LABEL[nextClip.category] || nextClip.category}
-                </span>
-                <TeamLogo code={nextClip.home_team} className="h-10 w-10 object-contain" />
+                </div>
+                <TeamLogo code={nextClip.home_team} className="h-8 w-8 object-contain" />
               </div>
-              <div className="mt-2 font-accent text-[11px] uppercase tracking-widest text-white/50">
-                Clip {idx + 2} of {total}
+              <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.4em", color: C.blue }}>
+                CLIP {idx + 2} · OF {total}
               </div>
             </div>
           </div>
@@ -293,7 +322,19 @@ export default function FastReelAudition() {
         </div>
       )}
 
-      <style>{`@keyframes fadeIn { from {opacity:0} to {opacity:1} }`}</style>
+      <style>{`
+        @keyframes fadeIn { from {opacity:0} to {opacity:1} }
+        @keyframes bumperIn {
+          0%   { opacity: 0; transform: scale(0.62); }
+          55%  { opacity: 1; transform: scale(1.08); }
+          100% { opacity: 1; transform: scale(1);    }
+        }
+        @keyframes sweep {
+          0%   { transform: translateX(-100%) translateY(-50%); opacity: 0; }
+          40%  { opacity: 1; }
+          100% { transform: translateX(100%) translateY(-50%);  opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
