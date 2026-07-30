@@ -25,7 +25,6 @@ export default function Predictions() {
   const [myStats, setMyStats] = useState(null);
   const [board, setBoard] = useState([]);
   const [picks, setPicks] = useState({});
-  const [reasoning, setReasoning] = useState({});
   const [submitting, setSubmitting] = useState({});
   const [error, setError] = useState("");
   const [pickedGameId, setPickedGameId] = useState(null); // null = show all games
@@ -52,23 +51,24 @@ export default function Predictions() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { localStorage.setItem("ticker_user", userName); }, [userName]);
 
-  async function submitPick(gameId) {
-    const pick = picks[gameId];
-    if (!pick) { setError("Pick a side before submitting."); return; }
+  async function submitPick(gameId, side) {
+    if (!side) return;
     if (!userName.trim()) { setError("Enter a display name to submit picks."); return; }
     setError("");
+    // Optimistically render the glow immediately.
+    setPicks((p) => ({ ...p, [gameId]: side }));
     setSubmitting((s) => ({ ...s, [gameId]: true }));
     try {
       await api.post("/predictions", {
         user_name: userName,
         game_id: gameId,
-        pick,
-        reasoning: reasoning[gameId] || "",
+        pick: side,
+        reasoning: "",
       });
-      setPicks((p) => { const c = { ...p }; delete c[gameId]; return c; });
-      setReasoning((r) => { const c = { ...r }; delete c[gameId]; return c; });
       await refresh();
     } catch (e) {
+      // Roll back the optimistic glow on failure.
+      setPicks((p) => { const c = { ...p }; delete c[gameId]; return c; });
       setError(e?.response?.data?.detail || "Could not submit pick.");
     } finally {
       setSubmitting((s) => ({ ...s, [gameId]: false }));
@@ -82,7 +82,10 @@ export default function Predictions() {
     } catch (e) { console.error(e); }
   }
 
-  const alreadyPicked = new Set(myPreds.map((p) => p.game_id));
+  // Map each already-picked game to the side chosen so the button stays
+  // lit after submission (persistence across refresh).
+  const pickedSideByGame = new Map(myPreds.map((p) => [p.game_id, p.pick]));
+  const alreadyPicked = new Set(pickedSideByGame.keys());
 
   const visibleGames = useMemo(
     () => (pickedGameId ? games.filter((g) => g.id === pickedGameId) : games),
@@ -183,7 +186,9 @@ export default function Predictions() {
         <div className="grid gap-4">
           {visibleGames.map((g) => {
             const picked = alreadyPicked.has(g.id);
-            const chosen = picks[g.id];
+            // Chosen side wins from server truth (already-picked) first,
+            // falls back to local optimistic pick before the round-trip.
+            const chosen = pickedSideByGame.get(g.id) || picks[g.id];
             const awayName = teamName(g.away, teams);
             const homeName = teamName(g.home, teams);
             const awayAccent = teamAccent(g.away, teams);
@@ -204,11 +209,12 @@ export default function Predictions() {
                     })}
                   </div>
                   <div className="font-accent text-[11px] uppercase tracking-widest text-white/40">
-                    {picked ? "Locked" : "Pick a winner"}
+                    {picked ? "Your pick" : "Tap a team"}
                   </div>
                 </div>
 
-                {/* Team pick buttons */}
+                {/* Team pick buttons — tap = pick. No separate lock step.
+                 * The lit-up button IS the pick record. */}
                 <div className="grid grid-cols-2 gap-3">
                   <PickButton
                     testid={TEST_IDS.pred.pickAway(g.id)}
@@ -220,7 +226,7 @@ export default function Predictions() {
                     chosen={chosen === "away"}
                     reggie={g.reggie_pick === "away"}
                     marc={g.marc_pick === "away"}
-                    onClick={() => setPicks((p) => ({ ...p, [g.id]: "away" }))}
+                    onClick={() => !picked && submitPick(g.id, "away")}
                   />
                   <PickButton
                     testid={TEST_IDS.pred.pickHome(g.id)}
@@ -232,7 +238,7 @@ export default function Predictions() {
                     chosen={chosen === "home"}
                     reggie={g.reggie_pick === "home"}
                     marc={g.marc_pick === "home"}
-                    onClick={() => setPicks((p) => ({ ...p, [g.id]: "home" }))}
+                    onClick={() => !picked && submitPick(g.id, "home")}
                   />
                 </div>
 
@@ -286,32 +292,6 @@ export default function Predictions() {
                   homeAccent={homeAccent}
                   teams={teams}
                 />
-
-                {!picked && (
-                  <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                    <input
-                      data-testid={TEST_IDS.pred.reasoning(g.id)}
-                      value={reasoning[g.id] || ""}
-                      onChange={(e) => setReasoning((r) => ({ ...r, [g.id]: e.target.value }))}
-                      placeholder="One line of reasoning (optional)"
-                      className="flex-1 bg-[#0b0b10] border border-[#2d2d35] focus:border-[#1e5dff] rounded-md px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none"
-                    />
-                    <button
-                      data-testid={TEST_IDS.pred.submit(g.id)}
-                      onClick={() => submitPick(g.id)}
-                      disabled={submitting[g.id] || !chosen}
-                      className="px-5 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent uppercase tracking-widest text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {submitting[g.id] ? "Locking…" : "Lock it in"}
-                    </button>
-                  </div>
-                )}
-
-                {picked && (
-                  <div className="mt-4 text-xs font-accent uppercase tracking-widest text-emerald-400">
-                    ✓ Locked · pick recorded
-                  </div>
-                )}
               </div>
             );
           })}
@@ -447,7 +427,6 @@ function StatTile({ icon: Icon, label, value }) {
 }
 
 function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc, onClick, side }) {
-  const locked = picked && chosen;
   return (
     <button
       data-testid={testid}
@@ -489,7 +468,7 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
               >
                 ✓
               </span>
-              {locked ? "Locked" : "Your pick"}
+              Your pick
             </div>
           )}
         </div>

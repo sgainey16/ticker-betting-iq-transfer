@@ -7,18 +7,32 @@ import { ChevronDown } from "lucide-react";
 // PRIMARY rows show on first tap. SECONDARY rows only after "Show more".
 // One game at a time — follows whatever segment is currently on-air.
 
+// The full box score, grouped so nothing feels crammed. The PRIMARY set
+// shows on the very first tap — the "at-a-glance" numbers a fan actually
+// discusses. SECONDARY unfolds on "Show more" for the deeper crowd. We're
+// deliberately generous with what's included — hockey stats are fun to
+// read, and the format is dead simple.
 const PRIMARY = [
   { key: "Shots",                 label: "Shots on Goal" },
   { key: "Hits",                  label: "Hits" },
   { key: "Blocked Shots",         label: "Blocked Shots" },
   { key: "Faceoff Win Percent",   label: "Faceoffs",   fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
+  { key: "__pp_ratio__",          label: "Power Play", derived: (t) => {
+      const g = t?.["Power Play Goals"];
+      const opp = t?.["Power Play Opportunities"];
+      if (g == null || opp == null) return "—";
+      return `${Number(g)}/${Number(opp)}`;
+    } },
 ];
 
 const SECONDARY = [
-  { key: "Power Play Percentage", label: "Power Play", fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
+  { key: "Power Play Percentage", label: "PP %",       fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
+  { key: "Short Handed Goals",    label: "Shorthanded Goals" },
+  { key: "Faceoffs Won",          label: "Faceoffs Won" },
   { key: "Takeaways",             label: "Takeaways" },
   { key: "Giveaways",             label: "Giveaways" },
-  { key: "Penalty Minutes",       label: "PIM" },
+  { key: "Total Penalties",       label: "Penalties" },
+  { key: "Penalty Minutes",       label: "Penalty Minutes" },
 ];
 
 const _cache = new Map(); // match_id → response
@@ -103,7 +117,10 @@ export default function PostGameStats({ segment }) {
               <div className="space-y-2.5">
                 {PRIMARY.map((m) => (
                   <StatLine key={m.key} label={m.label}
-                    away={data.away?.stats?.[m.key]} home={data.home?.stats?.[m.key]} fmt={m.fmt} />
+                    away={m.derived ? m.derived(data.away?.stats) : data.away?.stats?.[m.key]}
+                    home={m.derived ? m.derived(data.home?.stats) : data.home?.stats?.[m.key]}
+                    fmt={m.fmt}
+                    derived={!!m.derived} />
                 ))}
               </div>
 
@@ -121,7 +138,10 @@ export default function PostGameStats({ segment }) {
                 <div className="space-y-2.5 mt-3">
                   {SECONDARY.map((m) => (
                     <StatLine key={m.key} label={m.label}
-                      away={data.away?.stats?.[m.key]} home={data.home?.stats?.[m.key]} fmt={m.fmt} />
+                      away={m.derived ? m.derived(data.away?.stats) : data.away?.stats?.[m.key]}
+                      home={m.derived ? m.derived(data.home?.stats) : data.home?.stats?.[m.key]}
+                      fmt={m.fmt}
+                      derived={!!m.derived} />
                   ))}
                 </div>
               )}
@@ -139,22 +159,31 @@ export default function PostGameStats({ segment }) {
 
 // One row: `[big away number]   [label]   [big home number]`
 // The winning side gets full opacity; the trailing side dims slightly so
-// the eye reads the delta without any chart.
-function StatLine({ label, away, home, fmt }) {
-  const a = numeric(away);
-  const h = numeric(home);
-  const awayWin = a > h;
-  const homeWin = h > a;
+// the eye reads the delta without any chart. `derived` values (e.g. "1/4"
+// PP goals-over-opps) skip the numeric win-compare because the string
+// form encodes both parts — we just render both in full opacity.
+function StatLine({ label, away, home, fmt, derived }) {
+  let awayWin = false, homeWin = false;
+  if (!derived) {
+    const a = numeric(away);
+    const h = numeric(home);
+    awayWin = a > h;
+    homeWin = h > a;
+  }
   const format = fmt || ((v) => (v == null ? "—" : String(v)));
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-      <div className={`text-right font-headline text-2xl sm:text-3xl leading-none ${awayWin ? "text-white" : "text-white/50"}`}>
+      <div className={`text-right font-headline text-2xl sm:text-3xl leading-none ${
+        derived || awayWin ? "text-white" : "text-white/50"
+      }`}>
         {format(away)}
       </div>
-      <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 px-2 min-w-[92px]">
+      <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 px-2 min-w-[110px]">
         {label}
       </div>
-      <div className={`text-left font-headline text-2xl sm:text-3xl leading-none ${homeWin ? "text-white" : "text-white/50"}`}>
+      <div className={`text-left font-headline text-2xl sm:text-3xl leading-none ${
+        derived || homeWin ? "text-white" : "text-white/50"
+      }`}>
         {format(home)}
       </div>
     </div>
