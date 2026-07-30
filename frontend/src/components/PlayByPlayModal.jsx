@@ -135,12 +135,28 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
   useEffect(() => {
     if (!open || !current) return;
     let cancelled = false;
+    // Watchdog: some Highlightly YT clips are "removed" and never fire a
+    // reliable onError. If the video hasn't reached PLAYING state within
+    // 8 seconds of load, treat it as broken and auto-advance so the modal
+    // never gets stuck on a black frame.
+    let hasReachedPlaying = false;
+    let watchdog = null;
     loadYTApi().then((YT) => {
       if (cancelled) return;
       const videoId = ytIdFromUrl(current.embed_url);
-      if (!videoId) return;
+      if (!videoId) { setTimeout(() => advance(), 500); return; }
+
+      const armWatchdog = () => {
+        if (watchdog) clearTimeout(watchdog);
+        hasReachedPlaying = false;
+        watchdog = setTimeout(() => {
+          if (!hasReachedPlaying) advance();
+        }, 8000);
+      };
+
       if (playerRef.current?.loadVideoById) {
         try { playerRef.current.loadVideoById(videoId); } catch { /* noop */ }
+        armWatchdog();
         return;
       }
       playerRef.current = new YT.Player(PLAYER_ID, {
@@ -152,14 +168,18 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
         events: {
           onReady: (e) => { try { e.target.playVideo(); } catch { /* noop */ } },
           onStateChange: (e) => {
-            if (e.data === 1) setHasStarted(true);
+            if (e.data === 1) { hasReachedPlaying = true; setHasStarted(true); }
             if (e.data === 0) advance();
           },
           onError: () => setTimeout(() => advance(), 500),
         },
       });
+      armWatchdog();
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (watchdog) clearTimeout(watchdog);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, current?.id]);
 
