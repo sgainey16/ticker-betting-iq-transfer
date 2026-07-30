@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, VolumeX, Volume2 } from "lucide-react";
+import { ChevronDown, VolumeX, Volume2, Radio } from "lucide-react";
 import { useLive } from "@/lib/liveContext";
 import { TeamLogo } from "@/lib/teamLogos";
 
