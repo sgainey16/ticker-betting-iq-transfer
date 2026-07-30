@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
-import { ChevronLeft, ChevronRight, Play, Pause, SkipForward, ExternalLink } from "lucide-react";
+import { ChevronLeft, ChevronRight, Play, Pause, SkipForward, ExternalLink, Smartphone } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
 import { playBumperSting } from "@/lib/sting";
@@ -161,17 +161,32 @@ export default function FastReelAudition() {
         </div>
       </div>
 
-      {/* Matchup ribbon */}
+      {/* Matchup ribbon — also carries the category chip so it sits on our
+       * chrome (not overlapping YouTube's own top-corner UI like Share /
+       * fullscreen / video title). Layered logos-@-logos in the centre. */}
       {current && (
-        <div className="px-4 py-3 border-b border-white/5 flex items-center justify-center gap-3">
-          <TeamLogo code={current.away_team} className="h-8 w-8 object-contain" />
-          <span className="font-headline text-lg">{current.away_team} @ {current.home_team}</span>
-          <TeamLogo code={current.home_team} className="h-8 w-8 object-contain" />
+        <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-3">
+          <div
+            className="px-2 py-1 rounded-sm font-accent text-[10px] uppercase tracking-[0.25em] shadow-lg"
+            style={{ background: "#c40b1a", color: "#fff" }}
+            data-testid="reel-category-chip"
+          >
+            {CATEGORY_LABEL[current.category] || current.category}
+          </div>
+          <div className="flex items-center gap-3">
+            <TeamLogo code={current.away_team} className="h-8 w-8 object-contain" />
+            <span className="font-headline text-lg">{current.away_team} @ {current.home_team}</span>
+            <TeamLogo code={current.home_team} className="h-8 w-8 object-contain" />
+          </div>
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/50 min-w-[60px] text-right">
+            {idx + 1}/{total}
+          </div>
         </div>
       )}
 
       {/* Video frame */}
       <div className="relative bg-black aspect-video max-w-4xl mx-auto mt-3 border border-white/10">
+        <ReelRotateHint />
         {current && !transitioning && (
           <iframe
             ref={iframeRef}
@@ -223,7 +238,7 @@ export default function FastReelAudition() {
         )}
 
         {/* Progress dots — one per clip */}
-        <div className="absolute top-2 left-0 right-0 px-3 flex items-center gap-1">
+        <div className="absolute top-2 left-0 right-0 px-3 flex items-center gap-1 z-10">
           {clips.map((_, i) => (
             <div
               key={i}
@@ -233,13 +248,6 @@ export default function FastReelAudition() {
             />
           ))}
         </div>
-
-        {/* Category chip */}
-        {current && !showBumper && (
-          <div className="absolute top-4 left-3 bg-red-600 px-2 py-1 rounded-sm font-accent text-[9px] uppercase tracking-[0.25em] shadow-lg">
-            {CATEGORY_LABEL[current.category] || current.category}
-          </div>
-        )}
       </div>
 
       {/* Transport controls */}
@@ -336,5 +344,40 @@ export default function FastReelAudition() {
         }
       `}</style>
     </div>
+  );
+}
+
+
+// ---- Rotate-your-phone hint ----
+// Small nudge for portrait viewers to flip to landscape for a bigger clip.
+// Auto-dismisses after 6 seconds AND on first tap. Remembered per-device
+// via localStorage so it never nags returning users.
+const REEL_ROTATE_HINT_KEY = "ticker.reel.rotate_hint_dismissed";
+function ReelRotateHint() {
+  const [visible, setVisible] = useState(() => {
+    try { return !localStorage.getItem(REEL_ROTATE_HINT_KEY); } catch { return true; }
+  });
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(() => setVisible(false), 6000);
+    return () => clearTimeout(t);
+  }, [visible]);
+  const dismiss = () => {
+    try { localStorage.setItem(REEL_ROTATE_HINT_KEY, String(Date.now())); } catch {}
+    setVisible(false);
+  };
+  if (!visible) return null;
+  return (
+    <button
+      onClick={dismiss}
+      data-testid="reel-rotate-hint"
+      className="portrait:flex landscape:hidden absolute top-3 left-1/2 -translate-x-1/2 z-30 items-center gap-2 rounded-full bg-black/70 border border-[#1E5BFF]/60 px-3 py-1.5 backdrop-blur-md shadow-[0_6px_20px_-8px_rgba(30,91,255,0.7)] animate-pulse"
+      aria-label="Rotate phone for bigger clip"
+    >
+      <Smartphone className="w-3.5 h-3.5 text-[#1E5BFF]" style={{ transform: "rotate(90deg)" }} />
+      <span className="font-accent text-[10px] uppercase tracking-[0.25em] text-white/90">
+        Flip for bigger clip
+      </span>
+    </button>
   );
 }
