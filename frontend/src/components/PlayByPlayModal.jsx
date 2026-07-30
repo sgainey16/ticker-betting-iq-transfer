@@ -144,22 +144,19 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
     loadYTApi().then((YT) => {
       if (cancelled) return;
       const videoId = ytIdFromUrl(current.embed_url);
-      if (!videoId) { setTimeout(() => advance(), 500); return; }
+      // No usable embed url — treat like a broken clip and close the modal
+      // (return to Recap page) instead of auto-advancing to the next clip.
+      if (!videoId) { setTimeout(() => onClose?.(), 500); return; }
 
       const armWatchdog = () => {
         if (watchdog) clearTimeout(watchdog);
         hasReachedPlaying = false;
         watchdog = setTimeout(() => {
-          if (!hasReachedPlaying) {
-            // If we're already on the last clip, closing is the only sane
-            // exit — advance() can't do anything and we don't want a
-            // "Video unavailable" dead-end frame.
-            if (idx >= (clips?.length || 0) - 1) {
-              onClose?.();
-            } else {
-              advance();
-            }
-          }
+          // Broken/removed clip — don't skip to next, just close the modal
+          // so the user returns to the main Recap page (they explicitly
+          // picked this clip; auto-advancing feels like the app is
+          // "skipping around" out of their control).
+          if (!hasReachedPlaying) onClose?.();
         }, 8000);
       };
 
@@ -178,9 +175,12 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
           onReady: (e) => { try { e.target.playVideo(); } catch { /* noop */ } },
           onStateChange: (e) => {
             if (e.data === 1) { hasReachedPlaying = true; setHasStarted(true); }
-            if (e.data === 0) advance();
+            // Clip ended — the user selected THIS clip, so close the modal
+            // and return them to the main Recap page. If they want the
+            // next clip they can hit the Next button explicitly.
+            if (e.data === 0) onClose?.();
           },
-          onError: () => setTimeout(() => advance(), 500),
+          onError: () => setTimeout(() => onClose?.(), 500),
         },
       });
       armWatchdog();
