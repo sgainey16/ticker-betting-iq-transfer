@@ -8,6 +8,7 @@ import os
 import json
 import hashlib
 import logging
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -37,7 +38,7 @@ ANALYST_VOICES = {
     # mature US male voice ("Bill" from the pre-made ElevenLabs library).
     "marc": {
         "voice_id": "pqHfZKP75CvOlQylNhV4",  # Bill — mature, warm
-        "settings": {"stability": 0.55, "similarity_boost": 0.78, "style": 0.25, "use_speaker_boost": True, "speed": 0.95},
+        "settings": {"stability": 0.6, "similarity_boost": 0.78, "style": 0.2, "use_speaker_boost": True, "speed": 0.95},
     },
 }
 
@@ -152,6 +153,21 @@ def _cache_key(analyst_id: str, text: str) -> str:
     return f"{analyst_id}_{h}.mp3"
 
 
+# Marc reads too fast past sentence-ends — he'll blow past a period and then
+# breathe one word into the next sentence, which sounds broken. ElevenLabs
+# v2's `<break>` tag misfires (breath lands mid-sentence). The reliable
+# trick with the pre-made "Bill" voice: replace the space after each
+# sentence-final period with an ELLIPSIS. Multilingual-v2 treats `...` as a
+# natural prosodic pause + soft downward inflection — the model won't speak
+# the dots, it just breathes there. Reggie doesn't need this because his
+# voice is trained on faster/rougher delivery already.
+_SENTENCE_BOUNDARY = re.compile(r'([.!?])\s+(?=[A-Z"\'])')
+
+def _apply_sentence_breaks(text: str) -> str:
+    # Convert "sentence. Next" → "sentence... Next" — reliable pause hint.
+    return _SENTENCE_BOUNDARY.sub(r'\1.. ', text)
+
+
 def audio_url_for(analyst_id: str, text: str) -> str:
     """Return the public URL the frontend should hit for this line."""
     return f"/api/audio/{_cache_key(analyst_id, text)}"
@@ -182,10 +198,12 @@ def ensure_audio(analyst_id: str, text: str) -> Optional[str]:
         return None
 
     voice = ANALYST_VOICES[analyst_id]
+    # Marc-only prosody prep: force a hard breath at every period.
+    tts_text = _apply_sentence_breaks(text) if analyst_id == "marc" else text
     try:
         audio_stream = client.text_to_speech.convert(
             voice_id=voice["voice_id"],
-            text=text,
+            text=tts_text,
             model_id=MODEL_ID,
             voice_settings=VoiceSettings(**voice["settings"]),
             output_format="mp3_44100_128",
@@ -198,7 +216,8 @@ def ensure_audio(analyst_id: str, text: str) -> Optional[str]:
             logger.warning("ElevenLabs returned empty audio for %s", analyst_id)
             return None
         # Only charge the budget once we actually got bytes back — a failed
-        # call shouldn't count against today's cap.
+        # call shouldn't count against today's cap. Charge original text
+        # length (the <break> tags aren't billable-facing).
         _budget_charge(text)
         # Write raw ElevenLabs mp3 to a temp file, then use ffmpeg to strip
         # leading/trailing silence and any long internal gaps. This is the
