@@ -39,7 +39,7 @@ const _cache = new Map(); // match_id → response
 
 export default function PostGameStats({ segment }) {
   const matchId = segment?.match_id;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [showMore, setShowMore] = useState(false);
   const [data, setData] = useState(() => _cache.get(matchId) || null);
   const [loading, setLoading] = useState(false);
@@ -127,11 +127,11 @@ export default function PostGameStats({ segment }) {
               {/* Show-more toggle */}
               <button
                 onClick={() => setShowMore((v) => !v)}
-                className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-md border border-white/10 hover:border-white/25 py-2 font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 hover:text-white transition-colors"
+                className="mt-5 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-[#F5A623]/60 hover:border-[#F5A623] bg-[#F5A623]/10 hover:bg-[#F5A623]/20 py-3 font-accent text-xs uppercase tracking-[0.3em] text-[#F5A623] transition-all shadow-[0_0_18px_-6px_rgba(245,166,35,0.6)] hover:shadow-[0_0_24px_-4px_rgba(245,166,35,0.8)]"
                 data-testid="post-game-stats-more"
               >
-                {showMore ? "Show less" : "Show more"}
-                <ChevronDown className={`w-3 h-3 transition-transform ${showMore ? "rotate-180" : ""}`} />
+                {showMore ? "Show Less" : "Show More Stats"}
+                <ChevronDown className={`w-4 h-4 transition-transform ${showMore ? "rotate-180" : ""}`} />
               </button>
 
               {showMore && (
