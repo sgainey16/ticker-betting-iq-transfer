@@ -124,16 +124,52 @@ export default function Predictions() {
             </p>
           </div>
 
-          <div className="glass rounded-lg px-4 py-3">
-            <label className="block text-[10px] font-accent uppercase tracking-widest text-white/50">
-              Display name
-            </label>
-            <input
-              data-testid={TEST_IDS.pred.userInput}
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="mt-1 bg-transparent text-white text-sm focus:outline-none border-b border-white/20 focus:border-[#1e5dff] pb-1 w-44"
-            />
+          {/* Score card — this used to be a plain "Display name" field
+           * plus a separate sidebar block. We fused them so the user's
+           * identity + track record live together as one glance. */}
+          <div className="glass rounded-lg px-4 py-3 min-w-[260px]" data-testid="pred-scorecard">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <label className="block text-[10px] font-accent uppercase tracking-widest text-white/50">
+                  Playing as
+                </label>
+                <input
+                  data-testid={TEST_IDS.pred.userInput}
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="mt-1 bg-transparent text-white font-headline text-base focus:outline-none border-b border-white/20 focus:border-[#1e5dff] pb-0.5 w-full min-w-0"
+                />
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <div className="text-[10px] font-accent uppercase tracking-widest text-white/50">
+                  Accuracy
+                </div>
+                <div className="font-headline text-3xl text-white leading-none mt-1">
+                  {myStats ? `${myStats.accuracy}%` : "—"}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-white/10 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Streak</div>
+                <div className="font-headline text-white text-lg mt-0.5 inline-flex items-center gap-1">
+                  <Flame className="w-3.5 h-3.5 text-[#F5A623]" />
+                  {myStats ? myStats.streak : 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Correct</div>
+                <div className="font-headline text-white text-lg mt-0.5">
+                  {myStats ? myStats.correct : 0}
+                </div>
+              </div>
+              <div>
+                <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Graded</div>
+                <div className="font-headline text-white text-lg mt-0.5">
+                  {myStats ? myStats.resolved : 0}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -325,21 +361,17 @@ export default function Predictions() {
 
       {/* Side rail */}
       <aside className="lg:col-span-4 space-y-5">
-        {/* Track record */}
-        <div className="card-surface p-5">
-          <div className="font-accent text-xs uppercase tracking-[0.3em] text-white/50">
-            Your track record
+        {/* Simulate button — the old sidebar "Your track record" card
+         * moved inline with the display name, so we keep only the demo
+         * simulate control here. */}
+        <div className="card-surface p-4">
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/50">
+            Demo · grade tonight
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <StatTile icon={Target} label="Acc" value={myStats ? `${myStats.accuracy}%` : "—"} />
-            <StatTile icon={Flame} label="Streak" value={myStats ? myStats.streak : "—"} />
-            <StatTile icon={Trophy} label="Correct" value={myStats ? myStats.correct : "—"} />
-          </div>
-
           <button
             data-testid={TEST_IDS.pred.simulate}
             onClick={simulateResolve}
-            className="mt-4 w-full inline-flex items-center justify-center gap-2 rounded-md border border-[#2d2d35] hover:border-white/30 px-3 py-2 text-xs font-accent uppercase tracking-widest text-white/70 hover:text-white transition-colors"
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-md border border-[#2d2d35] hover:border-white/30 px-3 py-2 text-xs font-accent uppercase tracking-widest text-white/70 hover:text-white transition-colors"
             title="Phase 1 demo: simulate a results feed to grade open picks"
           >
             <RefreshCcw className="w-3.5 h-3.5" />
