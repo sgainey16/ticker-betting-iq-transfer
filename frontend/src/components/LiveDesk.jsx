@@ -6,6 +6,7 @@ import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import { BACKEND_URL, api } from "@/lib/api";
 import { useBroadcast, BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
 import { playTickerSting } from "@/lib/sting";
+import { LowerThird } from "@/lib/brand";
 import { Volume2, VolumeX, PlayCircle, PauseCircle, ExternalLink } from "lucide-react";
 
 // ---- Timing ----
@@ -339,14 +340,13 @@ export default function LiveDesk({ autoFlow = true }) {
 
         {currentSpeaker && audioUnlocked && (
           <div
-            className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-md border transition-opacity duration-300"
-            style={{ background: "rgba(5,7,15,0.55)", borderColor: speakerAccent + "88" }}
+            className="absolute bottom-3 left-3 z-20 transition-opacity duration-300"
             data-testid={TEST_IDS.desk.lowerThird}
           >
-            <span className="h-2 w-2 rounded-full live-pulse" style={{ background: speakerAccent }} />
-            <span className="font-accent text-[11px] uppercase tracking-widest text-white/90">
-              {speakerName}
-            </span>
+            <LowerThird
+              speaker={(speakerName || "").toUpperCase()}
+              role={currentSpeaker === "reggie" ? "COLOR · LIVE" : "ANALYST · LIVE"}
+            />
           </div>
         )}
       </div>

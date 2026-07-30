@@ -157,7 +157,7 @@ export default function Predictions() {
               <div>
                 <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Streak</div>
                 <div className="font-headline text-white text-lg mt-0.5 inline-flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 text-[#F5A623]" />
+                  <Flame className="w-3.5 h-3.5 text-[#1E5BFF]" />
                   {myStats ? myStats.streak : 0}
                 </div>
               </div>
@@ -396,7 +396,7 @@ export default function Predictions() {
               {board.map((row, i) => (
                 <div key={row.user_name} className="flex items-center justify-between rounded-md px-3 py-2 border border-[#2d2d35] bg-[#0b0b10]">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-6 text-center font-accent text-sm" style={{ color: i === 0 ? "#F5A623" : "#9CA3AF" }}>
+                    <div className="w-6 text-center font-accent text-sm" style={{ color: i === 0 ? "#1E5BFF" : "#9CA3AF" }}>
                       {i + 1}
                     </div>
                     <div className="text-white text-sm truncate">{row.user_name}</div>

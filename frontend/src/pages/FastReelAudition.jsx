@@ -178,7 +178,7 @@ export default function FastReelAudition() {
         {showBumper && nextClip && (
           <div className="absolute inset-0 bg-black flex items-center justify-center">
             <div className="text-center animate-[fadeIn_400ms_ease-out]">
-              <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-[#F5A623]">Next up</div>
+              <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-[#1E5BFF]">Next up</div>
               <div className="mt-2 flex items-center justify-center gap-3">
                 <TeamLogo code={nextClip.away_team} className="h-10 w-10 object-contain" />
                 <span className="font-headline text-2xl">
@@ -199,7 +199,7 @@ export default function FastReelAudition() {
             <div
               key={i}
               className={`h-0.5 flex-1 rounded-full transition-colors ${
-                i < idx ? "bg-[#F5A623]" : i === idx ? "bg-white" : "bg-white/15"
+                i < idx ? "bg-[#1E5BFF]" : i === idx ? "bg-white" : "bg-white/15"
               }`}
             />
           ))}
@@ -252,7 +252,7 @@ export default function FastReelAudition() {
                 key={c.id}
                 onClick={() => setIdx(i)}
                 className={`flex-shrink-0 w-32 rounded-md border overflow-hidden transition-all ${
-                  i === idx ? "border-[#F5A623] shadow-[0_0_12px_-2px_rgba(245,166,35,0.7)]" : "border-white/10 hover:border-white/40"
+                  i === idx ? "border-[#1E5BFF] shadow-[0_0_12px_-2px_rgba(30,91,255,0.7)]" : "border-white/10 hover:border-white/40"
                 }`}
                 data-testid={`reel-chip-${i}`}
               >

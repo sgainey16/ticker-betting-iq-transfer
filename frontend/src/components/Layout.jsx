@@ -5,6 +5,7 @@ import ReggieAssistant from "@/components/ReggieAssistant";
 import LaunchZoneBanner from "@/components/LaunchZoneBanner";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
+import { TMark } from "@/lib/brand";
 import { BroadcastProvider } from "@/lib/broadcastContext";
 import { LiveProvider, useLive } from "@/lib/liveContext";
 
@@ -63,8 +64,8 @@ function LayoutInner({ children }) {
             className="flex items-center gap-3 group"
             data-testid="brand-link"
           >
-            <div className="h-9 w-9 rounded-md flex items-center justify-center bg-[#1e5dff] text-white font-headline text-xl leading-none shadow-[0_0_24px_rgba(30,93,255,0.55)]">
-              T
+            <div className="flex items-center justify-center" data-testid="brand-mark">
+              <TMark size={44} variant="light" />
             </div>
             <div className="leading-tight">
               <div className="font-headline text-lg text-white">THE TICKER</div>

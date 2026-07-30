@@ -8,11 +8,11 @@ import { useRef } from "react";
 const TABS = [
   { key: "all",      label: "All",         icon: Video,   accent: "#1e5dff" },
   { key: "recaps",   label: "Full Recap",  icon: Film,    accent: "#00e5ff" },
-  { key: "goals",    label: "Goals",       icon: Zap,     accent: "#F5A623" },
+  { key: "goals",    label: "Goals",       icon: Zap,     accent: "#1E5BFF" },
   { key: "saves",    label: "Saves",       icon: Shield,  accent: "#00e5ff" },
   { key: "hits",     label: "Hits & Fights", icon: Swords, accent: "#ff4d6d" },
   { key: "postgame", label: "Post-Game",   icon: Users,   accent: "#c084fc" },
-  { key: "viral",    label: "Viral",       icon: Sparkles,accent: "#F5A623" },
+  { key: "viral",    label: "Viral",       icon: Sparkles,accent: "#1E5BFF" },
 ];
 
 export default function Recaps() {
@@ -305,11 +305,11 @@ function ClipCard({ clip, logoMap }) {
 function CategoryPill({ category }) {
   const CATEGORY_LABELS = {
     "match-highlights": { label: "Full Recap",   color: "#00e5ff" },
-    "goal":             { label: "Goal",         color: "#F5A623" },
-    "power-play-goal":  { label: "PPG",          color: "#F5A623" },
-    "shorthanded-goal": { label: "SHG",          color: "#F5A623" },
-    "overtime-shootout-goal": { label: "OT/SO",  color: "#F5A623" },
-    "hat-trick":        { label: "Hat Trick",    color: "#F5A623" },
+    "goal":             { label: "Goal",         color: "#1E5BFF" },
+    "power-play-goal":  { label: "PPG",          color: "#1E5BFF" },
+    "shorthanded-goal": { label: "SHG",          color: "#1E5BFF" },
+    "overtime-shootout-goal": { label: "OT/SO",  color: "#1E5BFF" },
+    "hat-trick":        { label: "Hat Trick",    color: "#1E5BFF" },
     "save":             { label: "Save",         color: "#00e5ff" },
     "fight":            { label: "Fight",        color: "#ff4d6d" },
     "hit-check":        { label: "Hit",          color: "#ff4d6d" },

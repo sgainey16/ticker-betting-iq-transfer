@@ -104,7 +104,7 @@ function GameCard({ game }) {
         </div>
         {!isFinal && (
           <span className={`font-accent text-[9px] uppercase tracking-widest ${
-            isPP ? "text-[#F5A623]" : "text-white/50"
+            isPP ? "text-[#1E5BFF]" : "text-white/50"
           }`}>
             {situationLabel}
           </span>
@@ -150,7 +150,7 @@ function TeamSide({ side, team, isPP }) {
         <div>
           <div className="font-headline text-white text-sm sm:text-base leading-tight">{team.code}</div>
           <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
-            {team.shots} SOG {isPP && <span className="text-[#F5A623]">· PP</span>}
+            {team.shots} SOG {isPP && <span className="text-[#1E5BFF]">· PP</span>}
           </div>
         </div>
       </div>

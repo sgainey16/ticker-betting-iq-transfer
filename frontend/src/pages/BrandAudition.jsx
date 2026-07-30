@@ -20,40 +20,43 @@ const C = {
 };
 
 // ---------------------------------------------------------------------------
-// T-MARK — the angular T with the blue lightning slash to the upper-left.
-// Parameterized so the same primitive drives the header, favicon, nametag
-// pills, jerseys — every place the mark needs to appear. `variant` swaps
-// between light-on-dark and dark-on-light execution. `flip` mirrors the
-// mark so the motion runs the opposite direction — used only for auditioning
-// the correct orientation until the real brand file lands.
+// T-MARK — angular black T with 3 blue speed-streaks flying off the top-right.
+// Redrawn to match the corrected reference sheet: motion runs left-to-right,
+// blue slashes trail off the right end of the crossbar like a forward-motion
+// wake. Parameterized so the same primitive drives the header, favicon,
+// nametag pills, jerseys — every place the mark needs to appear.
+//   `variant`   swaps light-on-dark vs dark-on-light execution
+//   `size`      sets the rendered pixel width (height auto follows aspect)
 // ---------------------------------------------------------------------------
-function TMark({ size = 120, variant = "light", flip = false, className = "" }) {
-  const stroke = variant === "dark" ? C.black : C.white;
+function TMark({ size = 120, variant = "light", className = "" }) {
+  // Reference-accurate aspect: the streaks extend past the crossbar so the
+  // overall footprint is ~1.35:1 (wider than tall).
+  const w = size;
+  const h = size * (200 / 270);
+  // Body colour swaps: on dark bgs the T is white; on light/blue bgs it's black.
+  const body = variant === "dark" ? C.black : C.white;
   const accent = C.blue;
   return (
     <svg
-      viewBox="0 0 200 200"
-      width={size}
-      height={size}
+      viewBox="0 0 270 200"
+      width={w}
+      height={h}
       className={className}
       aria-label="The Ticker mark"
-      style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
-      {/* Blue lightning slash — sits to the upper-left of the T */}
-      <polygon points="12,42 78,42 58,78 12,78" fill={accent} />
-      <polygon points="46,58 78,42 60,90" fill={accent} opacity="0.85" />
+      {/* ---- BLACK T BODY ---- */}
+      {/* Top crossbar — slanted parallelogram leaning right for motion */}
+      <polygon points="18,28 152,28 142,72 8,72" fill={body} />
+      {/* Vertical stem — tapered, italicised */}
+      <polygon points="70,72 118,72 100,188 58,188" fill={body} />
 
-      {/* Top crossbar of the T — slanted right for motion */}
-      <polygon
-        points="82,42 188,42 178,86 72,86"
-        fill={stroke}
-      />
-
-      {/* Vertical stem of the T — slanted, tapered */}
-      <polygon
-        points="118,86 158,86 138,188 100,188"
-        fill={stroke}
-      />
+      {/* ---- BLUE SPEED STREAKS ---- */}
+      {/* Streak 1 · top, longest — sits on top edge of crossbar and races right */}
+      <polygon points="156,28 250,28 262,52 168,52" fill={accent} />
+      {/* Streak 2 · middle, medium length, slightly offset */}
+      <polygon points="148,58 218,58 232,80 160,80" fill={accent} />
+      {/* Streak 3 · bottom, shortest and pointed — dropping just below crossbar */}
+      <polygon points="140,86 188,86 202,104 148,104" fill={accent} opacity="0.9" />
     </svg>
   );
 }

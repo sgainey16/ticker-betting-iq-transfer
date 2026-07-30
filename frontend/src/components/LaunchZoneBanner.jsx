@@ -78,10 +78,10 @@ export default function LaunchZoneBanner() {
             Broadcast · Press Conference · Stats · Predictions voting · Reggie casual chat
           </div>
           <div>
-            <span className="font-accent uppercase tracking-widest text-[10px] text-[#F5A623] mr-2">Flipping to Founding Member</span>
+            <span className="font-accent uppercase tracking-widest text-[10px] text-[#1E5BFF] mr-2">Flipping to Founding Member</span>
             Deep Dive analytics · Betting IQ · Fantasy Tracker · leaderboards history
           </div>
-          <div className="text-white/60 italic pl-1 pt-0.5 border-l-2 border-[#F5A623]/40 ml-2 mt-1.5">
+          <div className="text-white/60 italic pl-1 pt-0.5 border-l-2 border-[#1E5BFF]/40 ml-2 mt-1.5">
             &ldquo;Every other tool studies the game. We study <span className="text-white not-italic font-headline">you</span>. Your patterns, your blind spots, your history. That&rsquo;s how you actually get better.&rdquo;
           </div>
           <div className="text-white/40">

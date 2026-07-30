@@ -77,7 +77,7 @@ export default function PostGameStats({ segment }) {
         data-testid="post-game-stats-toggle"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1E5BFF]">
             Post-Game Stats
           </div>
           <div className="hidden sm:flex items-center gap-2">
@@ -132,7 +132,7 @@ export default function PostGameStats({ segment }) {
               {/* Show-more toggle */}
               <button
                 onClick={() => setShowMore((v) => !v)}
-                className="mt-5 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-[#F5A623]/60 hover:border-[#F5A623] bg-[#F5A623]/10 hover:bg-[#F5A623]/20 py-3 font-accent text-xs uppercase tracking-[0.3em] text-[#F5A623] transition-all shadow-[0_0_18px_-6px_rgba(245,166,35,0.6)] hover:shadow-[0_0_24px_-4px_rgba(245,166,35,0.8)]"
+                className="mt-5 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-[#1E5BFF]/60 hover:border-[#1E5BFF] bg-[#1E5BFF]/10 hover:bg-[#1E5BFF]/20 py-3 font-accent text-xs uppercase tracking-[0.3em] text-[#1E5BFF] transition-all shadow-[0_0_18px_-6px_rgba(30,91,255,0.6)] hover:shadow-[0_0_24px_-4px_rgba(30,91,255,0.8)]"
                 data-testid="post-game-stats-more"
               >
                 {showMore ? "Show Less" : "Show More Stats"}

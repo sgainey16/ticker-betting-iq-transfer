@@ -177,9 +177,9 @@ export default function RecapShow() {
     <div data-testid="recap-show-page" className="space-y-2 landscape:space-y-1.5">
       {/* Slim date badge only — nothing above the frame competes with the hosts */}
       <div className="flex items-center justify-between landscape:hidden">
-        <div className="inline-flex items-center gap-2 rounded-full bg-[#F5A623]/15 border border-[#F5A623]/50 px-3 py-1">
-          <span className="tick-dot bg-[#F5A623] live-pulse" />
-          <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#F5A623]">
+        <div className="inline-flex items-center gap-2 rounded-full bg-[#1E5BFF]/15 border border-[#1E5BFF]/50 px-3 py-1">
+          <span className="tick-dot bg-[#1E5BFF] live-pulse" />
+          <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1E5BFF]">
             Last Night's Games · {formatDate(episode.date)}
           </span>
         </div>
@@ -412,7 +412,7 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip })
             data-testid={`recap-segment-${s.match_id}`}
             className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 min-w-[150px] rounded-lg overflow-hidden border transition-all ${
               isCurrent
-                ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
+                ? "bg-[#101625] border-[#1E5BFF] shadow-[0_0_16px_-4px_rgba(30,91,255,0.7)]"
                 : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
             }`}
           >
@@ -439,7 +439,7 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip })
                 </div>
               )}
               <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1 text-center ${
-                isCurrent ? "text-[#F5A623]" : isDone ? "text-emerald-400/70" : "text-white/40"
+                isCurrent ? "text-[#1E5BFF]" : isDone ? "text-emerald-400/70" : "text-white/40"
               }`}>
                 {isCurrent ? "On air" : isDone ? "✓ done" : `Game ${i + 1}`}
               </div>

@@ -47,8 +47,8 @@ export default function Home() {
         {games.length > 0 && (
           <div className="mt-6">
             <div className="flex items-center gap-2 mb-3">
-              <span className="tick-dot bg-[#F5A623] live-pulse" />
-              <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-[#F5A623]">
+              <span className="tick-dot bg-[#1E5BFF] live-pulse" />
+              <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-[#1E5BFF]">
                 Tonight's Board
               </div>
             </div>
@@ -65,7 +65,7 @@ export default function Home() {
                     data-testid={`show-game-tile-${g.id}`}
                     className={`flex-shrink-0 min-w-[130px] rounded-lg border px-3 py-2 transition-all ${
                       isSel
-                        ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
+                        ? "bg-[#101625] border-[#1E5BFF] shadow-[0_0_16px_-4px_rgba(30,91,255,0.7)]"
                         : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
                     }`}
                   >
@@ -75,7 +75,7 @@ export default function Home() {
                       <TeamLogo code={g.home} size={32} />
                     </div>
                     <div className={`mt-1 text-center font-accent text-[9px] uppercase tracking-[0.25em] ${
-                      isSel ? "text-[#F5A623]" : "text-white/40"
+                      isSel ? "text-[#1E5BFF]" : "text-white/40"
                     }`}>
                       {g.away} · {g.home}
                     </div>
