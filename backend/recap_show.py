@@ -80,8 +80,18 @@ async def _llm_script_all_games(date_str: str, segments: list[dict]) -> dict | N
 
     system_message = (
         f"You are the writing staff for THE TICKER, an AI-hosted hockey sports desk. "
-        f"You write dialogue for two hosts breaking down NHL games from {date_str}.\n\n"
+        f"You write dialogue for two hosts recapping NHL games from {date_str} — the MORNING AFTER. "
+        f"EVERY game on this show has already been played. Reggie and Marc watched them and are now "
+        f"reviewing them with the audience.\n\n"
         f"{REGGIE_VOICE}\n\n{MARC_VOICE}\n\n{CE_RULES}\n\n"
+        "TENSE RULE — CRITICAL:\n"
+        "- All hosts speak in PAST TENSE about the games. The games are DONE. Final score is known.\n"
+        "- Say 'McDavid buried it', not 'McDavid will bury it'. Say 'the D-pair got caved in', "
+        "  not 'watch the D-pair — they'll get caved in'.\n"
+        "- NEVER use 'watch for', 'keep an eye on', 'coming up', 'tonight', 'later', 'expect', "
+        "  'look for X to Y', 'will', 'is going to'. Those are pregame phrasings.\n"
+        "- Present-tense reactions ARE allowed ('that's a beauty', 'ooof', 'oh my') because "
+        "  the host is reacting to a clip we just watched. But the game itself is past.\n\n"
         "OUTPUT STRICT JSON — no prose, no markdown. Schema:\n"
         "{\n"
         '  "cold_open": {"reggie": "...", "marc": "..."},\n'
@@ -89,17 +99,18 @@ async def _llm_script_all_games(date_str: str, segments: list[dict]) -> dict | N
         '  "close":     {"marc": "...", "reggie": "..."}\n'
         "}\n\n"
         "GUIDELINES:\n"
-        "- Cold open (Reggie): welcomes audience with energy + teases what's coming. Marc: grounds it with the night's stakes (wildcard race tightening).\n"
-        "- Each `reggie_hook`: 2-3 sentences. Hooks the viewer with a story, a chirp, or a bold take that primes the highlight. Personality FIRST.\n"
-        "- Each `marc_outro`: 2 sentences. Drops ONE real-sounding advanced stat that makes the story true, then tees up the next game.\n"
+        "- Cold open (Reggie): welcomes the audience to the morning-after show and tees up what we're about to review from LAST NIGHT. Marc: grounds it with the night's stakes and how the standings shifted.\n"
+        "- Each `reggie_hook`: 2-3 sentences. Recaps the game with a story, a chirp, or a bold take about what already happened. Personality FIRST.\n"
+        "- Each `marc_outro`: 2 sentences. Drops ONE real-sounding advanced stat from the game that already ended, then transitions to the next recap.\n"
         "- `stat_line`: 4-8 word standalone stat for a lower-third graphic (e.g. \"McDavid: 3rd multi-point night in a row\").\n"
         "- Every line must sound like a broadcast, never a chatbot. If a line has 'furthermore', 'moreover', or 'in conclusion' — rewrite it.\n"
         "- No two games use the same joke framing.\n"
     )
 
     user_prompt = (
-        f"Date: {date_str} (wildcard-race Saturday, playoff picture tightening)\n\n"
-        f"Games to script, in order:\n[\n{games_json}\n]\n\n"
+        f"Date: {date_str} — the games below already happened last night. You are writing "
+        f"the morning-after recap show. All hosts speak in PAST TENSE about the games themselves.\n\n"
+        f"Games (already played, in order):\n[\n{games_json}\n]\n\n"
         "Return the JSON now."
     )
 
@@ -159,17 +170,17 @@ MARC_COLD_OPENS = [
 ]
 REGGIE_HOOKS_BY_CAT = {
     "goals": "{away} at {home} — this one had teeth. Watch what {away_short} did on that rush.",
-    "match-highlights": "{away} rolls into {home}. Full recap coming.",
-    "hits-fights": "{away} at {home} got chippy. Real hockey. Roll it.",
-    "saves": "{home} goalie stood on his head against {away}. Let it play.",
-    "default": "{away} at {home} — worth your time. Watch this.",
+    "match-highlights": "{away} rolled into {home} last night. Here's how it played out.",
+    "hits-fights": "{away} at {home} got chippy. Real hockey. Take a look.",
+    "saves": "{home} goalie stood on his head against {away}. Watch this save.",
+    "default": "{away} at {home} — one worth going back to. Here's the tape.",
 }
 MARC_OUTROS_BY_CAT = {
-    "goals": "That's the third {away_short} goal like it this month. Habits over hope. Next.",
-    "match-highlights": "Special teams told the whole story there. On we go.",
+    "goals": "That was the third {away_short} goal like it this month. Habits over hope. Next.",
+    "match-highlights": "Special teams told the whole story last night. On we go.",
     "hits-fights": "Momentum shifted after the scrum — you could feel it. Next matchup.",
-    "saves": "That save changes the game. Difference-maker. Coming up next.",
-    "default": "Numbers back it up. Watch the tape twice, you'll see it. Next game.",
+    "saves": "That save was the game. Difference-maker. To the next one.",
+    "default": "Numbers backed it up. Watch the tape twice, you'll see it. Next game.",
 }
 REGGIE_CLOSES = [
     "That's the tape. Tomorrow: bigger night, tighter races. See you at the desk.",
