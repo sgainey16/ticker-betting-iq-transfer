@@ -1,20 +1,41 @@
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { api } from "@/lib/api";
 import Ticker from "@/components/Ticker";
-import { TEST_IDS } from "@/lib/config";
 import { useBroadcast, BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
-import { Mic, Vote, Sparkles } from "lucide-react";
+import { TeamLogo } from "@/lib/teamLogos";
 
-// Home no longer mounts LiveDesk directly — LiveDesk lives in Layout and
-// portals its full frame into <div id="broadcast-slot" /> below. This lets
-// the show keep playing when users navigate to Stats/Predict/Recaps.
+// The Morning Skate — pregame preview page (`/show`). LiveDesk still
+// portals in the two-shot from Layout; below the panel we show:
+//   1. Tonight's Games rail — logo vs logo tiles the viewer can tap to
+//      focus one game's analytics.
+//   2. Pregame Analytics — team-vs-team season stats for the selected
+//      matchup. Users glance here while Reggie & Marc talk.
+
 export default function Home() {
   const { topics, activeTopic, setActiveTopic } = useBroadcast();
+  const [games, setGames] = useState([]);
+  const [teams, setTeams] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
 
   useEffect(() => {
-    // On revisit, if user last picked a topic, respect it. Otherwise the
-    // provider already defaults to Wildcard Night — nothing to do here.
+    let cancelled = false;
+    Promise.all([
+      api.get("/predictions/games").catch(() => ({ data: { games: [] } })),
+      api.get("/stats/teams").catch(() => ({ data: { teams: [] } })),
+    ]).then(([g, t]) => {
+      if (cancelled) return;
+      const gl = g.data?.games || [];
+      setGames(gl);
+      setTeams(t.data?.teams || []);
+      setSelectedId((cur) => cur || gl[0]?.id || null);
+    });
+    return () => { cancelled = true; };
   }, []);
+
+  const selected = useMemo(
+    () => games.find((g) => g.id === selectedId) || games[0] || null,
+    [games, selectedId]
+  );
 
   return (
     <div className="-mx-5 sm:-mx-8 -mt-8">
@@ -22,54 +43,57 @@ export default function Home() {
         {/* LiveDesk portals its full frame into this slot */}
         <div id={BROADCAST_SLOT_ID} data-testid="broadcast-slot" />
 
-        {/* Below the fold — two tiles: Deep Dive (Presser) + Matchups voting */}
-        <div className="mt-14 grid sm:grid-cols-2 gap-4">
-          <Link
-            to="/press-conference"
-            data-testid={TEST_IDS.home.askCta}
-            className="group card-surface p-6 flex items-center justify-between hover:-translate-y-0.5 transition-transform relative overflow-hidden"
-          >
-            <div className="min-w-0">
-              <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-[#1e5dff]">
-                Deep dive · analytics
-              </div>
-              <div className="font-headline text-2xl text-white mt-1">
-                Every tool studies the game. We study you.
-              </div>
-              <div className="text-white/60 text-sm mt-1">
-                Your patterns, your blind spots, your history. Coach, not casino.
-              </div>
-              <div className="inline-flex items-center gap-1.5 mt-3 text-[10px] font-accent uppercase tracking-widest text-[#00e5ff]">
-                <Sparkles className="w-3 h-3" />
-                First session on the house
+        {/* Tonight's Games rail — logo vs logo tiles */}
+        {games.length > 0 && (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="tick-dot bg-[#F5A623] live-pulse" />
+              <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-[#F5A623]">
+                Tonight's Board
               </div>
             </div>
-            <Mic className="w-6 h-6 text-white/50 group-hover:text-white transition-colors flex-shrink-0" />
-          </Link>
+            <div
+              className="flex gap-2 overflow-x-auto pb-2 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:overflow-visible landscape:pb-0"
+              data-testid="show-games-rail"
+            >
+              {games.map((g) => {
+                const isSel = selected?.id === g.id;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => setSelectedId(g.id)}
+                    data-testid={`show-game-tile-${g.id}`}
+                    className={`flex-shrink-0 min-w-[130px] rounded-lg border px-3 py-2 transition-all ${
+                      isSel
+                        ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
+                        : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1.5">
+                      <TeamLogo code={g.away} size={32} />
+                      <span className="font-accent text-[9px] uppercase tracking-widest text-white/40">@</span>
+                      <TeamLogo code={g.home} size={32} />
+                    </div>
+                    <div className={`mt-1 text-center font-accent text-[9px] uppercase tracking-[0.25em] ${
+                      isSel ? "text-[#F5A623]" : "text-white/40"
+                    }`}>
+                      {g.away} · {g.home}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-          <Link
-            to="/predictions"
-            data-testid="home-matchups-cta"
-            className="group card-surface p-6 flex items-center justify-between hover:-translate-y-0.5 transition-transform relative overflow-hidden"
-          >
-            <div className="min-w-0">
-              <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-[#00e5ff]">
-                Matchups · pick against the panel
-              </div>
-              <div className="font-headline text-2xl text-white mt-1">
-                Tonight's Card
-              </div>
-              <div className="text-white/60 text-sm mt-1">
-                Reggie says one thing. Marc says another. Call it — track your streak vs. the desk.
-              </div>
-              <div className="inline-flex items-center gap-1.5 mt-3 text-[10px] font-accent uppercase tracking-widest text-[#1e5dff]">
-                <Vote className="w-3 h-3" />
-                Vote now — no wallet required
-              </div>
-            </div>
-            <Vote className="w-6 h-6 text-white/50 group-hover:text-white transition-colors flex-shrink-0" />
-          </Link>
-        </div>
+        {/* Pregame Analytics — team vs team for the selected matchup */}
+        {selected && (
+          <PregameAnalytics
+            awayCode={selected.away}
+            homeCode={selected.home}
+            teams={teams}
+          />
+        )}
       </div>
 
       <Ticker
@@ -79,4 +103,72 @@ export default function Home() {
       />
     </div>
   );
+}
+
+// Simple side-by-side comparison — the numbers Reggie & Marc are
+// actually referencing on air. Same clean format as Post-Game Stats
+// so users don't have to relearn a layout.
+function PregameAnalytics({ awayCode, homeCode, teams }) {
+  const away = teams.find((t) => t.code === awayCode);
+  const home = teams.find((t) => t.code === homeCode);
+  if (!away || !home) {
+    return (
+      <div className="mt-4 card-surface p-6 text-center">
+        <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
+          Loading pregame numbers…
+        </div>
+      </div>
+    );
+  }
+  const rec = (t) => `${t.w ?? 0}-${t.l ?? 0}-${t.otl ?? 0}`;
+  const rows = [
+    { label: "Record",       a: rec(away),                h: rec(home) },
+    { label: "Points",       a: away.pts ?? "—",          h: home.pts ?? "—" },
+    { label: "Goals For",    a: away.gf ?? "—",           h: home.gf ?? "—" },
+    { label: "Goals Against", a: away.ga ?? "—",           h: home.ga ?? "—" },
+    { label: "Goal Diff",    a: signed((away.gf || 0) - (away.ga || 0)),
+                             h: signed((home.gf || 0) - (home.ga || 0)) },
+  ];
+  return (
+    <section
+      className="mt-4 card-surface p-4 sm:p-5"
+      data-testid="pregame-analytics"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff]">
+          Pregame · Team vs Team
+        </div>
+      </div>
+      <div className="grid grid-cols-3 items-center pb-3 mb-3 border-b border-white/10">
+        <div className="flex items-center gap-2 justify-start">
+          <TeamLogo code={awayCode} size={32} />
+          <span className="font-headline text-white text-base">{away.name || awayCode}</span>
+        </div>
+        <div className="text-center font-accent text-[9px] uppercase tracking-[0.3em] text-white/40">vs</div>
+        <div className="flex items-center gap-2 justify-end">
+          <span className="font-headline text-white text-base">{home.name || homeCode}</span>
+          <TeamLogo code={homeCode} size={32} />
+        </div>
+      </div>
+      <div className="space-y-2.5">
+        {rows.map((r) => (
+          <div key={r.label} className="grid grid-cols-3 items-center gap-3">
+            <div className="text-right font-headline text-2xl sm:text-3xl leading-none text-white">{r.a}</div>
+            <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60">
+              {r.label}
+            </div>
+            <div className="text-left font-headline text-2xl sm:text-3xl leading-none text-white">{r.h}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 pt-3 border-t border-white/10 text-[9px] font-accent uppercase tracking-widest text-white/30 text-right">
+        Season Snapshot · Reggie &amp; Marc are watching these
+      </div>
+    </section>
+  );
+}
+
+function signed(n) {
+  if (n > 0) return `+${n}`;
+  return String(n);
 }

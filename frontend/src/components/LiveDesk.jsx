@@ -281,6 +281,12 @@ export default function LiveDesk({ autoFlow = true }) {
     </>
   );
 
+  // On /show — "The Morning Skate" — the top label reads "Tonight's Games"
+  // instead of the rotating topic name; the topic still cycles for the
+  // hosts' internal state but doesn't crowd the chyron.
+  const isShowPage = location.pathname.startsWith("/show");
+  const headerLabel = isShowPage ? "Tonight's Games" : activeTopicLabel;
+
   const fullFrame = (
     <section className="relative">
       {/* Slim control strip — topic label left, playback + mute right */}
@@ -288,10 +294,10 @@ export default function LiveDesk({ autoFlow = true }) {
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="h-2 w-2 rounded-full bg-red-500 live-pulse flex-shrink-0" />
           <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-white/50 flex-shrink-0">
-            Now
+            {isShowPage ? "Live" : "Now"}
           </div>
           <div className="font-headline text-white text-lg sm:text-xl truncate" data-testid="desk-active-topic">
-            {activeTopicLabel}
+            {headerLabel}
           </div>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">{controls}</div>
@@ -299,7 +305,9 @@ export default function LiveDesk({ autoFlow = true }) {
 
       <div
         data-testid={TEST_IDS.desk.shotFrame}
-        className="relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11]"
+        className={`relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11] ${
+          isShowPage ? "landscape:rounded-none landscape:border-x-0 landscape:-mx-5 sm:landscape:-mx-8" : ""
+        }`}
       >
         <TwoHostDesk
           shot={currentShot}
