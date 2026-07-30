@@ -225,6 +225,15 @@ export default function RecapShow() {
             setPlaying(true);
           }
         }}
+        onJumpToClip={(segIdx) => {
+          const target = beats.findIndex(
+            (b) => b.segment && b.segment.order === segIdx + 1 && b.kind === "clip"
+          );
+          if (target >= 0) {
+            setBeatIdx(target);
+            setPlaying(true);
+          }
+        }}
       />
       </div>
 
@@ -247,6 +256,14 @@ function formatDate(iso) {
     const d = new Date(iso + "T00:00:00Z");
     return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
   } catch { return iso; }
+}
+
+// Extract a YouTube video ID from an embed_url and return the poster
+// thumbnail (mqdefault ~ 320x180 — small file, sharp on tile-size preview).
+function youtubeThumb(embedUrl) {
+  if (!embedUrl) return null;
+  const m = embedUrl.match(/\/embed\/([^/?&#]+)/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/mqdefault.jpg` : null;
 }
 
 // ---- Show frame ----
@@ -377,7 +394,7 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
 }
 
 // ---- Segment rail — logo vs logo ----
-function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
+function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip }) {
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:overflow-visible">
       {episode.segments.map((s, i) => {
@@ -388,41 +405,78 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
           .filter((n) => n >= 0).pop() ?? -1;
         const isCurrent = beatIdx >= firstBeatIdx && beatIdx <= lastBeatIdx;
         const isDone = beatIdx > lastBeatIdx;
+        const thumb = youtubeThumb(s.clip?.embed_url);
         return (
-          <button
+          <div
             key={s.match_id}
-            onClick={() => onJumpToSegment(i)}
             data-testid={`recap-segment-${s.match_id}`}
-            className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 rounded-lg px-3 landscape:px-2 py-2 min-w-[150px] border transition-all ${
+            className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 min-w-[150px] rounded-lg overflow-hidden border transition-all ${
               isCurrent
                 ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
                 : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
             }`}
           >
-            {/* Bigger logos so the matchup reads at a glance on landscape */}
-            <div className="flex items-center justify-between gap-1.5">
-              {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
-              <span className="text-[9px] font-accent uppercase tracking-widest text-white/40">@</span>
-              {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
-            </div>
-            {/* Final score line — brighter side won */}
-            {s.final && (
-              <div className="mt-1 flex items-center justify-center gap-2 font-headline text-sm landscape:text-xs leading-none">
-                <span className={s.final.away_score > s.final.home_score ? "text-white" : "text-white/50"}>
-                  {s.final.away_score}
-                </span>
-                <span className="text-white/30 text-[10px]">–</span>
-                <span className={s.final.home_score > s.final.away_score ? "text-white" : "text-white/50"}>
-                  {s.final.home_score}
-                </span>
+            {/* TOP BANNER — logos + score + status (tappable = jump to segment) */}
+            <button
+              onClick={() => onJumpToSegment(i)}
+              className="w-full px-3 landscape:px-2 py-2 text-left"
+              data-testid={`recap-segment-logos-${s.match_id}`}
+            >
+              <div className="flex items-center justify-between gap-1.5">
+                {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
+                <span className="text-[9px] font-accent uppercase tracking-widest text-white/40">@</span>
+                {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
               </div>
+              {s.final && (
+                <div className="mt-1 flex items-center justify-center gap-2 font-headline text-sm landscape:text-xs leading-none">
+                  <span className={s.final.away_score > s.final.home_score ? "text-white" : "text-white/50"}>
+                    {s.final.away_score}
+                  </span>
+                  <span className="text-white/30 text-[10px]">–</span>
+                  <span className={s.final.home_score > s.final.away_score ? "text-white" : "text-white/50"}>
+                    {s.final.home_score}
+                  </span>
+                </div>
+              )}
+              <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1 text-center ${
+                isCurrent ? "text-[#F5A623]" : isDone ? "text-emerald-400/70" : "text-white/40"
+              }`}>
+                {isCurrent ? "On air" : isDone ? "✓ done" : `Game ${i + 1}`}
+              </div>
+            </button>
+
+            {/* BOTTOM BANNER — highlight thumbnail with play button
+             *   Sits flush against the logo banner (no gap, hairline divider)
+             *   so it reads as one connected card. Tapping the button (or
+             *   the thumbnail itself) jumps straight into that game's clip. */}
+            {thumb && (
+              <button
+                onClick={() => onJumpToClip(i)}
+                data-testid={`recap-segment-clip-${s.match_id}`}
+                aria-label={`Play highlights for ${s.away.code} at ${s.home.code}`}
+                className="w-full relative block group border-t border-white/10 aspect-video overflow-hidden"
+              >
+                <img
+                  src={thumb}
+                  alt=""
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                {/* Dark scrim so the play icon reads on any thumbnail */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/40" />
+                {/* Play button — big red circle, unmissable */}
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="h-9 w-9 landscape:h-8 landscape:w-8 rounded-full bg-red-600 group-hover:bg-red-500 flex items-center justify-center shadow-[0_0_20px_-2px_rgba(239,68,68,0.85)] transition-colors">
+                    <Play className="w-4 h-4 text-white translate-x-[1px]" fill="currentColor" />
+                  </span>
+                </span>
+                {/* Corner meta — "Highlights" label so intent is clear */}
+                <span className="absolute bottom-1 left-1.5 font-accent text-[8px] uppercase tracking-[0.25em] text-white/85">
+                  Highlights
+                </span>
+              </button>
             )}
-            <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1 text-center ${
-              isCurrent ? "text-[#F5A623]" : isDone ? "text-emerald-400/70" : "text-white/40"
-            }`}>
-              {isCurrent ? "On air" : isDone ? "✓ done" : `Game ${i + 1}`}
-            </div>
-          </button>
+          </div>
         );
       })}
     </div>
