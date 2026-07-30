@@ -381,12 +381,13 @@ export default function TeamRoomAudition() {
             <RetiredBanner key={i} number={r.n} color={t.primary} />
           ))}
         </div>
-        {/* Cup silhouette on the right wall */}
-        <div className="absolute top-10 right-6 hidden lg:block z-10 opacity-80">
-          <Trophy className="w-16 h-16" style={{ color: t.primary, filter: `drop-shadow(0 0 12px ${t.primary}66)` }} />
-          <div className="mt-1 text-center text-[9px] tracking-widest text-white/50" style={{ fontFamily: "Oswald" }}>
-            LEGACY
-          </div>
+        {/* Retired-number banners on the right wall as well — jerseys in the rafters,
+             not a Cup. Not every franchise has hoisted one, so we lean on retired
+             numbers as the universal shrine element. */}
+        <div className="absolute top-8 right-4 hidden lg:flex flex-col gap-2 z-10 opacity-90">
+          {(t.retiredNumbers || []).slice().reverse().map((r, i) => (
+            <RetiredBanner key={`r-${i}`} number={r.n} color={t.accent || t.primary} />
+          ))}
         </div>
 
         <div className="px-6 py-8 max-w-6xl mx-auto flex items-start gap-6 flex-wrap relative z-20">
