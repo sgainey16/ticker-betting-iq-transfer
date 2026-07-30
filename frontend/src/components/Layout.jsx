@@ -18,7 +18,7 @@ const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 const NAV = [
   { to: "/", end: true, label: "Recap", testid: TEST_IDS.nav.recaps },
   { to: "/show", label: "Show", testid: TEST_IDS.nav.broadcast },
-  { to: "/scoreboard", label: "Score", testid: "nav-scoreboard" },
+  { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
   { to: "/press-conference", label: "Presser", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
   { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
