@@ -8,20 +8,9 @@ import { playBumperSting } from "@/lib/sting";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-// Human-readable badges for each Highlightly category.
-const CATEGORY_LABEL = {
-  "goal": "GOAL",
-  "power-play-goal": "POWER-PLAY GOAL",
-  "shorthanded-goal": "SHORTIE",
-  "overtime-shootout-goal": "OT / SHOOTOUT WINNER",
-  "hat-trick": "HAT TRICK",
-  "save": "BIG SAVE",
-  "hit-check": "BIG HIT",
-  "fight": "SCRAP",
-  "assist-play": "SET-UP",
-  "viral-moment": "VIRAL",
-  "match-highlights": "FULL RECAP",
-};
+// Human-readable badges for each Highlightly category (used only as a
+// fallback if we somehow miss the numbered `labels[]` from buildLabels).
+// The canonical base map lives further down as CATEGORY_LABEL_BASE.
 
 // Extract a YouTube video ID from either an /embed/... or a /watch?v=... URL
 function ytIdFromUrl(url) {
@@ -49,6 +38,55 @@ function buildEmbed(url) {
     `?autoplay=1&mute=0&modestbranding=1&rel=0&playsinline=1` +
     `&enablejsapi=1&origin=${origin}`
   );
+}
+
+// Lazy-load YouTube's official IFrame Player API. Returns a promise that
+// resolves once `window.YT.Player` is available. Loaded once per session
+// (the SDK guards itself against double-loading).
+function loadYTApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+  if (window._ytApiPromise) return window._ytApiPromise;
+  window._ytApiPromise = new Promise((resolve) => {
+    const prior = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prior === "function") { try { prior(); } catch { /* noop */ } }
+      resolve(window.YT);
+    };
+    const tag = document.createElement("script");
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+  });
+  return window._ytApiPromise;
+}
+
+// Category → clean human label. Numbering appended per-clip in-context.
+const CATEGORY_LABEL_BASE = {
+  "goal": "GOAL",
+  "power-play-goal": "POWER-PLAY",
+  "shorthanded-goal": "SHORTIE",
+  "overtime-shootout-goal": "OT WINNER",
+  "hat-trick": "HAT TRICK",
+  "save": "BIG SAVE",
+  "hit-check": "BIG HIT",
+  "fight": "SCRAP",
+  "assist-play": "SET-UP",
+  "viral-moment": "VIRAL",
+  "match-highlights": "FULL RECAP",
+};
+
+// Compute a numbered label for each clip so a game with 5 goals reads
+// "GOAL 1 · GOAL 2 · GOAL 3 …" instead of five identical "GOAL" chips.
+function buildLabels(clips) {
+  const counters = {};
+  const totals = {};
+  for (const c of clips) totals[c.category] = (totals[c.category] || 0) + 1;
+  return clips.map((c) => {
+    counters[c.category] = (counters[c.category] || 0) + 1;
+    const base = CATEGORY_LABEL_BASE[c.category] || (c.category || "PLAY").toUpperCase();
+    // Only number when there are >1 of this category (avoid "SHORTIE 1 of 1").
+    if (totals[c.category] > 1) return `${base} ${counters[c.category]}`;
+    return base;
+  });
 }
 
 // Short Reggie one-liners that plug into the transition bumper. Category-
@@ -80,7 +118,9 @@ export default function FastReelAudition() {
   const [paused, setPaused] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [showBumper, setShowBumper] = useState(false);
-  const iframeRef = useRef(null);
+  const playerRef = useRef(null);
+  const playerContainerId = "reel-yt-player";
+  const currentIdxRef = useRef(0);
   const audioCtxRef = useRef(null);
   // Pre-cached Reggie transition audio URLs. Warmed on mount so bumpers
   // never have to wait on ElevenLabs generation.
@@ -137,40 +177,67 @@ export default function FastReelAudition() {
 
   const clips = reel?.short_clips || [];
   const current = clips[idx];
+  const labels = useMemo(() => buildLabels(clips), [clips]);
 
-  // Register with the YouTube iframe once it loads so we get postMessage
-  // events for state changes. We watch for state 0 (ended) → advance.
+  // Keep a ref of the current idx so YT callbacks (which capture stale
+  // state) can read the up-to-date value without re-registering.
+  useEffect(() => { currentIdxRef.current = idx; }, [idx]);
+
+  // ---- YouTube IFrame Player integration ----
+  // Instantiate a real YT.Player instance for the first clip. Subsequent
+  // clips call player.loadVideoById(nextId). onStateChange fires reliably
+  // (state 0 = ENDED) so we can auto-advance without polling or postMessage
+  // guesswork.
   useEffect(() => {
-    if (!current || !iframeRef.current) return;
-    const iframe = iframeRef.current;
+    if (!current) return;
+    let cancelled = false;
 
-    function tellIframeToListen() {
-      try {
-        iframe.contentWindow?.postMessage(
-          JSON.stringify({ event: "listening", id: "reel", channel: "widget" }),
-          "*"
-        );
-      } catch { /* noop */ }
-    }
-    // Ask the iframe to start reporting once it's loaded.
-    iframe.addEventListener("load", tellIframeToListen);
+    loadYTApi().then((YT) => {
+      if (cancelled) return;
+      const videoId = ytIdFromUrl(current.embed_url);
+      if (!videoId) return;
 
-    function onMsg(ev) {
-      if (typeof ev.data !== "string") return;
-      let data;
-      try { data = JSON.parse(ev.data); } catch { return; }
-      if (data?.event === "onStateChange" && data.info === 0) {
-        // Clip ended — advance with the bumper transition.
-        advance();
+      // Player already exists → load the next video in place.
+      if (playerRef.current && typeof playerRef.current.loadVideoById === "function") {
+        try { playerRef.current.loadVideoById(videoId); } catch { /* noop */ }
+        return;
       }
-    }
-    window.addEventListener("message", onMsg);
-    return () => {
-      iframe.removeEventListener("load", tellIframeToListen);
-      window.removeEventListener("message", onMsg);
-    };
+      // First-time init: create the player against the placeholder div.
+      playerRef.current = new YT.Player(playerContainerId, {
+        videoId,
+        playerVars: {
+          autoplay: 1,
+          modestbranding: 1,
+          rel: 0,
+          playsinline: 1,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: (e) => { try { e.target.playVideo(); } catch { /* noop */ } },
+          onStateChange: (e) => {
+            // state 0 = ENDED — auto-advance with the branded bumper.
+            if (e.data === 0) advance();
+          },
+          onError: () => {
+            // Unavailable / geo-blocked clip → skip past it after 500ms.
+            setTimeout(() => advance(), 500);
+          },
+        },
+      });
+    });
+
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.id]);
+
+  // Fully teardown the player when the component unmounts so it doesn't
+  // keep hitting YouTube after the user leaves the audition page.
+  useEffect(() => {
+    return () => {
+      try { playerRef.current?.destroy(); } catch { /* noop */ }
+      playerRef.current = null;
+    };
+  }, []);
 
   function advance() {
     if (idx >= clips.length - 1) {
@@ -251,7 +318,7 @@ export default function FastReelAudition() {
             style={{ background: "#c40b1a", color: "#fff" }}
             data-testid="reel-category-chip"
           >
-            {CATEGORY_LABEL[current.category] || current.category}
+            {labels[idx] || CATEGORY_LABEL_BASE[current.category] || current.category}
           </div>
           <div className="flex items-center gap-3">
             <TeamLogo code={current.away_team} className="h-8 w-8 object-contain" />
@@ -267,18 +334,14 @@ export default function FastReelAudition() {
       {/* Video frame */}
       <div className="relative bg-black aspect-video max-w-4xl mx-auto mt-3 border border-white/10">
         <ReelRotateHint />
-        {current && !transitioning && (
-          <iframe
-            ref={iframeRef}
-            key={current.id}
-            src={buildEmbed(current.embed_url)}
-            title={current.title || "Clip"}
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            className="w-full h-full"
-            data-testid={`reel-iframe-${idx}`}
-          />
-        )}
+        {/* YouTube IFrame Player mount point. The YT SDK replaces this
+         *  div with an <iframe> on init. Subsequent clip changes call
+         *  player.loadVideoById(newId) in place — no remount. */}
+        <div
+          id="reel-yt-player"
+          className={`w-full h-full ${transitioning ? "invisible" : ""}`}
+          data-testid={`reel-player`}
+        />
 
         {/* Transition scrim (fade to black) */}
         {transitioning && !showBumper && (
@@ -306,7 +369,7 @@ export default function FastReelAudition() {
               <div className="flex items-center gap-3">
                 <TeamLogo code={nextClip.away_team} className="h-8 w-8 object-contain" />
                 <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: C.white, letterSpacing: "0.05em" }}>
-                  {CATEGORY_LABEL[nextClip.category] || nextClip.category}
+                  {labels[idx + 1] || CATEGORY_LABEL_BASE[nextClip.category] || nextClip.category}
                 </div>
                 <TeamLogo code={nextClip.home_team} className="h-8 w-8 object-contain" />
               </div>
@@ -377,7 +440,7 @@ export default function FastReelAudition() {
                   {t && <img src={t} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/25" />
                   <span className="absolute top-1 left-1 font-accent text-[8px] uppercase tracking-widest bg-red-600 text-white px-1 py-0.5 rounded-sm">
-                    {(CATEGORY_LABEL[c.category] || c.category).split(" ")[0]}
+                    {labels[i] || (CATEGORY_LABEL_BASE[c.category] || c.category).split(" ")[0]}
                   </span>
                   <span className="absolute bottom-1 right-1 font-accent text-[9px] text-white/85">
                     {i + 1}
