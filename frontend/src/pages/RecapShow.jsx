@@ -238,13 +238,14 @@ export default function RecapShow() {
       />
       </div>
 
-      {/* Post-Game Stats + Play-By-Play — split screen below the segment rail.
-       * Desktop: 2-column grid (stats left, individual plays right).
-       * Mobile: stacked vertically. Both panels follow the current segment. */}
+      {/* Play-By-Play + Post-Game Stats — split screen below the segment rail.
+       * Videos-first (left): every goal with scorer/assists/time/situation +
+       * tap-to-play modal. Stats (right): shot/hit/PP box score.
+       * Mobile: stacked, play-by-play still on top. */}
       {currentSegment && (
         <div className="grid gap-3 md:grid-cols-2">
-          <PostGameStats segment={currentSegment} />
           <PlayByPlayPanel segment={currentSegment} />
+          <PostGameStats segment={currentSegment} />
         </div>
       )}
 

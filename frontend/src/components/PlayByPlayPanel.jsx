@@ -136,9 +136,9 @@ export default function PlayByPlayPanel({ segment }) {
         })}
       </div>
 
-      {clipsForModal.length > 0 && (
+      {clipsForModal.length > 0 && modalIdx !== null && (
         <PlayByPlayModal
-          open={modalIdx !== null}
+          open={true}
           clips={clipsForModal}
           matchup={data.matchup}
           startIdx={modalIdx || 0}

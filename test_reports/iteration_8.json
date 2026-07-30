@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only verification of PlayByPlayPanel + PlayByPlayModal on Recap Show. Tested layout order (PBP left, Stats right), row data (scorer/assists/score/period-time), modal open/close/reopen lifecycle, poster visibility, YT video load, and next/prev transport. Core modal-mount fix (conditional mount on modalIdx!==null) is working — no black-screen crash on reopen. All 6 review-request cases pass.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "PBP modal — Goal 2 clip", "issue": "After clicking Next to Goal 2, YouTube shows 'Video unavailable / This content isn't available.' This is a Highlightly-sourced YouTube video that has been removed/privated on YT's side — not a code bug, but user-visible. Consider a fallback (skip to next clip on onError, or show a friendly 'clip unavailable — advancing…' overlay). Note: onError handler currently calls advance() after 500ms but only fires for certain YT error codes; 'Video unavailable' embed sometimes doesn't emit the error event.", "affected_selectors": ["pbp-modal"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: Harden onError handling in PlayByPlayModal — the current onError -> advance() only fires for real YT.PlayerError codes. Some 'Video unavailable' states never emit an error and leave the modal stuck on that clip. Add a 6-8s watchdog after loadVideoById that auto-advances if state 1 (PLAYING) was never observed.",
+    "OPTIONAL: On backend, pre-validate Highlightly YouTube clip availability before returning in /api/audition/play-by-play so removed videos are filtered/replaced."
+  ],
+  "critical_code_review_comments": [
+    "PlayByPlayModal.jsx line 158: onError -> setTimeout(advance, 500) — YT IFrame error events are unreliable for 'Video unavailable' embeds; a watchdog based on state changes would be more robust.",
+    "PlayByPlayModal.jsx line 288: The YT.Player mount div uses a static string id 'pbp-yt-player'. Because PlayByPlayPanel conditionally mounts the modal (line 139 of PlayByPlayPanel.jsx), the div is fresh on each open — the mount lifecycle bug is properly fixed. Confirmed by test: close → reopen still shows the poster/player correctly.",
+    "PlayByPlayModal.jsx ytIdFromUrl (line 47): regex only handles /embed/{id} and ?v={id}. If a source_url is an ESPN mp4 (as returned for some match_ids like 244354), videoId is null and no player is created and no poster thumbnail is rendered — user sees only the red play button on black. Not user-facing for the current Recap episode (WSH@CBJ served YT clips), but is a latent issue if the backend ever pairs a non-YT source_url."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (6/6 review cases verified)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Recap default episode is WSH@CBJ 7-0 whose PBP endpoint returns 7 goals with YouTube-hosted Highlightly clips — perfect for testing the modal. Goal 2 (Kent Johnson) has a removed YouTube video showing 'Video unavailable' — useful as an edge-case fixture. Poster's <img> src is set via ytThumb() → https://img.youtube.com/vi/{id}/hqdefault.jpg; if empty the poster still renders a red play button but on black. Modal lifecycle fix confirmed: modalIdx!==null conditional mount in PlayByPlayPanel.jsx line 139 guarantees fresh div id per open.",
+  "rca of the issue": "Original bug (black screen on 2nd open) was caused by YT.Player consuming/replacing the mount div with an iframe on first open, so on second open the referenced div id no longer existed and YT.Player init silently no-op'd. Fix: PlayByPlayPanel now conditionally mounts <PlayByPlayModal> only when modalIdx!==null so the entire modal (and its <div id='pbp-yt-player'>) unmounts on close and remounts fresh on reopen. Verified working: after close+reopen the poster renders and clicking it loads the YT iframe again."
+}
