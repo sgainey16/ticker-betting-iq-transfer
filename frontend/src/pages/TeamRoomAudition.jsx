@@ -52,6 +52,8 @@ const TEAMS = {
       { u: "PastaLova88",     msg: "Big game tonight 🔥" },
       { u: "BlackAndGold",    msg: "Believe in this team." },
     ],
+    retiredNumbers: [ {n:"4"}, {n:"7"}, {n:"77"} ],
+    reggieQuote: "Bruins have won 4 straight. Marchand looks pissed off in the good way. I love it.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2450, next: "SUPERFAN", cap: 5000 },
   },
   MTL: {
@@ -86,6 +88,8 @@ const TEAMS = {
       { u: "BleuBlancRouge",  msg: "On est en feu! 🔥" },
       { u: "LeRocket",        msg: "Demidov va changer le jeu." },
     ],
+    retiredNumbers: [ {n:"9"}, {n:"4"}, {n:"29"} ],
+    reggieQuote: "5 straight for the Habs. Bell Centre is going to be electric tonight. Book it.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2750, next: "LEGEND", cap: 5000 },
   },
   TOR: {
@@ -120,6 +124,8 @@ const TEAMS = {
       { u: "MapleMafia",   msg: "Auston is unreal 🔥" },
       { u: "Sheldon4Life", msg: "Believe." },
     ],
+    retiredNumbers: [ {n:"1"}, {n:"4"}, {n:"13"} ],
+    reggieQuote: "Matthews is on pace for 60. Ridiculous. This might be the year. I said IT MIGHT.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 3150, next: "LEGEND", cap: 5000 },
   },
   EDM: {
@@ -154,6 +160,8 @@ const TEAMS = {
       { u: "McJesus97",   msg: "Connor is on another planet." },
       { u: "DraiForMVP",  msg: "Best duo in the league." },
     ],
+    retiredNumbers: [ {n:"99"}, {n:"11"}, {n:"31"} ],
+    reggieQuote: "7 in a row. McJesus doing McJesus things. This is a Cup team. Say it with me.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 4200, next: "LEGEND", cap: 5000 },
   },
   NYR: {
@@ -188,6 +196,8 @@ const TEAMS = {
       { u: "MSGForever",      msg: "Panarin is money." },
       { u: "BroadwayHat",     msg: "Playoffs start now." },
     ],
+    retiredNumbers: [ {n:"1"}, {n:"11"}, {n:"35"} ],
+    reggieQuote: "Panarin is money. Fox is a magician. Broadway is buzzing. Playoffs start now.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2950, next: "SUPERFAN", cap: 5000 },
   },
   COL: {
@@ -222,6 +232,8 @@ const TEAMS = {
       { u: "MakarMagic",  msg: "Best D-man in the world." },
       { u: "8622Forever", msg: "Nate is unreal." },
     ],
+    retiredNumbers: [ {n:"21"}, {n:"33"}, {n:"77"} ],
+    reggieQuote: "MacKinnon's in an MVP fight. Makar reminds me of Bobby Orr. Cup or bust in Denver.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 3520, next: "LEGEND", cap: 5000 },
   },
 };
@@ -253,19 +265,56 @@ function SectionLabel({ text, right, color }) {
   );
 }
 
-// Placeholder host silhouette — swap for Nano Banana character art
-function HostSilhouette({ label, color }) {
+// Reggie's "on-stage" placeholder — solo host presence for the Team Room.
+// Marc doesn't appear in this concept per user direction. This is a scene
+// element, not just a nametag: pointing pose silhouette + speech bubble
+// so the block has personality even before the illustrated art lands.
+function ReggieOnStage({ color, quote }) {
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative h-40 w-32 rounded-t-full flex items-end justify-center overflow-hidden"
-           style={{ background: `linear-gradient(180deg, ${color}22, ${color}11)`, border: `2px dashed ${color}55` }}>
-        <div className="text-[9px] uppercase tracking-widest text-white/40 mb-2"
-             style={{ fontFamily: "Oswald" }}>
-          Character art
+    <div className="relative flex flex-col items-center">
+      {/* Speech bubble above Reggie */}
+      {quote && (
+        <div className="mb-3 max-w-[280px] rounded-2xl px-4 py-2 relative"
+             style={{ background: "rgba(255,255,255,0.95)", color: "#0b0b10" }}>
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", letterSpacing: "0.02em", lineHeight: 1.35 }}>
+            {quote}
+          </div>
+          {/* Bubble tail */}
+          <div className="absolute left-1/2 -bottom-2 w-4 h-4 -translate-x-1/2 rotate-45"
+               style={{ background: "rgba(255,255,255,0.95)" }} />
+        </div>
+      )}
+      {/* Reggie placeholder — bigger, pointer-pose vibe (dashed to signal WIP) */}
+      <div className="relative h-56 w-44 rounded-t-full flex items-end justify-center overflow-hidden"
+           style={{ background: `linear-gradient(180deg, ${color}33 0%, ${color}11 60%, transparent 100%)`,
+                    border: `2px dashed ${color}66` }}>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <TMark size={56} variant="light" />
+        </div>
+        <div className="mb-2 text-[9px] uppercase tracking-widest text-white/40" style={{ fontFamily: "Oswald" }}>
+          Reggie art
         </div>
       </div>
-      <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "12px", letterSpacing: "0.1em", color: color }}>
-        {label}
+      <div className="mt-2" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", letterSpacing: "0.15em", color }}>
+        REGGIE HARLOW · YOUR GUY
+      </div>
+    </div>
+  );
+}
+
+// Retired jersey banner hanging from the wall — decorative warmth.
+function RetiredBanner({ number, color }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="w-14 h-20 flex items-center justify-center relative"
+           style={{
+             background: `linear-gradient(180deg, ${color}, ${color}88)`,
+             clipPath: "polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%)",
+             boxShadow: `0 6px 18px -6px ${color}aa`,
+           }}>
+        <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+          {number}
+        </div>
       </div>
     </div>
   );
@@ -313,9 +362,34 @@ export default function TeamRoomAudition() {
         </Link>
       </div>
 
-      {/* HERO */}
-      <div className="relative overflow-hidden" style={{ background: `radial-gradient(ellipse at center, ${t.primary}22, ${t.bg} 70%)` }}>
-        <div className="px-6 py-8 max-w-6xl mx-auto flex items-start gap-6 flex-wrap">
+      {/* HERO — locker-room scene backdrop */}
+      <div className="relative overflow-hidden"
+           style={{
+             background: `
+               radial-gradient(ellipse at 20% 0%, ${t.primary}22, transparent 55%),
+               radial-gradient(ellipse at 80% 100%, ${t.primary}18, transparent 55%),
+               linear-gradient(180deg, ${t.bg} 0%, ${t.panel} 100%)
+             `,
+           }}>
+        {/* Faux wood-plank strip along the top for locker-room warmth */}
+        <div className="absolute inset-x-0 top-0 h-3 opacity-40"
+             style={{ background: `repeating-linear-gradient(90deg, ${t.accent}22 0 24px, ${t.accent}11 24px 48px)` }} />
+
+        {/* Retired-number banners on the left wall (portrait-hidden to save space) */}
+        <div className="absolute top-8 left-4 hidden lg:flex flex-col gap-2 z-10 opacity-90">
+          {(t.retiredNumbers || []).map((r, i) => (
+            <RetiredBanner key={i} number={r.n} color={t.primary} />
+          ))}
+        </div>
+        {/* Cup silhouette on the right wall */}
+        <div className="absolute top-10 right-6 hidden lg:block z-10 opacity-80">
+          <Trophy className="w-16 h-16" style={{ color: t.primary, filter: `drop-shadow(0 0 12px ${t.primary}66)` }} />
+          <div className="mt-1 text-center text-[9px] tracking-widest text-white/50" style={{ fontFamily: "Oswald" }}>
+            LEGACY
+          </div>
+        </div>
+
+        <div className="px-6 py-8 max-w-6xl mx-auto flex items-start gap-6 flex-wrap relative z-20">
           {/* Left: welcome + record card */}
           <div className="flex-1 min-w-[280px]">
             <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "13px", letterSpacing: "0.25em", color: t.primary }}>
@@ -349,15 +423,12 @@ export default function TeamRoomAudition() {
             </div>
           </div>
 
-          {/* Center: character silhouettes at the broadcast desk */}
-          <div className="flex items-end gap-6 self-center">
-            <HostSilhouette label="REGGIE" color={t.primary} />
-            <div className="text-center pb-8">
-              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "34px", color: t.primary, letterSpacing: "0.03em" }}>
-                {t.neonText}
-              </div>
+          {/* Center: SOLO Reggie with speech bubble + team neon */}
+          <div className="flex flex-col items-center self-center">
+            <ReggieOnStage color={t.primary} quote={t.reggieQuote} />
+            <div className="mt-4" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: t.primary, letterSpacing: "0.03em", textShadow: `0 0 24px ${t.primary}88` }}>
+              {t.neonText}
             </div>
-            <HostSilhouette label="MARC" color={t.primary} />
           </div>
 
           {/* Right: Tonight card */}
@@ -380,7 +451,7 @@ export default function TeamRoomAudition() {
                 <div className="text-xs text-white/85" style={{ fontFamily: "Inter" }}>{t.tonight.odds}</div>
               </div>
               <div>
-                <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>PREDICTION</div>
+                <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>REGGIE'S CALL</div>
                 <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: t.primary }}>{t.tonight.pred}</div>
               </div>
               {t.tonight.injuries.length > 0 && (
@@ -506,23 +577,17 @@ export default function TeamRoomAudition() {
           </div>
         </Panel>
 
-        {/* Tonight's Keys — Reggie/Marc */}
+        {/* Tonight's Keys — Reggie solo */}
         <Panel>
-          <SectionLabel text="TONIGHT'S KEYS" color={t.primary} />
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <div>
-              <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: t.primary }}>REGGIE'S KEYS</div>
-              <ol className="mt-1 space-y-1 text-[12px] text-white/80" style={{ fontFamily: "Inter" }}>
-                {t.reggieKeys.map((k, i) => <li key={i}>{i + 1}. {k}</li>)}
-              </ol>
-            </div>
-            <div>
-              <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: t.primary }}>MARC'S KEYS</div>
-              <ol className="mt-1 space-y-1 text-[12px] text-white/80" style={{ fontFamily: "Inter" }}>
-                {t.marcKeys.map((k, i) => <li key={i}>{i + 1}. {k}</li>)}
-              </ol>
-            </div>
-          </div>
+          <SectionLabel text="REGGIE'S TAKE ON TONIGHT" color={t.primary} />
+          <ol className="mt-2 space-y-1.5 text-[13px] text-white/85" style={{ fontFamily: "Inter" }}>
+            {[...t.reggieKeys, ...t.marcKeys].slice(0, 5).map((k, i) => (
+              <li key={i} className="flex gap-2">
+                <span style={{ color: t.primary, fontFamily: "Rajdhani", fontWeight: 700 }}>{i + 1}.</span>
+                <span>{k}</span>
+              </li>
+            ))}
+          </ol>
         </Panel>
 
         {/* Fan Poll */}
