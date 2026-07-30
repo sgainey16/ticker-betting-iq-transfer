@@ -23,9 +23,11 @@ const C = {
 // T-MARK — the angular T with the blue lightning slash to the upper-left.
 // Parameterized so the same primitive drives the header, favicon, nametag
 // pills, jerseys — every place the mark needs to appear. `variant` swaps
-// between light-on-dark and dark-on-light execution.
+// between light-on-dark and dark-on-light execution. `flip` mirrors the
+// mark so the motion runs the opposite direction — used only for auditioning
+// the correct orientation until the real brand file lands.
 // ---------------------------------------------------------------------------
-function TMark({ size = 120, variant = "light", className = "" }) {
+function TMark({ size = 120, variant = "light", flip = false, className = "" }) {
   const stroke = variant === "dark" ? C.black : C.white;
   const accent = C.blue;
   return (
@@ -35,6 +37,7 @@ function TMark({ size = 120, variant = "light", className = "" }) {
       height={size}
       className={className}
       aria-label="The Ticker mark"
+      style={flip ? { transform: "scaleX(-1)" } : undefined}
     >
       {/* Blue lightning slash — sits to the upper-left of the T */}
       <polygon points="12,42 78,42 58,78 12,78" fill={accent} />
@@ -345,6 +348,34 @@ export default function BrandAudition() {
 
         {/* 1 · LOGO SUITE */}
         <Section number="01" title="LOGO SUITE">
+          {/* Direction A/B — my current SVG vs. mirrored. Whichever reads
+              as "moving forward" is closer to the real brand mark. */}
+          <div className="mb-6 p-6 rounded-md border" style={{ background: "#111116", borderColor: C.blue }}>
+            <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.28em", color: C.blue }} className="mb-4">
+              DIRECTION AUDIT · WHICH ONE READS AS "MOVING FORWARD"?
+            </div>
+            <div className="grid grid-cols-2 gap-6">
+              <div className="flex flex-col items-center gap-3">
+                <TMark size={140} variant="light" flip={false} />
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: C.white }}>
+                  V1 · SLASH LEFT
+                </div>
+                <div style={{ fontFamily: "Inter", fontSize: "11px", color: C.gray, textAlign: "center" }}>
+                  Original take — slash trails behind on the left
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-3">
+                <TMark size={140} variant="light" flip={true} />
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: C.white }}>
+                  V2 · SLASH RIGHT (FLIPPED)
+                </div>
+                <div style={{ fontFamily: "Inter", fontSize: "11px", color: C.gray, textAlign: "center" }}>
+                  Motion runs forward, slash leads the way
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="flex flex-col items-center gap-3 p-6 rounded-md" style={{ background: "#111116" }}>
               <TMark size={100} variant="light" />
