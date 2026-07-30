@@ -743,6 +743,77 @@ async def recap_show_post_game_stats(match_id: int):
     return {"cached": False, **payload}
 
 
+# ---------- Fast-reel audition (per-game short-clip preview) ----------
+
+# Ordering priority — most exciting stuff first when Highlightly doesn't give
+# us proper game timestamps. Goals up top, then set-piece goals, then saves.
+_REEL_CATEGORY_ORDER = [
+    "overtime-shootout-goal",
+    "hat-trick",
+    "goal",
+    "power-play-goal",
+    "shorthanded-goal",
+    "save",
+    "hit-check",
+    "fight",
+    "assist-play",
+    "viral-moment",
+    "match-highlights",  # last — the long recap is the fallback, not the star
+]
+
+
+@api.get("/audition/fast-reel")
+async def audition_fast_reel(match_id: int):
+    """Return every clip Highlightly has for a game, sorted for a shorts-
+    style auto-advance reel. `short_clips` are the 30-90s cuts (goals,
+    saves, hits). `long_clip` is the 7-10min match-highlights fallback.
+    Frontend uses this to power the /audition/fast-reel/:matchId preview."""
+    clips = await highlightly.get_by_match(match_id, limit=40)
+    # Sort by category priority. Within the same category, keep API order.
+    def order_key(c):
+        cat = c.get("category") or "other"
+        try:
+            return (_REEL_CATEGORY_ORDER.index(cat), 0)
+        except ValueError:
+            return (len(_REEL_CATEGORY_ORDER), 0)
+    short_clips = [c for c in clips if c.get("category") != "match-highlights" and c.get("embed_url")]
+    long_clips  = [c for c in clips if c.get("category") == "match-highlights" and c.get("embed_url")]
+    short_clips.sort(key=order_key)
+    # Pull matchup metadata from the first clip if available
+    matchup = None
+    if clips:
+        home = clips[0].get("home_team")
+        away = clips[0].get("away_team")
+        if home and away:
+            matchup = f"{away} @ {home}"
+    return {
+        "match_id": match_id,
+        "matchup": matchup,
+        "short_clips": [
+            {
+                "id": c.get("id"),
+                "title": c.get("title"),
+                "category": c.get("category"),
+                "embed_url": c.get("embed_url"),
+                "source_url": c.get("source_url"),
+                "channel": c.get("channel"),
+                "home_team": c.get("home_team"),
+                "away_team": c.get("away_team"),
+            }
+            for c in short_clips
+        ],
+        "long_clip": (
+            {
+                "id": long_clips[0].get("id"),
+                "title": long_clips[0].get("title"),
+                "embed_url": long_clips[0].get("embed_url"),
+                "source_url": long_clips[0].get("source_url"),
+            }
+            if long_clips else None
+        ),
+    }
+
+
 # ---------- Live scoreboard (demo mode today, real feed later) ----------
 
 @api.get("/live/state")

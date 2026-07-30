@@ -18,6 +18,7 @@ import PlayerDetail from "@/pages/PlayerDetail";
 import GreatestGoalDemo from "@/pages/GreatestGoalDemo";
 import DeskPreview from "@/pages/DeskPreview";
 import ComingSoon from "@/pages/ComingSoon";
+import FastReelAudition from "@/pages/FastReelAudition";
 import { Toaster } from "sonner";
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
             <Route path="/voice-lab" element={<VoiceLab />} />
             <Route path="/voices" element={<Voices />} />
             <Route path="/desk-preview" element={<DeskPreview />} />
+            <Route path="/audition/fast-reel/:matchId" element={<FastReelAudition />} />
             <Route path="/soon/:slug" element={<ComingSoon />} />
           </Routes>
         </Layout>
