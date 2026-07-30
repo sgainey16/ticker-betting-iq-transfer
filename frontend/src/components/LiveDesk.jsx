@@ -269,15 +269,6 @@ export default function LiveDesk({ autoFlow = true }) {
         {paused ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
         {paused ? "Resume" : "Pause"}
       </button>
-      <button
-        onClick={() => setMuted((m) => !m)}
-        data-testid={TEST_IDS.desk.muteBtn}
-        className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#2d2d35] hover:border-white/40 text-white/70 font-accent text-[11px] uppercase tracking-widest transition-colors"
-        title={muted ? "Unmute the desk" : "Mute the desk"}
-      >
-        {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        {muted ? "Muted" : "Sound On"}
-      </button>
     </>
   );
 

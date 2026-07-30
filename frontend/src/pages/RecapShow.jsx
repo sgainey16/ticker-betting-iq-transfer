@@ -370,11 +370,6 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
             title="Skip forward">
             <SkipForward className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onToggleMute}
-            className="h-8 w-8 rounded-full flex items-center justify-center bg-black/70 hover:bg-black border border-white/20 text-white transition-colors"
-            title={muted ? "Unmute" : "Mute"}>
-            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-          </button>
         </div>
       )}
     </div>
