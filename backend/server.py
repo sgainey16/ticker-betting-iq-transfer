@@ -41,6 +41,8 @@ from highlightly_client import highlightly, TAB_GROUPS
 from recap_show import generate_episode as generate_recap_episode
 from live import live_engine
 from radio_stations import lookup as radio_lookup, list_all as radio_list_all
+import nhl_pbp as pbp_client
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
@@ -811,6 +813,101 @@ async def audition_fast_reel(match_id: int):
             }
             if long_clips else None
         ),
+    }
+
+
+@api.get("/audition/play-by-play")
+async def audition_play_by_play(match_id: int):
+    """Rich per-goal play-by-play for a game.
+
+    Combines two sources:
+      - **NHL public API** — every goal event with scorer, both assists,
+        exact period+time, score-at-time, situation (EV/PP/SH/EN).
+      - **Highlightly** — best-effort video-clip pairing (chronological
+        1-to-1 match with NHL goals; leftover goals are stats-only).
+
+    Response shape:
+      {
+        "match_id": 244354,
+        "matchup": "WPG @ CHI",
+        "away_team": "WPG", "home_team": "CHI",
+        "away_logo": "...", "home_logo": "...",
+        "plays": [
+          {
+            "seq": 1, "period": 1, "time": "10:40",
+            "team_code": "CHI", "team_logo": "...",
+            "scorer": "Nick Foligno", "assist1": null, "assist2": null,
+            "away_score": 0, "home_score": 1,
+            "situation": "PP", "shot_type": "snap",
+            "clip": { "embed_url": "...", "id": 123 }   // null if no video
+          }, ...
+        ]
+      }
+    """
+    # 1) Highlightly match metadata (date + team codes)
+    ms = await highlightly.get_match_stats(match_id)
+    if not ms:
+        return {"ready": False, "match_id": match_id}
+    home = ms.get("home", {}).get("team", {}) or {}
+    away = ms.get("away", {}).get("team", {}) or {}
+    home_code = (home.get("abbreviation") or "").upper()
+    away_code = (away.get("abbreviation") or "").upper()
+    # Highlightly match_stats has no date field — pull it from the /matches endpoint.
+    date_str = None
+    try:
+        async with httpx.AsyncClient(timeout=15) as h:
+            r = await h.get(f"{highlightly.base_url}/matches/{match_id}", headers=highlightly._headers())
+            if r.status_code == 200:
+                data = r.json()
+                if isinstance(data, list):
+                    data = data[0] if data else {}
+                date_str = (data.get("date") or "")[:10]  # YYYY-MM-DD prefix
+    except Exception:
+        pass
+
+    # 2) Highlightly clips for this match (video pairing pool)
+    clips = await highlightly.get_by_match(match_id, limit=40)
+    goal_clips = [
+        c for c in clips
+        if c.get("category") in ("goal", "power-play-goal", "shorthanded-goal", "overtime-shootout-goal")
+        and c.get("embed_url")
+    ]
+
+    # 3) NHL play-by-play
+    nhl_goals: list[dict] = []
+    async with httpx.AsyncClient(timeout=15) as http_client:
+        nhl_id = await pbp_client.find_nhl_game_id(http_client, date_str, home_code, away_code)
+        if nhl_id:
+            nhl_goals = await pbp_client.get_goals_for_game(http_client, nhl_id)
+
+    # 4) Pair NHL goals with Highlightly clips chronologically (best effort).
+    #    Skip shootout attempts — they're not really "highlight clips".
+    regulation_goals = [g for g in nhl_goals if not g.get("shootout")]
+    plays: list[dict] = []
+    for i, g in enumerate(regulation_goals):
+        clip = goal_clips[i] if i < len(goal_clips) else None
+        plays.append({
+            "seq": i + 1,
+            **g,
+            "team_logo": (
+                home.get("logo") if g.get("team_code") == home_code
+                else away.get("logo") if g.get("team_code") == away_code
+                else None
+            ),
+            "clip": (
+                {"id": clip.get("id"), "embed_url": clip.get("embed_url"), "source_url": clip.get("source_url")}
+                if clip else None
+            ),
+        })
+
+    return {
+        "ready": True,
+        "match_id": match_id,
+        "nhl_game_id": nhl_id if nhl_id else None,
+        "matchup": f"{away_code} @ {home_code}" if home_code and away_code else None,
+        "home_team": home_code, "away_team": away_code,
+        "home_logo": home.get("logo"), "away_logo": away.get("logo"),
+        "plays": plays,
     }
 
 

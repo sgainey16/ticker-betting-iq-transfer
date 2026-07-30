@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
 import PostGameStats from "@/components/PostGameStats";
+import PlayByPlayPanel from "@/components/PlayByPlayPanel";
 import { playStinger } from "@/lib/stinger";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film, Smartphone,
@@ -237,11 +238,14 @@ export default function RecapShow() {
       />
       </div>
 
-      {/* Post-Game Stats — sits beneath the fixed-height show wrapper so
-       * users scroll down (portrait) or swipe (landscape) to see the box
-       * score while Reggie & Marc are still discussing the game. */}
+      {/* Post-Game Stats + Play-By-Play — split screen below the segment rail.
+       * Desktop: 2-column grid (stats left, individual plays right).
+       * Mobile: stacked vertically. Both panels follow the current segment. */}
       {currentSegment && (
-        <PostGameStats segment={currentSegment} />
+        <div className="grid gap-3 md:grid-cols-2">
+          <PostGameStats segment={currentSegment} />
+          <PlayByPlayPanel segment={currentSegment} />
+        </div>
       )}
 
       {/* Hidden audio element for host lines */}
