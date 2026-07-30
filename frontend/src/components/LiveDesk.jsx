@@ -337,7 +337,7 @@ export default function LiveDesk({ autoFlow = true }) {
 
         {currentSpeaker && audioUnlocked && (
           <div
-            className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-md border transition-opacity duration-300"
+            className="absolute bottom-3 left-3 z-20 flex items-center gap-2 rounded-full px-3 py-1.5 backdrop-blur-md border transition-opacity duration-300"
             style={{ background: "rgba(5,7,15,0.55)", borderColor: speakerAccent + "88" }}
             data-testid={TEST_IDS.desk.lowerThird}
           >
