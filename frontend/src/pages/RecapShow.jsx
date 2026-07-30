@@ -398,18 +398,31 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment }) {
             key={s.match_id}
             onClick={() => onJumpToSegment(i)}
             data-testid={`recap-segment-${s.match_id}`}
-            className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 rounded-lg px-3 landscape:px-2 py-2 min-w-[128px] border transition-all ${
+            className={`flex-shrink-0 landscape:flex-shrink landscape:min-w-0 rounded-lg px-3 landscape:px-2 py-2 min-w-[150px] border transition-all ${
               isCurrent
                 ? "bg-[#101625] border-[#F5A623] shadow-[0_0_16px_-4px_rgba(245,166,35,0.7)]"
                 : "bg-[#0b0b10] border-[#2d2d35] hover:border-white/40"
             }`}
           >
+            {/* Bigger logos so the matchup reads at a glance on landscape */}
             <div className="flex items-center justify-between gap-1.5">
-              {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-6 w-6 landscape:h-5 landscape:w-5 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
+              {s.away.logo_url ? <img src={s.away.logo_url} alt={s.away.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.away.code}</span>}
               <span className="text-[9px] font-accent uppercase tracking-widest text-white/40">@</span>
-              {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-6 w-6 landscape:h-5 landscape:w-5 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
+              {s.home.logo_url ? <img src={s.home.logo_url} alt={s.home.code} className="h-9 w-9 landscape:h-7 landscape:w-7 object-contain" /> : <span className="text-[9px] text-white/50">{s.home.code}</span>}
             </div>
-            <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1.5 text-center ${
+            {/* Final score line — brighter side won */}
+            {s.final && (
+              <div className="mt-1 flex items-center justify-center gap-2 font-headline text-sm landscape:text-xs leading-none">
+                <span className={s.final.away_score > s.final.home_score ? "text-white" : "text-white/50"}>
+                  {s.final.away_score}
+                </span>
+                <span className="text-white/30 text-[10px]">–</span>
+                <span className={s.final.home_score > s.final.away_score ? "text-white" : "text-white/50"}>
+                  {s.final.home_score}
+                </span>
+              </div>
+            )}
+            <div className={`text-[9px] landscape:text-[8px] font-accent uppercase tracking-[0.25em] mt-1 text-center ${
               isCurrent ? "text-[#F5A623]" : isDone ? "text-emerald-400/70" : "text-white/40"
             }`}>
               {isCurrent ? "On air" : isDone ? "✓ done" : `Game ${i + 1}`}

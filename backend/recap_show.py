@@ -296,6 +296,29 @@ async def generate_episode(date_str: str) -> dict:
 
     segments = await _group_by_game(clips, logo_map)
 
+    # Fan out concurrent /matches/{id} calls so every segment carries its
+    # final score. One call per game — Highlightly caps at 8 games so this
+    # is cheap. Fills `segment.final = {home, away, state}`.
+    import asyncio as _asyncio
+    async def _fetch_score(seg):
+        try:
+            stats = await highlightly.get_match_stats(seg["match_id"])
+            if not stats:
+                return
+            score = stats.get("score") or {}
+            current = score.get("current") or ""
+            # Highlightly uses "X - Y" where X is away, Y is home. Normalize.
+            parts = [p.strip() for p in current.replace("–", "-").split("-")]
+            if len(parts) == 2 and all(p.isdigit() for p in parts):
+                seg["final"] = {
+                    "away_score": int(parts[0]),
+                    "home_score": int(parts[1]),
+                    "state": stats.get("state") or "FINAL",
+                }
+        except Exception:
+            pass
+    await _asyncio.gather(*[_fetch_score(s) for s in segments])
+
     # Try LLM script first — richer, better voice. Templated fallback if it fails.
     llm_script = await _llm_script_all_games(date_str, segments)
     used_llm = bool(llm_script)
