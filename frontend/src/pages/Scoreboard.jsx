@@ -2,71 +2,72 @@ import { useState } from "react";
 import { ChevronDown, VolumeX, Volume2, Radio } from "lucide-react";
 import { useLive } from "@/lib/liveContext";
 import { TeamLogo } from "@/lib/teamLogos";
+import { BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
 
 // The Scoreboard tab. In demo mode this shows 4 mock games with a live
 // ticker feel — clock, period, PP/PK, score updating every ~12s. When we
 // wire the real NHL API, this same shell paints whatever comes back from
 // /api/live/state (no UI changes needed).
+//
+// Reggie & Marc anchor the top of the page via the shared broadcast slot
+// so the Scoreboard feels like the same live desk as /show — the label
+// on the chyron reads "LIVE ACTION" here.
 
 export default function Scoreboard() {
   const { games, muted, setMuted, forceGoal } = useLive();
 
   return (
-    <div className="space-y-6" data-testid="scoreboard-page">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="font-accent text-xs uppercase tracking-[0.35em] text-red-400">
-            <span className="inline-flex items-center gap-2 align-middle">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
-              </span>
-              Live · demo mode
-            </span>
+    <div className="-mx-5 sm:-mx-8 -mt-8" data-testid="scoreboard-page">
+      <div className="max-w-7xl mx-auto px-5 sm:px-8 pt-6 pb-6 space-y-6">
+        {/* Reggie & Marc portal in here — same live desk as /show. */}
+        <div id={BROADCAST_SLOT_ID} data-testid="broadcast-slot" />
+
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-headline text-4xl sm:text-5xl text-white">Scoreboard</h1>
+            <p className="text-white/60 mt-2 text-sm max-w-xl">
+              Tonight's board — clock, period, special teams, and a red-light alert every time the puck hits the back of the net.
+            </p>
           </div>
-          <h1 className="font-headline text-4xl sm:text-5xl text-white mt-1">Scoreboard</h1>
-          <p className="text-white/60 mt-2 text-sm max-w-xl">
-            Tonight's board — clock, period, special teams, and a red-light alert every time the puck hits the back of the net.
-          </p>
+
+          {/* Sound toggle + investor "force goal" button */}
+          <div className="flex items-center gap-2">
+            <button
+              data-testid="scoreboard-mute-toggle"
+              onClick={() => setMuted(!muted)}
+              className="inline-flex items-center gap-2 rounded-full border border-[#2d2d35] hover:border-white/30 px-3 py-2 font-accent text-[11px] uppercase tracking-widest text-white/70 hover:text-white transition-colors"
+              title={muted ? "Turn goal horn on" : "Mute goal horn"}
+            >
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {muted ? "Horn off" : "Horn on"}
+            </button>
+            <button
+              data-testid="scoreboard-force-goal"
+              onClick={forceGoal}
+              className="inline-flex items-center gap-2 rounded-full border border-red-500/50 hover:border-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-2 font-accent text-[11px] uppercase tracking-widest text-red-300 hover:text-red-200 transition-colors"
+              title="Fire a demo goal now"
+            >
+              <Radio className="w-4 h-4" />
+              Fire goal (demo)
+            </button>
+          </div>
         </div>
 
-        {/* Sound toggle + investor "force goal" button */}
-        <div className="flex items-center gap-2">
-          <button
-            data-testid="scoreboard-mute-toggle"
-            onClick={() => setMuted(!muted)}
-            className="inline-flex items-center gap-2 rounded-full border border-[#2d2d35] hover:border-white/30 px-3 py-2 font-accent text-[11px] uppercase tracking-widest text-white/70 hover:text-white transition-colors"
-            title={muted ? "Turn goal horn on" : "Mute goal horn"}
-          >
-            {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            {muted ? "Horn off" : "Horn on"}
-          </button>
-          <button
-            data-testid="scoreboard-force-goal"
-            onClick={forceGoal}
-            className="inline-flex items-center gap-2 rounded-full border border-red-500/50 hover:border-red-400 bg-red-500/10 hover:bg-red-500/20 px-3 py-2 font-accent text-[11px] uppercase tracking-widest text-red-300 hover:text-red-200 transition-colors"
-            title="Fire a demo goal now"
-          >
-            <Radio className="w-4 h-4" />
-            Fire goal (demo)
-          </button>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {games.map((g) => <GameCard key={g.game_id} game={g} />)}
         </div>
+
+        {games.length === 0 && (
+          <div className="card-surface p-12 text-center">
+            <div className="font-accent text-xs uppercase tracking-widest text-white/40">
+              No games on the board
+            </div>
+            <div className="text-white/60 mt-2 text-sm">
+              Live feed will populate here once the season is underway.
+            </div>
+          </div>
+        )}
       </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        {games.map((g) => <GameCard key={g.game_id} game={g} />)}
-      </div>
-
-      {games.length === 0 && (
-        <div className="card-surface p-12 text-center">
-          <div className="font-accent text-xs uppercase tracking-widest text-white/40">
-            No games on the board
-          </div>
-          <div className="text-white/60 mt-2 text-sm">
-            Live feed will populate here once the season is underway.
-          </div>
-        </div>
-      )}
     </div>
   );
 }

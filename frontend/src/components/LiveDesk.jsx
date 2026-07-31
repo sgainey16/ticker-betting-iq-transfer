@@ -55,50 +55,52 @@ export default function LiveDesk({ autoFlow = true }) {
   const advancedRef = useRef(new Set());
 
   const [slotEl, setSlotEl] = useState(null);
-  // Predict Show now lives at /show. Landing (/) is the Recap Show, which
-  // owns its own audio flow — the persistent Predict player is paused there.
-  const isHome = location.pathname === "/show";
+  // Broadcast slot pages — routes that host the full Reggie & Marc frame
+  // at the top of the layout (via createPortal into #broadcast-slot).
+  // The Morning Skate (/show) and the Scoreboard (/scoreboard) both open
+  // on the live desk so the network feels continuously "on air".
+  const isSlotPage =
+    location.pathname === "/show" || location.pathname === "/scoreboard";
 
   // Routes where the persistent Predict Show competes with something else.
   // Recap Show (/) has its own audio flow — pause the Predict-show mini-bar.
   // Presser (/press-conference) and Back Office are 1-on-1/settings flows.
   // Audition (/audition/*) plays raw broadcast clips — hosts must be silent
   // so the user can actually hear the clip audio.
-  const QUIET_ROUTES = ["/press-conference", "/back-office", "/scoreboard", "/audition", "/"];
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/audition", "/"];
   const isQuietRoute =
     location.pathname === "/" ||
     QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));
 
   // Auto-pause when the user walks into a "quiet" route (Presser, Back
   // Office, Recap Show landing). Auto-RESUME the moment the user arrives
-  // at /show — that's the home of the Predict Show, they came here to
-  // listen. Elsewhere (Stats, Predict, etc.) we honor whatever state the
-  // pause button last set.
+  // at a broadcast-slot page (Morning Skate, Scoreboard) — they came here
+  // to listen. Elsewhere we honor whatever state the pause button last set.
   useEffect(() => {
     if (isQuietRoute) {
       setPaused(true);
       audioRef.current?.pause();
       audioRefB.current?.pause();
-    } else if (location.pathname === "/show") {
+    } else if (isSlotPage) {
       setPaused(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  // Track the Home broadcast slot — appears when Home mounts, disappears
+  // Track the broadcast slot — appears when a slot page mounts, disappears
   // when user leaves. We portal the full frame into it; when it goes away
   // we render the mini bar in Layout's flow.
   useEffect(() => {
-    if (!isHome) {
+    if (!isSlotPage) {
       setSlotEl(null);
       return;
     }
-    // Wait one tick so Home has committed its DOM.
+    // Wait one tick so the page has committed its DOM.
     const raf = requestAnimationFrame(() => {
       setSlotEl(document.getElementById(BROADCAST_SLOT_ID));
     });
     return () => cancelAnimationFrame(raf);
-  }, [isHome, location.pathname]);
+  }, [isSlotPage, location.pathname]);
 
   // Load banter whenever active topic changes.
   useEffect(() => {
@@ -276,10 +278,18 @@ export default function LiveDesk({ autoFlow = true }) {
   );
 
   // On /show — "The Morning Skate" — the top label reads "Tonight's Games"
-  // instead of the rotating topic name; the topic still cycles for the
-  // hosts' internal state but doesn't crowd the chyron.
+  // instead of the rotating topic name. On /scoreboard — the label reads
+  // "LIVE ACTION" so the chyron mirrors the live-desk feel of the network.
+  // The topic still cycles internally for the hosts' banter but doesn't
+  // crowd the chyron on either page.
   const isShowPage = location.pathname.startsWith("/show");
-  const headerLabel = isShowPage ? "Tonight's Games" : activeTopicLabel;
+  const isScoreboardPage = location.pathname.startsWith("/scoreboard");
+  const headerLabel = isScoreboardPage
+    ? "Live Action"
+    : isShowPage
+      ? "Tonight's Games"
+      : activeTopicLabel;
+  const headerKicker = isScoreboardPage ? null : isShowPage ? "Live" : "Now";
 
   const fullFrame = (
     <section className="relative">
@@ -287,9 +297,11 @@ export default function LiveDesk({ autoFlow = true }) {
       <div className="mb-3 flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <span className="h-2 w-2 rounded-full bg-red-500 live-pulse flex-shrink-0" />
-          <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-white/50 flex-shrink-0">
-            {isShowPage ? "Live" : "Now"}
-          </div>
+          {headerKicker && (
+            <div className="font-accent text-[10px] uppercase tracking-[0.4em] text-white/50 flex-shrink-0">
+              {headerKicker}
+            </div>
+          )}
           <div className="font-headline text-white text-lg sm:text-xl truncate" data-testid="desk-active-topic">
             {headerLabel}
           </div>
@@ -300,7 +312,7 @@ export default function LiveDesk({ autoFlow = true }) {
       <div
         data-testid={TEST_IDS.desk.shotFrame}
         className={`relative rounded-2xl overflow-hidden border border-[#2d2d35] bg-[#0d0d11] ${
-          isShowPage ? "landscape:rounded-none landscape:border-x-0 landscape:-mx-5 sm:landscape:-mx-8" : ""
+          isShowPage || isScoreboardPage ? "landscape:rounded-none landscape:border-x-0 landscape:-mx-5 sm:landscape:-mx-8" : ""
         }`}
       >
         <TwoHostDesk
