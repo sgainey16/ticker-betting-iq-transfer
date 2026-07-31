@@ -11,7 +11,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Flame, Snowflake, ChevronRight, Trophy, Send } from "lucide-react";
-import { TeamLogo } from "@/lib/teamLogos";
+import { TeamLogo, useTeamLogos } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
 
 /* -----------------------------------------------------------
@@ -359,6 +359,12 @@ export default function TeamRoomAudition() {
 
   const isPeeking = teamCode !== homeTeam;
   const t = TEAMS[teamCode];
+  // Non-seeded teams (all 32 minus the 6 audition franchises) don't have
+  // full stat panels yet — render a lightweight "lighting up soon" shell so
+  // the fan still sees their logo, welcome, and a way to Ask Reggie.
+  if (!t) {
+    return <UnseededTeamRoom code={teamCode} homeTeam={homeTeam} setTeamCode={setTeamCode} makeHome={makeHome} />;
+  }
   const xpPct = Math.min(100, Math.round((t.superfan.xp / t.superfan.cap) * 100));
 
   return (
@@ -372,7 +378,7 @@ export default function TeamRoomAudition() {
               THE TICKER · {isPeeking ? "SCOUTING" : "MY TEAM"}
             </div>
             <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", color: t.primary, letterSpacing: "0.3em" }}>
-              {isPeeking ? `PEEKING AT ${t.name} · YOUR HOME IS ${TEAMS[homeTeam].name}` : "YOUR DEFAULT DEEP DIVE"}
+              {isPeeking ? `PEEKING AT ${t.name} · YOUR HOME IS ${TEAMS[homeTeam]?.name || homeTeam}` : "YOUR DEFAULT DEEP DIVE"}
             </div>
           </div>
         </div>
@@ -410,7 +416,7 @@ export default function TeamRoomAudition() {
                 style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}
                 data-testid="team-back-to-home"
               >
-                ← BACK TO {TEAMS[homeTeam].name}
+                ← BACK TO {TEAMS[homeTeam]?.name || homeTeam}
               </button>
               <button
                 onClick={() => makeHome(teamCode)}
@@ -745,3 +751,85 @@ export default function TeamRoomAudition() {
     </div>
   );
 }
+
+/* ----------------------- UNSEEDED TEAM PLACEHOLDER ----------------------- */
+
+// The 32-team roster ships as logos + names via /api/images/team-logos, but
+// only 6 franchises have full seed data (stats panels, banter, prediction
+// center). Everyone else gets this lightweight Home page — power logo,
+// welcome, "lighting up soon" hero, and an Ask Reggie shortcut so the
+// interaction still starts on day one.
+function UnseededTeamRoom({ code, homeTeam, setTeamCode, makeHome }) {
+  const { logoByCode, nameByCode } = useTeamLogos();
+  const teamName = nameByCode(code) || code;
+  const isPeeking = code !== homeTeam;
+  return (
+    <div className="min-h-screen text-white pb-24 bg-[#0b0b10]">
+      <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.5)" }}>
+        <div className="flex items-center gap-3">
+          <TMark size={30} variant="light" />
+          <div>
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", letterSpacing: "0.05em" }}>
+              THE TICKER · {isPeeking ? "SCOUTING" : "MY TEAM"}
+            </div>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", color: "#1E5BFF", letterSpacing: "0.3em" }}>
+              {teamName.toUpperCase()} · LIGHTING UP SOON
+            </div>
+          </div>
+        </div>
+        {isPeeking && (
+          <button
+            onClick={() => setTeamCode(homeTeam)}
+            className="px-3 py-1.5 rounded-md border border-white/20 hover:border-white text-xs text-white/85 hover:text-white"
+            style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.15em" }}
+          >
+            ← BACK TO HOME
+          </button>
+        )}
+      </div>
+
+      <div className="relative overflow-hidden border-b border-white/5"
+           style={{ background: "radial-gradient(circle at 50% 30%, #1E5BFF14, transparent 60%), #0b0b10" }}>
+        <div className="px-6 py-14 max-w-6xl mx-auto grid md:grid-cols-2 items-center gap-8">
+          <div>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "16px", letterSpacing: "0.3em", color: "#1E5BFF" }}>
+              WELCOME HOME
+            </div>
+            <div className="relative mt-3" style={{ height: 260 }}>
+              <div className="absolute inset-0 rounded-full blur-3xl opacity-70 pointer-events-none"
+                   style={{ background: "radial-gradient(circle at 40% 50%, #1E5BFF55 0%, transparent 60%)" }} />
+              <TeamLogo code={code} size={260} className="relative drop-shadow-2xl" data-testid="team-hero-logo-unseeded" />
+            </div>
+          </div>
+          <div className="max-w-md">
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "40px", color: "#fff", lineHeight: 1 }}>
+              {teamName}
+            </div>
+            <div className="mt-4 text-[18px] text-white/80" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+              Your Team Room is lighting up. Stats, banter, live matchup coverage, and your private insights library with Reggie all rolling out — {teamName} is on the schedule.
+            </div>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                href="/press-conference/classic"
+                className="px-5 py-3 rounded-md text-black font-bold flex items-center gap-2"
+                style={{ background: "#1E5BFF", fontFamily: "Oswald", fontSize: "14px", letterSpacing: "0.15em" }}
+              >
+                ASK REGGIE ANYTHING
+              </a>
+              {isPeeking && (
+                <button
+                  onClick={() => makeHome(code)}
+                  className="px-5 py-3 rounded-md border border-white/25 hover:border-white text-white font-bold"
+                  style={{ fontFamily: "Oswald", fontSize: "14px", letterSpacing: "0.15em" }}
+                >
+                  SET AS MY HOME
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

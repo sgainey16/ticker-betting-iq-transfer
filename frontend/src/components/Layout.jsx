@@ -5,6 +5,7 @@ import ReggieAssistant from "@/components/ReggieAssistant";
 import LaunchZoneBanner from "@/components/LaunchZoneBanner";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
+import OnboardingOverlay from "@/components/OnboardingOverlay";
 import { TMark } from "@/lib/brand";
 import { BroadcastProvider } from "@/lib/broadcastContext";
 import { LiveProvider, useLive } from "@/lib/liveContext";
@@ -142,6 +143,11 @@ function LayoutInner({ children }) {
       <LiveDesk autoFlow={true} />
 
       <ReggieAssistant />
+
+      {/* First-run onboarding — greets the user with Reggie voice, captures
+       * name + team, then lands them on their Home. Gated by localStorage
+       * (or ?onboarding=1 for testing). */}
+      <OnboardingOverlay />
     </div>
   );
 }
