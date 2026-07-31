@@ -8,9 +8,9 @@
  *
  * Route: /audition/team-room  (+ /audition/team-room/:code for direct link)
  */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Play, Flame, Snowflake, ChevronRight, Trophy, MessageCircle, Send } from "lucide-react";
+import { Flame, Snowflake, ChevronRight, Trophy, Send } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
 
@@ -265,60 +265,9 @@ function SectionLabel({ text, right, color }) {
   );
 }
 
-// Reggie's "on-stage" placeholder — solo host presence for the Team Room.
-// Marc doesn't appear in this concept per user direction. This is a scene
-// element, not just a nametag: pointing pose silhouette + speech bubble
-// so the block has personality even before the illustrated art lands.
-function ReggieOnStage({ color, quote }) {
-  return (
-    <div className="relative flex flex-col items-center">
-      {/* Speech bubble above Reggie */}
-      {quote && (
-        <div className="mb-3 max-w-[280px] rounded-2xl px-4 py-2 relative"
-             style={{ background: "rgba(255,255,255,0.95)", color: "#0b0b10" }}>
-          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", letterSpacing: "0.02em", lineHeight: 1.35 }}>
-            {quote}
-          </div>
-          {/* Bubble tail */}
-          <div className="absolute left-1/2 -bottom-2 w-4 h-4 -translate-x-1/2 rotate-45"
-               style={{ background: "rgba(255,255,255,0.95)" }} />
-        </div>
-      )}
-      {/* Reggie placeholder — bigger, pointer-pose vibe (dashed to signal WIP) */}
-      <div className="relative h-56 w-44 rounded-t-full flex items-end justify-center overflow-hidden"
-           style={{ background: `linear-gradient(180deg, ${color}33 0%, ${color}11 60%, transparent 100%)`,
-                    border: `2px dashed ${color}66` }}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <TMark size={56} variant="light" />
-        </div>
-        <div className="mb-2 text-[9px] uppercase tracking-widest text-white/40" style={{ fontFamily: "Oswald" }}>
-          Reggie art
-        </div>
-      </div>
-      <div className="mt-2" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", letterSpacing: "0.15em", color }}>
-        REGGIE HARLOW · YOUR GUY
-      </div>
-    </div>
-  );
-}
-
-// Retired jersey banner hanging from the wall — decorative warmth.
-function RetiredBanner({ number, color }) {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <div className="w-14 h-20 flex items-center justify-center relative"
-           style={{
-             background: `linear-gradient(180deg, ${color}, ${color}88)`,
-             clipPath: "polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%)",
-             boxShadow: `0 6px 18px -6px ${color}aa`,
-           }}>
-        <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: "#fff", textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
-          {number}
-        </div>
-      </div>
-    </div>
-  );
-}
+// (Reggie silhouette + retired-jersey banners removed — user asked us to
+// dial the room decor back and let one big team logo carry the identity
+// with a splash of team color. Stats panels below do the rest of the work.)
 
 /* ---------------------------- PAGE ---------------------------- */
 
@@ -329,17 +278,17 @@ export default function TeamRoomAudition() {
   const xpPct = Math.min(100, Math.round((t.superfan.xp / t.superfan.cap) * 100));
 
   return (
-    <div className="min-h-screen text-white pb-24" style={{ background: t.bg }}>
+    <div className="min-h-screen text-white pb-24 bg-[#0b0b10]">
       {/* Team switcher bar */}
       <div className="border-b border-white/10 px-4 py-3 flex items-center justify-between" style={{ background: "rgba(0,0,0,0.5)" }}>
         <div className="flex items-center gap-3">
           <TMark size={30} variant="light" />
           <div>
             <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", letterSpacing: "0.05em" }}>
-              THE TICKER · TEAM ROOM AUDITION
+              THE TICKER · TEAM ROOM
             </div>
             <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", color: t.primary, letterSpacing: "0.3em" }}>
-              FLIP TEAMS TO SEE THE THEME CHANGE
+              PICK YOUR TEAM
             </div>
           </div>
         </div>
@@ -362,78 +311,47 @@ export default function TeamRoomAudition() {
         </Link>
       </div>
 
-      {/* HERO — locker-room scene backdrop */}
-      <div className="relative overflow-hidden"
+      {/* HERO — network-brand dark shell. Team color only as a soft glow
+       * behind the one power logo, plus small accents (streak pill, section
+       * labels, Reggie's call). We'll build team energy incrementally. */}
+      <div className="relative overflow-hidden border-b border-white/5"
            style={{
              background: `
-               radial-gradient(ellipse at 20% 0%, ${t.primary}22, transparent 55%),
-               radial-gradient(ellipse at 80% 100%, ${t.primary}18, transparent 55%),
-               linear-gradient(180deg, ${t.bg} 0%, ${t.panel} 100%)
+               radial-gradient(circle at 50% 30%, ${t.primary}14, transparent 60%),
+               #0b0b10
              `,
            }}>
-        {/* Faux wood-plank strip along the top for locker-room warmth */}
-        <div className="absolute inset-x-0 top-0 h-3 opacity-40"
-             style={{ background: `repeating-linear-gradient(90deg, ${t.accent}22 0 24px, ${t.accent}11 24px 48px)` }} />
-
-        {/* Retired-number banners on the left wall (portrait-hidden to save space) */}
-        <div className="absolute top-8 left-4 hidden lg:flex flex-col gap-2 z-10 opacity-90">
-          {(t.retiredNumbers || []).map((r, i) => (
-            <RetiredBanner key={i} number={r.n} color={t.primary} />
-          ))}
-        </div>
-        {/* Retired-number banners on the right wall as well — jerseys in the rafters,
-             not a Cup. Not every franchise has hoisted one, so we lean on retired
-             numbers as the universal shrine element. */}
-        <div className="absolute top-8 right-4 hidden lg:flex flex-col gap-2 z-10 opacity-90">
-          {(t.retiredNumbers || []).slice().reverse().map((r, i) => (
-            <RetiredBanner key={`r-${i}`} number={r.n} color={t.accent || t.primary} />
-          ))}
-        </div>
-
-        <div className="px-6 py-8 max-w-6xl mx-auto flex items-start gap-6 flex-wrap relative z-20">
-          {/* Left: welcome + record card */}
-          <div className="flex-1 min-w-[280px]">
-            <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "13px", letterSpacing: "0.25em", color: t.primary }}>
+        <div className="px-6 py-10 max-w-6xl mx-auto grid md:grid-cols-2 items-start gap-8">
+          {/* Left: welcome + POWER LOGO (replaces the team-name text) + record */}
+          <div className="min-w-[240px]">
+            <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "12px", letterSpacing: "0.3em", color: t.primary }}>
               WELCOME BACK, STEVE
             </div>
-            <div className="mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "44px", color: C.white, lineHeight: 0.95 }}>
-              {t.name}
+            <div className="relative mt-2 flex items-center justify-start" style={{ height: 240 }}>
+              <div className="absolute inset-0 rounded-full blur-3xl opacity-70 pointer-events-none"
+                   style={{ background: `radial-gradient(circle at 40% 50%, ${t.primary}55 0%, transparent 60%)` }} />
+              <TeamLogo code={t.code} size={240} className="relative drop-shadow-2xl"
+                        data-testid="team-hero-logo" />
             </div>
-            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: t.primary, letterSpacing: "0.03em", marginTop: 2 }}>
-              HEADQUARTERS
-            </div>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="h-16 w-16 rounded-md flex items-center justify-center bg-black/40 border border-white/10">
-                <TeamLogo code={t.code} className="h-14 w-14 object-contain" />
+            <div className="mt-4 rounded-md border border-white/10 bg-black/40 px-4 py-3 inline-block">
+              <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.3em", color: "#888" }}>
+                CURRENT RECORD
               </div>
-              <div className="rounded-md border border-white/10 bg-black/60 px-4 py-2">
-                <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.3em", color: "#888" }}>
-                  CURRENT RECORD
-                </div>
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "32px", color: C.white, lineHeight: 1 }}>
-                  {t.record}
-                </div>
-                <div className="mt-1 text-xs" style={{ fontFamily: "Oswald", fontWeight: 500, color: "#888", letterSpacing: "0.2em" }}>
-                  {t.division} · {t.points} PTS
-                </div>
-                <div className="mt-2 inline-block px-2 py-0.5 rounded-sm text-[10px]"
-                     style={{ background: "#0f7c3722", color: "#26cd66", border: "1px solid #26cd6644", fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}>
-                  {t.streak}
-                </div>
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "34px", color: C.white, lineHeight: 1 }}>
+                {t.record}
               </div>
-            </div>
-          </div>
-
-          {/* Center: SOLO Reggie with speech bubble + team neon */}
-          <div className="flex flex-col items-center self-center">
-            <ReggieOnStage color={t.primary} quote={t.reggieQuote} />
-            <div className="mt-4" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", color: t.primary, letterSpacing: "0.03em", textShadow: `0 0 24px ${t.primary}88` }}>
-              {t.neonText}
+              <div className="mt-1 text-xs" style={{ fontFamily: "Oswald", fontWeight: 500, color: "#888", letterSpacing: "0.2em" }}>
+                {t.division} · {t.points} PTS
+              </div>
+              <div className="mt-2 inline-block px-2 py-0.5 rounded-sm text-[10px]"
+                   style={{ background: "#0f7c3722", color: "#26cd66", border: "1px solid #26cd6644", fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}>
+                {t.streak}
+              </div>
             </div>
           </div>
 
           {/* Right: Tonight card */}
-          <Panel className="min-w-[240px]" style={{ background: "rgba(0,0,0,0.55)" }}>
+          <Panel className="min-w-[240px] md:justify-self-end w-full md:w-[320px]" style={{ background: "rgba(0,0,0,0.55)" }}>
             <SectionLabel text="TONIGHT" color={t.primary} />
             <div className="flex items-center justify-center gap-3 py-2">
               <TeamLogo code={t.code} className="h-9 w-9 object-contain" />
