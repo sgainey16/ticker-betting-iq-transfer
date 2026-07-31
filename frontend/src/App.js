@@ -33,7 +33,9 @@ function App() {
             <Route path="/" element={<RecapShow />} />
             <Route path="/show" element={<Home />} />
             <Route path="/recap" element={<Navigate to="/" replace />} />
-            <Route path="/press-conference" element={<PressConference />} />
+            <Route path="/press-conference" element={<TeamRoomAudition />} />
+            {/* Old presser (1-on-1 with Reggie) still reachable directly */}
+            <Route path="/press-conference/classic" element={<PressConference />} />
             {/* legacy alias */}
             <Route path="/ask" element={<Navigate to="/press-conference" replace />} />
             <Route path="/stats" element={<Stats />} />

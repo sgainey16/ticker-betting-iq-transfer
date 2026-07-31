@@ -8,7 +8,7 @@
  *
  * Route: /audition/team-room  (+ /audition/team-room/:code for direct link)
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Flame, Snowflake, ChevronRight, Trophy, Send } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
@@ -54,6 +54,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"4"}, {n:"7"}, {n:"77"} ],
     reggieQuote: "Bruins have won 4 straight. Marchand looks pissed off in the good way. I love it.",
+    marcQuote: "Pastrnak's shot rate is up 18%, Swayman's .928 since March. Edmonton's D has a real problem tonight.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2450, next: "SUPERFAN", cap: 5000 },
   },
   MTL: {
@@ -90,6 +91,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"9"}, {n:"4"}, {n:"29"} ],
     reggieQuote: "5 straight for the Habs. Bell Centre is going to be electric tonight. Book it.",
+    marcQuote: "Caufield's shooting 17.4%, Suzuki plus-eleven in the last ten. This isn't a hot streak — they're building.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2750, next: "LEGEND", cap: 5000 },
   },
   TOR: {
@@ -126,6 +128,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"1"}, {n:"4"}, {n:"13"} ],
     reggieQuote: "Matthews is on pace for 60. Ridiculous. This might be the year. I said IT MIGHT.",
+    marcQuote: "You said 'might', Reg — because their PK is 26th. Fix that or the parade waits another year.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 3150, next: "LEGEND", cap: 5000 },
   },
   EDM: {
@@ -162,6 +165,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"99"}, {n:"11"}, {n:"31"} ],
     reggieQuote: "7 in a row. McJesus doing McJesus things. This is a Cup team. Say it with me.",
+    marcQuote: "The five-on-five numbers say the same thing. Goals-for percentage 61%. Even the process is Cup-level.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 4200, next: "LEGEND", cap: 5000 },
   },
   NYR: {
@@ -198,6 +202,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"1"}, {n:"11"}, {n:"35"} ],
     reggieQuote: "Panarin is money. Fox is a magician. Broadway is buzzing. Playoffs start now.",
+    marcQuote: "Shesterkin's save percentage is back over .920. If he's this Shesty in April, everyone else is playing for silver.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 2950, next: "SUPERFAN", cap: 5000 },
   },
   COL: {
@@ -234,6 +239,7 @@ const TEAMS = {
     ],
     retiredNumbers: [ {n:"21"}, {n:"33"}, {n:"77"} ],
     reggieQuote: "MacKinnon's in an MVP fight. Makar reminds me of Bobby Orr. Cup or bust in Denver.",
+    marcQuote: "Careful, Reg — 'reminds me of Bobby Orr' is a heavy sentence. But 78 points from a D-man? Fine, I'll allow it.",
     superfan: { level: "SEASON TICKET HOLDER", xp: 3520, next: "LEGEND", cap: 5000 },
   },
 };
@@ -265,15 +271,93 @@ function SectionLabel({ text, right, color }) {
   );
 }
 
+// Banter strip — Reggie & Marc greet the fan the moment they land, one
+// team-specific take each. Uses the two-tone bubble treatment so it feels
+// like a real broadcast exchange rather than a marketing pull-quote.
+function TeamBanter({ team }) {
+  const t = team;
+  return (
+    <div className="max-w-6xl mx-auto px-6 pb-6" data-testid="team-banter">
+      <SectionLabel text="REGGIE & MARC ON THE" right={t.name} color={t.primary} />
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className="rounded-md border border-white/10 bg-black/40 p-3 flex gap-3">
+          <div className="h-9 w-9 rounded-full flex-shrink-0 flex items-center justify-center"
+               style={{ background: t.primary + "33", border: `1px solid ${t.primary}55` }}>
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: t.primary }}>RH</span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "10px", letterSpacing: "0.28em", color: t.primary }}>
+              REGGIE HARLOW
+            </div>
+            <div className="mt-1 text-[14px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+              "{t.reggieQuote}"
+            </div>
+          </div>
+        </div>
+        <div className="rounded-md border border-white/10 bg-black/40 p-3 flex gap-3">
+          <div className="h-9 w-9 rounded-full flex-shrink-0 flex items-center justify-center bg-white/8"
+               style={{ border: "1px solid rgba(255,255,255,0.18)" }}>
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: "#c9d4ff" }}>MC</span>
+          </div>
+          <div>
+            <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "10px", letterSpacing: "0.28em", color: "#c9d4ff" }}>
+              MARC COLLINS
+            </div>
+            <div className="mt-1 text-[14px] text-white/85" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+              "{t.marcQuote}"
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // (Reggie silhouette + retired-jersey banners removed — user asked us to
 // dial the room decor back and let one big team logo carry the identity
 // with a splash of team color. Stats panels below do the rest of the work.)
 
 /* ---------------------------- PAGE ---------------------------- */
 
+const TEAM_STORAGE_KEY = "ticker.homeTeam";
+
 export default function TeamRoomAudition() {
   const { code } = useParams();
-  const [teamCode, setTeamCode] = useState(code && TEAMS[code.toUpperCase()] ? code.toUpperCase() : "BOS");
+
+  // Two-layer state:
+  //   • homeTeam — the fan's DEFAULT team (persisted). Set on first pick or
+  //     via the "Set as my home" button. Never overwritten by casual peeking.
+  //   • teamCode — the team CURRENTLY being viewed. May be a "peek" at
+  //     another franchise for a scouting deep-dive.
+  const [homeTeam, setHomeTeam] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem(TEAM_STORAGE_KEY);
+      if (stored && TEAMS[stored]) return stored;
+    } catch {}
+    return "BOS";
+  });
+  const [teamCode, setTeamCode] = useState(() => {
+    const fromRoute = code && TEAMS[code.toUpperCase()] ? code.toUpperCase() : null;
+    if (fromRoute) return fromRoute;
+    try {
+      const stored = window.localStorage.getItem(TEAM_STORAGE_KEY);
+      if (stored && TEAMS[stored]) return stored;
+    } catch {}
+    return "BOS";
+  });
+
+  // Route param wins — deep links to /audition/team-room/MTL peek at MTL
+  // without touching the fan's home team.
+  useEffect(() => {
+    if (code && TEAMS[code.toUpperCase()]) setTeamCode(code.toUpperCase());
+  }, [code]);
+
+  const makeHome = (c) => {
+    setHomeTeam(c);
+    try { window.localStorage.setItem(TEAM_STORAGE_KEY, c); } catch {}
+  };
+
+  const isPeeking = teamCode !== homeTeam;
   const t = TEAMS[teamCode];
   const xpPct = Math.min(100, Math.round((t.superfan.xp / t.superfan.cap) * 100));
 
@@ -285,30 +369,60 @@ export default function TeamRoomAudition() {
           <TMark size={30} variant="light" />
           <div>
             <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", letterSpacing: "0.05em" }}>
-              THE TICKER · TEAM ROOM
+              THE TICKER · {isPeeking ? "SCOUTING" : "MY TEAM"}
             </div>
             <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", color: t.primary, letterSpacing: "0.3em" }}>
-              PICK YOUR TEAM
+              {isPeeking ? `PEEKING AT ${t.name} · YOUR HOME IS ${TEAMS[homeTeam].name}` : "YOUR DEFAULT DEEP DIVE"}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {TEAM_ORDER.map((c) => (
-            <button key={c} onClick={() => setTeamCode(c)}
-              className={`h-9 w-9 rounded-md flex items-center justify-center border transition-all ${
-                c === teamCode ? "border-white shadow-lg scale-105" : "border-white/15 hover:border-white/50"
-              }`}
-              style={{ background: c === teamCode ? TEAMS[c].primary + "22" : "transparent" }}
-              data-testid={`team-switch-${c}`}
-            >
-              <TeamLogo code={c} className="h-7 w-7 object-contain" />
-            </button>
-          ))}
+          {TEAM_ORDER.map((c) => {
+            const isActive = c === teamCode;
+            const isHome = c === homeTeam;
+            return (
+              <button key={c} onClick={() => setTeamCode(c)}
+                className={`relative h-9 w-9 rounded-md flex items-center justify-center border transition-all ${
+                  isActive ? "border-white shadow-lg scale-105" : "border-white/15 hover:border-white/50"
+                }`}
+                style={{ background: isActive ? TEAMS[c].primary + "22" : "transparent" }}
+                title={isHome ? `${TEAMS[c].name} · your home team` : `Peek at ${TEAMS[c].name}`}
+                data-testid={`team-switch-${c}`}
+              >
+                <TeamLogo code={c} className="h-7 w-7 object-contain" />
+                {isHome && (
+                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full border border-black"
+                        style={{ background: TEAMS[c].primary }}
+                        title="Home team"
+                        data-testid={`team-home-dot-${c}`} />
+                )}
+              </button>
+            );
+          })}
         </div>
-        <Link to="/" className="text-white/50 hover:text-white text-xs"
-              style={{ fontFamily: "Oswald", fontWeight: 500, letterSpacing: "0.28em" }}>
-          ← BACK
-        </Link>
+        {/* Peek-mode affordances: snap back to home OR make this team home */}
+        <div className="flex items-center gap-2">
+          {isPeeking && (
+            <>
+              <button
+                onClick={() => setTeamCode(homeTeam)}
+                className="px-3 py-1.5 rounded-md border border-white/20 hover:border-white text-xs text-white/85 hover:text-white transition-colors"
+                style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}
+                data-testid="team-back-to-home"
+              >
+                ← BACK TO {TEAMS[homeTeam].name}
+              </button>
+              <button
+                onClick={() => makeHome(teamCode)}
+                className="px-3 py-1.5 rounded-md text-xs text-black font-semibold hover:opacity-90 transition-opacity"
+                style={{ background: t.primary, fontFamily: "Oswald", letterSpacing: "0.15em" }}
+                data-testid="team-set-home"
+              >
+                SET AS MY HOME
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* HERO — network-brand dark shell. Team color only as a soft glow
@@ -325,7 +439,7 @@ export default function TeamRoomAudition() {
           {/* Left: welcome + POWER LOGO (replaces the team-name text) + record */}
           <div className="min-w-[240px]">
             <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "12px", letterSpacing: "0.3em", color: t.primary }}>
-              WELCOME BACK, STEVE
+              {isPeeking ? `SCOUTING · ${t.name}` : "WELCOME BACK, STEVE"}
             </div>
             <div className="relative mt-2 flex items-center justify-start" style={{ height: 240 }}>
               <div className="absolute inset-0 rounded-full blur-3xl opacity-70 pointer-events-none"
@@ -403,6 +517,41 @@ export default function TeamRoomAudition() {
           ))}
         </div>
       </div>
+
+      {/* Reggie & Marc banter — team-specific greeting the moment fans land */}
+      <TeamBanter team={t} />
+
+      {/* YOUR INSIGHTS & HISTORY — only surfaces on the fan's home team.
+       * Peek mode ("scouting" another team) is base stats only: no
+       * personal Q&A / saved-take history is exposed. Once auth ships,
+       * this panel hydrates from the user's Reggie & Marc conversation log. */}
+      {!isPeeking && (
+        <div className="max-w-6xl mx-auto px-6 pb-2" data-testid="insights-history-panel">
+          <SectionLabel text="YOUR INSIGHTS & HISTORY · WITH REGGIE" color={t.primary} />
+          <div className="rounded-md border border-white/10 bg-black/40 p-4 flex items-start gap-4">
+            <div className="h-10 w-10 rounded-full flex-shrink-0 flex items-center justify-center"
+                 style={{ background: t.primary + "22", border: `1px solid ${t.primary}55` }}>
+              <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: t.primary }}>RH</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px", color: C.white }}>
+                No deep-dives yet, Steve.
+              </div>
+              <div className="mt-1 text-[13px] text-white/65" style={{ fontFamily: "Inter", lineHeight: 1.45 }}>
+                Ask Reggie & Marc a question about the {t.name.charAt(0) + t.name.slice(1).toLowerCase()} and your saved takes, matchup breakdowns and answers pile up here — your private library, for your team only.
+              </div>
+            </div>
+            <Link
+              to="/press-conference/classic"
+              className="flex-shrink-0 px-3 py-2 rounded-md text-xs text-black font-semibold hover:opacity-90 transition-opacity"
+              style={{ background: t.primary, fontFamily: "Oswald", letterSpacing: "0.15em" }}
+              data-testid="ask-reggie-cta"
+            >
+              ASK REGGIE →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main grid */}
       <div className="px-4 md:px-6 py-4 max-w-6xl mx-auto grid md:grid-cols-3 gap-3">
@@ -574,7 +723,9 @@ export default function TeamRoomAudition() {
         </Panel>
       </div>
 
-      {/* Superfan XP bar */}
+      {/* Superfan XP bar — personal layer. Only shown when the fan is on
+       * their own home team. Peek mode is base stats only, no personal data. */}
+      {!isPeeking && (
       <div className="fixed left-0 right-0 bottom-0 border-t border-white/10 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
         <div className="max-w-6xl mx-auto flex items-center gap-4">
           <div className="min-w-[180px]">
@@ -590,6 +741,7 @@ export default function TeamRoomAudition() {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
