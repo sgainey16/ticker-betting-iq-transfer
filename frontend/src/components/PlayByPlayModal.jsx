@@ -53,6 +53,13 @@ function ytThumb(url) {
   const id = ytIdFromUrl(url);
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
 }
+// Highlightly ships two clip flavors: YouTube embeds AND direct progressive
+// MP4 URLs (typically from ESPN's CDN). Detect the second case so we can
+// render a native <video> tag — the YT.Player SDK obviously can't play MP4s.
+function isDirectVideo(url) {
+  if (!url) return false;
+  return /\.(mp4|webm|m3u8)(\?|$)/i.test(url);
+}
 
 // Lazy-load YT IFrame API (guarded against double-load).
 function loadYTApi() {
@@ -96,6 +103,7 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
   const [showBumper, setShowBumper] = useState(false);
 
   const playerRef = useRef(null);
+  const videoRef = useRef(null);
   const audioCtxRef = useRef(null);
   const bumperAudioRef = useRef(null);
   const reggieLinesRef = useRef([]);
@@ -106,6 +114,8 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
   const current = clips?.[idx];
   const nextClip = clips?.[idx + 1];
   const total = clips?.length || 0;
+  const useDirectVideo = isDirectVideo(current?.embed_url);
+  const useYouTube = !useDirectVideo && !!ytIdFromUrl(current?.embed_url);
 
   // Reset when the modal reopens on a different starting clip
   useEffect(() => {
@@ -131,31 +141,25 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
     return () => { alive = false; };
   }, [open]);
 
-  // YouTube player lifecycle
+  // YouTube player lifecycle — only runs when the clip IS a YouTube embed.
+  // Direct MP4 clips (ESPN CDN etc.) use a native <video> tag instead.
   useEffect(() => {
-    if (!open || !current) return;
+    if (!open || !current || !useYouTube) return;
     let cancelled = false;
     // Watchdog: some Highlightly YT clips are "removed" and never fire a
     // reliable onError. If the video hasn't reached PLAYING state within
-    // 8 seconds of load, treat it as broken and auto-advance so the modal
-    // never gets stuck on a black frame.
+    // 8 seconds of load, treat it as broken and close the modal.
     let hasReachedPlaying = false;
     let watchdog = null;
     loadYTApi().then((YT) => {
       if (cancelled) return;
       const videoId = ytIdFromUrl(current.embed_url);
-      // No usable embed url — treat like a broken clip and close the modal
-      // (return to Recap page) instead of auto-advancing to the next clip.
       if (!videoId) { setTimeout(() => onClose?.(), 500); return; }
 
       const armWatchdog = () => {
         if (watchdog) clearTimeout(watchdog);
         hasReachedPlaying = false;
         watchdog = setTimeout(() => {
-          // Broken/removed clip — don't skip to next, just close the modal
-          // so the user returns to the main Recap page (they explicitly
-          // picked this clip; auto-advancing feels like the app is
-          // "skipping around" out of their control).
           if (!hasReachedPlaying) onClose?.();
         }, 8000);
       };
@@ -175,9 +179,6 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
           onReady: (e) => { try { e.target.playVideo(); } catch { /* noop */ } },
           onStateChange: (e) => {
             if (e.data === 1) { hasReachedPlaying = true; setHasStarted(true); }
-            // Clip ended — the user selected THIS clip, so close the modal
-            // and return them to the main Recap page. If they want the
-            // next clip they can hit the Next button explicitly.
             if (e.data === 0) onClose?.();
           },
           onError: () => setTimeout(() => onClose?.(), 500),
@@ -190,19 +191,52 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
       if (watchdog) clearTimeout(watchdog);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, current?.id]);
+  }, [open, current?.id, useYouTube]);
+
+  // Native <video> lifecycle for MP4/webm/HLS clips.
+  useEffect(() => {
+    if (!open || !current || !useDirectVideo) return;
+    const el = videoRef.current;
+    if (!el) return;
+    el.currentTime = 0;
+    const onPlaying = () => setHasStarted(true);
+    const onEnded = () => onClose?.();
+    const onError = () => setTimeout(() => onClose?.(), 500);
+    el.addEventListener("playing", onPlaying);
+    el.addEventListener("ended", onEnded);
+    el.addEventListener("error", onError);
+    // Mobile autoplay commonly requires muted OR user gesture. We start
+    // muted so autoplay lands; the user un-mutes via the poster tap.
+    el.play().catch(() => { /* poster button will trigger .play() */ });
+    return () => {
+      el.removeEventListener("playing", onPlaying);
+      el.removeEventListener("ended", onEnded);
+      el.removeEventListener("error", onError);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, current?.id, useDirectVideo]);
 
   // Destroy player when modal closes
   useEffect(() => {
     if (!open) {
       try { playerRef.current?.destroy(); } catch { /* noop */ }
       playerRef.current = null;
+      try { videoRef.current?.pause(); } catch { /* noop */ }
       if (bumperAudioRef.current) {
         try { bumperAudioRef.current.pause(); } catch { /* noop */ }
         bumperAudioRef.current = null;
       }
     }
   }, [open]);
+
+  // If a clip has neither a YouTube ID nor a direct video URL, close the
+  // modal after a beat rather than leave the user staring at a black box.
+  useEffect(() => {
+    if (!open || !current) return;
+    if (useYouTube || useDirectVideo) return;
+    const t = setTimeout(() => onClose?.(), 500);
+    return () => clearTimeout(t);
+  }, [open, current, useYouTube, useDirectVideo, onClose]);
 
   function getAudioCtx() {
     if (!audioCtxRef.current) {
@@ -313,21 +347,50 @@ export default function PlayByPlayModal({ open, clips, matchup, startIdx = 0, on
             ))}
           </div>
 
-          {/* YT player mount */}
-          <div id={PLAYER_ID} className={`w-full h-full ${transitioning ? "invisible" : ""}`} />
+          {/* Video mount — YouTube player OR native <video>, depending on
+           * the source URL. Only one is mounted at a time so we don't leak
+           * a stale player when a match mixes clip types. */}
+          {useYouTube && (
+            <div id={PLAYER_ID} className={`w-full h-full ${transitioning ? "invisible" : ""}`} />
+          )}
+          {useDirectVideo && (
+            <video
+              ref={videoRef}
+              key={current.id /* forces reload when we advance */}
+              src={current.embed_url}
+              className={`w-full h-full object-contain bg-black ${transitioning ? "invisible" : ""}`}
+              autoPlay
+              playsInline
+              controls
+              preload="auto"
+              data-testid="pbp-native-video"
+            />
+          )}
 
-          {/* Poster before first play (mobile autoplay is often blocked) */}
+          {/* Poster before first play (mobile autoplay is often blocked).
+           * For direct MP4 we don't need a YT thumbnail — a solid frame with
+           * a play button is enough and matches the clip's own aesthetic. */}
           {!hasStarted && !transitioning && (
             <button
               onClick={() => {
-                try { playerRef.current?.playVideo(); } catch { /* noop */ }
+                if (useYouTube) {
+                  try { playerRef.current?.playVideo(); } catch { /* noop */ }
+                } else if (useDirectVideo) {
+                  try { videoRef.current?.play(); } catch { /* noop */ }
+                }
                 setHasStarted(true);
               }}
               className="absolute inset-0 z-20 group"
               aria-label="Tap to play"
               data-testid="pbp-poster"
             >
-              <img src={ytThumb(current.embed_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              {useYouTube && ytThumb(current.embed_url) && (
+                <img src={ytThumb(current.embed_url)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              )}
+              {useDirectVideo && (
+                <div className="absolute inset-0"
+                     style={{ background: `linear-gradient(135deg, ${C.blue}22, ${C.black} 70%)` }} />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
               <span className="absolute inset-0 flex items-center justify-center">
                 <span className="h-14 w-14 rounded-full bg-red-600 group-active:bg-red-500 flex items-center justify-center transition-colors"
