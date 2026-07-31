@@ -250,7 +250,7 @@ const TEAM_ORDER = ["BOS", "MTL", "TOR", "EDM", "NYR", "COL"];
 
 function Panel({ children, className = "", style }) {
   return (
-    <div className={`rounded-md border border-white/10 bg-black/40 p-3 ${className}`} style={style}>
+    <div className={`rounded-md border border-white/10 bg-black/40 p-4 md:p-5 ${className}`} style={style}>
       {children}
     </div>
   );
@@ -258,12 +258,12 @@ function Panel({ children, className = "", style }) {
 
 function SectionLabel({ text, right, color }) {
   return (
-    <div className="flex items-center justify-between mb-2">
-      <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.28em", color: color || C.silver }}>
+    <div className="flex items-center justify-between mb-3">
+      <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.28em", color: color || C.silver }}>
         {text}
       </div>
       {right && (
-        <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.25em", color: "#666" }}>
+        <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "12px", letterSpacing: "0.25em", color: "#888" }}>
           {right}
         </div>
       )}
@@ -280,30 +280,30 @@ function TeamBanter({ team }) {
     <div className="max-w-6xl mx-auto px-6 pb-6" data-testid="team-banter">
       <SectionLabel text="REGGIE & MARC ON THE" right={t.name} color={t.primary} />
       <div className="grid md:grid-cols-2 gap-3">
-        <div className="rounded-md border border-white/10 bg-black/40 p-3 flex gap-3">
-          <div className="h-9 w-9 rounded-full flex-shrink-0 flex items-center justify-center"
+        <div className="rounded-md border border-white/10 bg-black/40 p-4 flex gap-3">
+          <div className="h-11 w-11 rounded-full flex-shrink-0 flex items-center justify-center"
                style={{ background: t.primary + "33", border: `1px solid ${t.primary}55` }}>
-            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: t.primary }}>RH</span>
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: t.primary }}>RH</span>
           </div>
           <div>
-            <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "10px", letterSpacing: "0.28em", color: t.primary }}>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.28em", color: t.primary }}>
               REGGIE HARLOW
             </div>
-            <div className="mt-1 text-[14px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+            <div className="mt-1.5 text-[18px] text-white/95" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.35 }}>
               "{t.reggieQuote}"
             </div>
           </div>
         </div>
-        <div className="rounded-md border border-white/10 bg-black/40 p-3 flex gap-3">
-          <div className="h-9 w-9 rounded-full flex-shrink-0 flex items-center justify-center bg-white/8"
+        <div className="rounded-md border border-white/10 bg-black/40 p-4 flex gap-3">
+          <div className="h-11 w-11 rounded-full flex-shrink-0 flex items-center justify-center bg-white/8"
                style={{ border: "1px solid rgba(255,255,255,0.18)" }}>
-            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: "#c9d4ff" }}>MC</span>
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#c9d4ff" }}>MC</span>
           </div>
           <div>
-            <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "10px", letterSpacing: "0.28em", color: "#c9d4ff" }}>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.28em", color: "#c9d4ff" }}>
               MARC COLLINS
             </div>
-            <div className="mt-1 text-[14px] text-white/85" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+            <div className="mt-1.5 text-[18px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.35 }}>
               "{t.marcQuote}"
             </div>
           </div>
@@ -438,59 +438,59 @@ export default function TeamRoomAudition() {
         <div className="px-6 py-10 max-w-6xl mx-auto grid md:grid-cols-2 items-start gap-8">
           {/* Left: welcome + POWER LOGO (replaces the team-name text) + record */}
           <div className="min-w-[240px]">
-            <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "12px", letterSpacing: "0.3em", color: t.primary }}>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "16px", letterSpacing: "0.3em", color: t.primary }}>
               {isPeeking ? `SCOUTING · ${t.name}` : "WELCOME BACK, STEVE"}
             </div>
-            <div className="relative mt-2 flex items-center justify-start" style={{ height: 240 }}>
+            <div className="relative mt-3 flex items-center justify-start" style={{ height: 260 }}>
               <div className="absolute inset-0 rounded-full blur-3xl opacity-70 pointer-events-none"
                    style={{ background: `radial-gradient(circle at 40% 50%, ${t.primary}55 0%, transparent 60%)` }} />
-              <TeamLogo code={t.code} size={240} className="relative drop-shadow-2xl"
+              <TeamLogo code={t.code} size={260} className="relative drop-shadow-2xl"
                         data-testid="team-hero-logo" />
             </div>
-            <div className="mt-4 rounded-md border border-white/10 bg-black/40 px-4 py-3 inline-block">
-              <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.3em", color: "#888" }}>
+            <div className="mt-5 rounded-md border border-white/10 bg-black/40 px-5 py-4 inline-block">
+              <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#888" }}>
                 CURRENT RECORD
               </div>
-              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "34px", color: C.white, lineHeight: 1 }}>
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "44px", color: C.white, lineHeight: 1, letterSpacing: "0.01em" }}>
                 {t.record}
               </div>
-              <div className="mt-1 text-xs" style={{ fontFamily: "Oswald", fontWeight: 500, color: "#888", letterSpacing: "0.2em" }}>
+              <div className="mt-1.5" style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "13px", color: "#a0a0a5", letterSpacing: "0.2em" }}>
                 {t.division} · {t.points} PTS
               </div>
-              <div className="mt-2 inline-block px-2 py-0.5 rounded-sm text-[10px]"
-                   style={{ background: "#0f7c3722", color: "#26cd66", border: "1px solid #26cd6644", fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}>
+              <div className="mt-2.5 inline-block px-2.5 py-1 rounded-sm text-[13px]"
+                   style={{ background: "#0f7c3722", color: "#26cd66", border: "1px solid #26cd6644", fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.15em" }}>
                 {t.streak}
               </div>
             </div>
           </div>
 
           {/* Right: Tonight card */}
-          <Panel className="min-w-[240px] md:justify-self-end w-full md:w-[320px]" style={{ background: "rgba(0,0,0,0.55)" }}>
+          <Panel className="min-w-[240px] md:justify-self-end w-full md:w-[340px]" style={{ background: "rgba(0,0,0,0.55)" }}>
             <SectionLabel text="TONIGHT" color={t.primary} />
-            <div className="flex items-center justify-center gap-3 py-2">
-              <TeamLogo code={t.code} className="h-9 w-9 object-contain" />
-              <span className="text-white/50" style={{ fontFamily: "Oswald", fontWeight: 500 }}>VS</span>
-              <TeamLogo code={t.tonight.opp} className="h-9 w-9 object-contain" />
+            <div className="flex items-center justify-center gap-4 py-2">
+              <TeamLogo code={t.code} className="h-11 w-11 object-contain" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "16px", color: "#888", letterSpacing: "0.1em" }}>VS</span>
+              <TeamLogo code={t.tonight.opp} className="h-11 w-11 object-contain" />
             </div>
-            <div className="text-center" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: C.white }}>
+            <div className="text-center" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: C.white, letterSpacing: "0.02em" }}>
               {t.tonight.time}
             </div>
-            <div className="text-center text-xs text-white/60" style={{ fontFamily: "Oswald", letterSpacing: "0.15em" }}>
+            <div className="text-center" style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "13px", color: "#a0a0a5", letterSpacing: "0.15em" }}>
               {t.tonight.venue}
             </div>
-            <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+            <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
               <div>
-                <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>ODDS</div>
-                <div className="text-xs text-white/85" style={{ fontFamily: "Inter" }}>{t.tonight.odds}</div>
+                <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.28em", color: "#888" }}>ODDS</div>
+                <div className="text-[15px] text-white/90 mt-0.5" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>{t.tonight.odds}</div>
               </div>
               <div>
-                <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>REGGIE'S CALL</div>
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: t.primary }}>{t.tonight.pred}</div>
+                <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.28em", color: "#888" }}>REGGIE'S CALL</div>
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: t.primary, lineHeight: 1.1 }}>{t.tonight.pred}</div>
               </div>
               {t.tonight.injuries.length > 0 && (
                 <div>
-                  <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>INJURIES</div>
-                  <div className="text-[11px] text-white/70">{t.tonight.injuries.join(" · ")}</div>
+                  <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.28em", color: "#888" }}>INJURIES</div>
+                  <div className="text-[14px] text-white/80 mt-0.5" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>{t.tonight.injuries.join(" · ")}</div>
                 </div>
               )}
             </div>
@@ -498,20 +498,20 @@ export default function TeamRoomAudition() {
         </div>
 
         {/* 4 Room icons */}
-        <div className="px-6 pb-6 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="px-6 pb-8 max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { title: "LOCKER ROOM", sub: "News & Updates" },
             { title: "COACH'S OFFICE", sub: "Analytics & Stats" },
             { title: "WAR ROOM", sub: "Trade Rumors" },
             { title: "FILM ROOM", sub: "Video Breakdown" },
           ].map((r) => (
-            <button key={r.title} className="flex items-center gap-3 rounded-md border border-white/10 bg-black/40 hover:border-white/40 p-3 text-left transition-colors">
-              <div className="h-8 w-8 rounded-md flex items-center justify-center" style={{ background: t.primary + "33" }}>
-                <ChevronRight className="w-4 h-4" style={{ color: t.primary }} />
+            <button key={r.title} className="flex items-center gap-3 rounded-md border border-white/10 bg-black/40 hover:border-white/40 p-4 text-left transition-colors">
+              <div className="h-10 w-10 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: t.primary + "33" }}>
+                <ChevronRight className="w-5 h-5" style={{ color: t.primary }} />
               </div>
               <div>
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: C.white, letterSpacing: "0.05em" }}>{r.title}</div>
-                <div className="text-[10px] text-white/50" style={{ fontFamily: "Oswald", letterSpacing: "0.15em" }}>{r.sub}</div>
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "17px", color: C.white, letterSpacing: "0.03em" }}>{r.title}</div>
+                <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "12px", color: "#a0a0a5", letterSpacing: "0.15em" }}>{r.sub}</div>
               </div>
             </button>
           ))}
@@ -526,25 +526,25 @@ export default function TeamRoomAudition() {
        * personal Q&A / saved-take history is exposed. Once auth ships,
        * this panel hydrates from the user's Reggie & Marc conversation log. */}
       {!isPeeking && (
-        <div className="max-w-6xl mx-auto px-6 pb-2" data-testid="insights-history-panel">
+        <div className="max-w-6xl mx-auto px-6 pb-4" data-testid="insights-history-panel">
           <SectionLabel text="YOUR INSIGHTS & HISTORY · WITH REGGIE" color={t.primary} />
-          <div className="rounded-md border border-white/10 bg-black/40 p-4 flex items-start gap-4">
-            <div className="h-10 w-10 rounded-full flex-shrink-0 flex items-center justify-center"
+          <div className="rounded-md border border-white/10 bg-black/40 p-5 flex items-start gap-4">
+            <div className="h-12 w-12 rounded-full flex-shrink-0 flex items-center justify-center"
                  style={{ background: t.primary + "22", border: `1px solid ${t.primary}55` }}>
-              <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: t.primary }}>RH</span>
+              <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: t.primary }}>RH</span>
             </div>
             <div className="flex-1 min-w-0">
-              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px", color: C.white }}>
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "20px", color: C.white, letterSpacing: "0.01em" }}>
                 No deep-dives yet, Steve.
               </div>
-              <div className="mt-1 text-[13px] text-white/65" style={{ fontFamily: "Inter", lineHeight: 1.45 }}>
+              <div className="mt-2 text-[16px] text-white/75" style={{ fontFamily: "Inter", lineHeight: 1.5 }}>
                 Ask Reggie & Marc a question about the {t.name.charAt(0) + t.name.slice(1).toLowerCase()} and your saved takes, matchup breakdowns and answers pile up here — your private library, for your team only.
               </div>
             </div>
             <Link
               to="/press-conference/classic"
-              className="flex-shrink-0 px-3 py-2 rounded-md text-xs text-black font-semibold hover:opacity-90 transition-opacity"
-              style={{ background: t.primary, fontFamily: "Oswald", letterSpacing: "0.15em" }}
+              className="flex-shrink-0 px-4 py-2.5 rounded-md text-black font-bold hover:opacity-90 transition-opacity"
+              style={{ background: t.primary, fontFamily: "Oswald", fontSize: "14px", letterSpacing: "0.15em" }}
               data-testid="ask-reggie-cta"
             >
               ASK REGGIE →
@@ -560,12 +560,12 @@ export default function TeamRoomAudition() {
           <SectionLabel text="TOP PERFORMERS" right="VIEW ALL" color={t.primary} />
           <div className="space-y-2 pt-1">
             {t.topPerformers.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="w-5 text-white/40 text-xs">{i + 1}</div>
-                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px" }}>{p.name}</div>
-                <div className="text-white/50 text-xs w-6">{p.pos}</div>
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, color: t.primary, fontSize: "16px" }}>{p.pts}</div>
-                <div className="text-[9px] text-white/40 uppercase tracking-widest">PTS</div>
+              <div key={i} className="flex items-center gap-3 py-1">
+                <div className="w-6 text-white/40 text-sm">{i + 1}</div>
+                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "20px", letterSpacing: "0.01em" }}>{p.name}</div>
+                <div className="text-white/60 text-sm w-8" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.1em" }}>{p.pos}</div>
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, color: t.primary, fontSize: "24px", lineHeight: 1 }}>{p.pts}</div>
+                <div className="text-[11px] text-white/50 uppercase tracking-widest" style={{ fontFamily: "Oswald", fontWeight: 600 }}>PTS</div>
               </div>
             ))}
           </div>
@@ -573,18 +573,18 @@ export default function TeamRoomAudition() {
 
         {/* Heating Up */}
         <Panel>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-orange-400" />
-              <span style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.28em", color: "#ff9a3c" }}>WHO'S HEATING UP</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4 text-orange-400" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.28em", color: "#ff9a3c" }}>WHO'S HEATING UP</span>
             </div>
-            <span className="text-[10px] text-white/40" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>LAST 5 GAMES</span>
+            <span className="text-[12px] text-white/60" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.2em" }}>LAST 5 GAMES</span>
           </div>
           <div className="space-y-2 pt-1">
             {t.heatingUp.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px" }}>{p.name}</div>
-                <div className="text-white/80 text-xs" style={{ fontFamily: "Inter" }}>{p.line}</div>
+              <div key={i} className="flex items-center gap-3 py-1">
+                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "19px", letterSpacing: "0.01em" }}>{p.name}</div>
+                <div className="text-white/90 text-sm" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>{p.line}</div>
               </div>
             ))}
           </div>
@@ -592,18 +592,18 @@ export default function TeamRoomAudition() {
 
         {/* Ice Cold */}
         <Panel>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-1.5">
-              <Snowflake className="w-3.5 h-3.5 text-cyan-300" />
-              <span style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.28em", color: "#7dd3fc" }}>WHO'S ICE COLD</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Snowflake className="w-4 h-4 text-cyan-300" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.28em", color: "#7dd3fc" }}>WHO'S ICE COLD</span>
             </div>
-            <span className="text-[10px] text-white/40" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>LAST 5 GAMES</span>
+            <span className="text-[12px] text-white/60" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.2em" }}>LAST 5 GAMES</span>
           </div>
           <div className="space-y-2 pt-1">
             {t.iceCold.map((p, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px" }}>{p.name}</div>
-                <div className="text-white/80 text-xs" style={{ fontFamily: "Inter" }}>{p.line}</div>
+              <div key={i} className="flex items-center gap-3 py-1">
+                <div className="flex-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "19px", letterSpacing: "0.01em" }}>{p.name}</div>
+                <div className="text-white/90 text-sm" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>{p.line}</div>
               </div>
             ))}
           </div>
@@ -618,14 +618,14 @@ export default function TeamRoomAudition() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px" }}>{t.prospect.name}</span>
-                <span className="text-[10px] text-white/40 uppercase tracking-widest">{t.prospect.pos}</span>
+                <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", letterSpacing: "0.01em" }}>{t.prospect.name}</span>
+                <span className="text-[12px] text-white/60 uppercase tracking-widest" style={{ fontFamily: "Oswald", fontWeight: 600 }}>{t.prospect.pos}</span>
               </div>
-              <div className="mt-1 text-[12px] text-white/70" style={{ fontFamily: "Inter" }}>
+              <div className="mt-2 text-[15px] text-white/80" style={{ fontFamily: "Inter", lineHeight: 1.45 }}>
                 {t.prospect.note}
               </div>
-              <div className="mt-2 inline-block px-2 py-0.5 rounded-sm text-[10px]"
-                   style={{ background: t.primary + "33", color: t.primary, border: `1px solid ${t.primary}55`, fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.15em" }}>
+              <div className="mt-2 inline-block px-2.5 py-1 rounded-sm text-[12px]"
+                   style={{ background: t.primary + "33", color: t.primary, border: `1px solid ${t.primary}55`, fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.15em" }}>
                 {t.prospect.eta}
               </div>
             </div>
@@ -635,11 +635,11 @@ export default function TeamRoomAudition() {
         {/* Today in History */}
         <Panel>
           <SectionLabel text={`TODAY IN ${t.name} HISTORY`} color={t.primary} />
-          <div className="flex items-start gap-3 pt-1">
-            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "40px", color: t.primary, lineHeight: 1 }}>
+          <div className="flex items-start gap-4 pt-1">
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "52px", color: t.primary, lineHeight: 1 }}>
               {t.history.year}
             </div>
-            <div className="flex-1 text-[12px] text-white/75" style={{ fontFamily: "Inter", lineHeight: 1.4 }}>
+            <div className="flex-1 text-[15px] text-white/85" style={{ fontFamily: "Inter", lineHeight: 1.5 }}>
               {t.history.story}
             </div>
           </div>
@@ -648,10 +648,10 @@ export default function TeamRoomAudition() {
         {/* Tonight's Keys — Reggie solo */}
         <Panel>
           <SectionLabel text="REGGIE'S TAKE ON TONIGHT" color={t.primary} />
-          <ol className="mt-2 space-y-1.5 text-[13px] text-white/85" style={{ fontFamily: "Inter" }}>
+          <ol className="mt-2 space-y-2 text-[16px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.35 }}>
             {[...t.reggieKeys, ...t.marcKeys].slice(0, 5).map((k, i) => (
-              <li key={i} className="flex gap-2">
-                <span style={{ color: t.primary, fontFamily: "Rajdhani", fontWeight: 700 }}>{i + 1}.</span>
+              <li key={i} className="flex gap-2.5">
+                <span style={{ color: t.primary, fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px" }}>{i + 1}.</span>
                 <span>{k}</span>
               </li>
             ))}
@@ -661,63 +661,63 @@ export default function TeamRoomAudition() {
         {/* Fan Poll */}
         <Panel>
           <SectionLabel text="FAN POLL" color={t.primary} />
-          <div className="text-[13px] text-white/85 mt-1 mb-3">{t.poll.q}</div>
+          <div className="text-[16px] text-white/90 mt-1 mb-3" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.35 }}>{t.poll.q}</div>
           <div className="flex gap-2">
-            <button className="flex-1 py-2 rounded-md text-white text-sm font-semibold" style={{ background: t.primary }}>YES</button>
-            <button className="flex-1 py-2 rounded-md text-white/70 text-sm font-semibold border border-white/15 hover:border-white/40">NO</button>
+            <button className="flex-1 py-2.5 rounded-md text-white font-bold" style={{ background: t.primary, fontFamily: "Oswald", fontSize: "14px", letterSpacing: "0.15em" }}>YES</button>
+            <button className="flex-1 py-2.5 rounded-md text-white/80 font-bold border border-white/15 hover:border-white/40" style={{ fontFamily: "Oswald", fontSize: "14px", letterSpacing: "0.15em" }}>NO</button>
           </div>
-          <div className="mt-2 text-[10px] text-white/45 text-center" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>
+          <div className="mt-3 text-[12px] text-white/55 text-center" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.2em" }}>
             {(t.poll.yes + t.poll.no).toLocaleString()} VOTES
           </div>
         </Panel>
 
         {/* Prediction Center */}
         <Panel>
-          <div className="flex items-center justify-between mb-2">
-            <span style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.28em", color: t.primary }}>PREDICTION CENTER</span>
-            <span className="text-[10px] text-white/40" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>YOUR RECORD</span>
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.28em", color: t.primary }}>PREDICTION CENTER</span>
+            <span className="text-[12px] text-white/55" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.2em" }}>YOUR RECORD</span>
           </div>
-          <div className="text-[10px] text-white/50 uppercase mb-2 tracking-widest">Place your prediction · Tonight</div>
+          <div className="text-[12px] text-white/60 uppercase mb-2 tracking-widest" style={{ fontFamily: "Oswald", fontWeight: 600 }}>Place your prediction · Tonight</div>
           <div className="flex items-center justify-around py-2">
-            <TeamLogo code={t.code} className="h-10 w-10 object-contain" />
-            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: "#888" }}>VS</div>
-            <TeamLogo code={t.tonight.opp} className="h-10 w-10 object-contain" />
+            <TeamLogo code={t.code} className="h-11 w-11 object-contain" />
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#888" }}>VS</div>
+            <TeamLogo code={t.tonight.opp} className="h-11 w-11 object-contain" />
           </div>
           <div className="grid grid-cols-3 gap-2 mt-2">
-            <button className="text-[10px] py-1.5 rounded-sm text-white" style={{ background: t.primary, fontFamily: "Oswald", letterSpacing: "0.15em" }}>{t.code} WINS</button>
-            <button className="text-[10px] py-1.5 rounded-sm text-white/70 border border-white/15" style={{ fontFamily: "Oswald", letterSpacing: "0.15em" }}>TIE</button>
-            <button className="text-[10px] py-1.5 rounded-sm text-white/70 border border-white/15" style={{ fontFamily: "Oswald", letterSpacing: "0.15em" }}>{t.tonight.opp} WINS</button>
+            <button className="py-2 rounded-sm text-white font-bold" style={{ background: t.primary, fontFamily: "Oswald", fontSize: "12px", letterSpacing: "0.15em" }}>{t.code} WINS</button>
+            <button className="py-2 rounded-sm text-white/80 font-bold border border-white/15" style={{ fontFamily: "Oswald", fontSize: "12px", letterSpacing: "0.15em" }}>TIE</button>
+            <button className="py-2 rounded-sm text-white/80 font-bold border border-white/15" style={{ fontFamily: "Oswald", fontSize: "12px", letterSpacing: "0.15em" }}>{t.tonight.opp} WINS</button>
           </div>
-          <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between">
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
             <div>
-              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "20px" }}>{t.prediction.record}</div>
-              <div className="text-[10px] text-emerald-400" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>{t.prediction.roi} ROI</div>
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", lineHeight: 1 }}>{t.prediction.record}</div>
+              <div className="text-[12px] text-emerald-400 mt-0.5" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em" }}>{t.prediction.roi} ROI</div>
             </div>
             <div className="text-right">
               <Trophy className="w-4 h-4 inline mr-1" style={{ color: t.primary }} />
-              <span className="text-[10px]" style={{ fontFamily: "Oswald", fontWeight: 600, letterSpacing: "0.2em", color: t.primary }}>{t.prediction.badge}</span>
+              <span className="text-[12px]" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em", color: t.primary }}>{t.prediction.badge}</span>
             </div>
           </div>
         </Panel>
 
         {/* Fan Chat */}
         <Panel>
-          <div className="flex items-center justify-between mb-2">
-            <span style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.28em", color: t.primary }}>FAN CHAT</span>
-            <span className="text-[10px] text-emerald-400" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>1.2K ONLINE</span>
+          <div className="flex items-center justify-between mb-3">
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.28em", color: t.primary }}>FAN CHAT</span>
+            <span className="text-[12px] text-emerald-400" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em" }}>1.2K ONLINE</span>
           </div>
-          <div className="space-y-2 max-h-[130px] overflow-y-auto no-scrollbar">
+          <div className="space-y-2.5 max-h-[160px] overflow-y-auto no-scrollbar">
             {t.chat.map((m, i) => (
-              <div key={i} className="text-[12px]">
-                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "12px", color: t.primary }}>{m.u}</div>
-                <div className="text-white/80" style={{ fontFamily: "Inter" }}>{m.msg}</div>
+              <div key={i}>
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: t.primary, letterSpacing: "0.02em" }}>{m.u}</div>
+                <div className="text-white/85 text-[15px]" style={{ fontFamily: "Inter" }}>{m.msg}</div>
               </div>
             ))}
           </div>
-          <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-2">
-            <input className="flex-1 bg-black/60 rounded-sm px-2 py-1 text-xs border border-white/10 focus:border-white/40 outline-none" placeholder="Say something..." />
-            <button className="h-7 w-7 rounded-sm flex items-center justify-center" style={{ background: t.primary }}>
-              <Send className="w-3 h-3 text-white" />
+          <div className="mt-3 flex items-center gap-2 border-t border-white/10 pt-3">
+            <input className="flex-1 bg-black/60 rounded-sm px-3 py-2 text-sm border border-white/10 focus:border-white/40 outline-none" placeholder="Say something..." />
+            <button className="h-9 w-9 rounded-sm flex items-center justify-center" style={{ background: t.primary }}>
+              <Send className="w-4 h-4 text-white" />
             </button>
           </div>
         </Panel>
@@ -726,18 +726,18 @@ export default function TeamRoomAudition() {
       {/* Superfan XP bar — personal layer. Only shown when the fan is on
        * their own home team. Peek mode is base stats only, no personal data. */}
       {!isPeeking && (
-      <div className="fixed left-0 right-0 bottom-0 border-t border-white/10 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
-        <div className="max-w-6xl mx-auto flex items-center gap-4">
-          <div className="min-w-[180px]">
-            <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.25em", color: "#888" }}>SUPERFAN LEVEL</div>
-            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: t.primary, letterSpacing: "0.05em" }}>{t.superfan.level}</div>
+      <div className="fixed left-0 right-0 bottom-0 border-t border-white/10 px-4 py-4" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(6px)" }}>
+        <div className="max-w-6xl mx-auto flex items-center gap-5">
+          <div className="min-w-[210px]">
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.28em", color: "#888" }}>SUPERFAN LEVEL</div>
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: t.primary, letterSpacing: "0.03em" }}>{t.superfan.level}</div>
           </div>
-          <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+          <div className="flex-1 h-3 rounded-full bg-white/10 overflow-hidden">
             <div className="h-full rounded-full transition-all" style={{ width: `${xpPct}%`, background: `linear-gradient(90deg, ${t.primary}, ${t.accent})` }} />
           </div>
           <div className="text-right">
-            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px" }}>{t.superfan.xp.toLocaleString()} / {t.superfan.cap.toLocaleString()} XP</div>
-            <div className="text-[10px] text-white/50" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>NEXT: {t.superfan.next}</div>
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "17px", letterSpacing: "0.01em" }}>{t.superfan.xp.toLocaleString()} / {t.superfan.cap.toLocaleString()} XP</div>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", color: "#a0a0a5", letterSpacing: "0.2em" }}>NEXT: {t.superfan.next}</div>
           </div>
         </div>
       </div>
