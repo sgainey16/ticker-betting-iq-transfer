@@ -139,13 +139,32 @@ const SEGMENTS = [
   ]},
 ];
 
-// Flatten into an indexed playlist.
+// Flatten into an indexed playlist. Merges consecutive same-speaker lines
+// into a single "turn" so ElevenLabs receives a natural multi-sentence read
+// instead of cold-starting the voice every 3 seconds. This restores the
+// cadence + banter feel of the Recap Show (which prompts the LLM for longer
+// monologues in a single call).
 function flattenScript(segments) {
   const flat = [];
   segments.forEach((seg, sIdx) => {
+    let currentTurn = null;
     seg.lines.forEach(([speaker, text], lIdx) => {
-      flat.push({ speaker, text, segmentTitle: seg.title, sIdx, lIdx, id: `${sIdx}-${lIdx}` });
+      if (currentTurn && currentTurn.speaker === speaker) {
+        // Same speaker keeps talking — glue this sentence onto the same turn
+        // so ElevenLabs delivers it in one continuous take. A space between
+        // sentences is enough; punctuation drives the pauses.
+        currentTurn.text = `${currentTurn.text} ${text}`;
+      } else {
+        // New speaker (or first line of segment) — commit previous turn, start fresh.
+        if (currentTurn) flat.push(currentTurn);
+        currentTurn = {
+          speaker, text,
+          segmentTitle: seg.title, sIdx, lIdx,
+          id: `${sIdx}-${flat.length}`,
+        };
+      }
     });
+    if (currentTurn) flat.push(currentTurn);
   });
   return flat;
 }
@@ -206,9 +225,10 @@ export default function CanucksUncut() {
     setIdx((cur) => {
       const next = cur + 1;
       if (next >= script.length) { setPlaying(false); return -1; }
-      // schedule the next line
-      setTimeout(() => playLine(next), 250);
-      return cur; // will be updated in playLine
+      // Tight hand-off — small gap so the next voice starts almost immediately
+      // (natural broadcast rhythm), but not zero (avoids clip clipping).
+      setTimeout(() => playLine(next), 90);
+      return cur;
     });
   };
 
