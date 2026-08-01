@@ -21,6 +21,7 @@ import ComingSoon from "@/pages/ComingSoon";
 import FastReelAudition from "@/pages/FastReelAudition";
 import BrandAudition from "@/pages/BrandAudition";
 import TeamRoomAudition from "@/pages/TeamRoomAudition";
+import CanucksUncut from "@/pages/CanucksUncut";
 import { Toaster } from "sonner";
 
 function App() {
@@ -34,6 +35,7 @@ function App() {
             <Route path="/show" element={<Home />} />
             <Route path="/recap" element={<Navigate to="/" replace />} />
             <Route path="/press-conference" element={<TeamRoomAudition />} />
+            <Route path="/uncut/canucks" element={<CanucksUncut />} />
             {/* Old presser (1-on-1 with Reggie) still reachable directly */}
             <Route path="/press-conference/classic" element={<PressConference />} />
             {/* legacy alias */}
