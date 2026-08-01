@@ -2,7 +2,6 @@ import { NavLink, Link, useLocation } from "react-router-dom";
 import { TEST_IDS } from "@/lib/config";
 import { Radio, Settings, Volume2, VolumeX } from "lucide-react";
 import ReggieAssistant from "@/components/ReggieAssistant";
-import LaunchZoneBanner from "@/components/LaunchZoneBanner";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
 import { TMark } from "@/lib/brand";
@@ -52,7 +51,9 @@ function LayoutInner({ children }) {
 
   return (
     <div className="min-h-screen">
-      <LaunchZoneBanner />
+      {/* LaunchZoneBanner ("no charge / free launch window") removed per
+       * user request. Component file stays on disk — flip it back on when
+       * we're ready to talk pricing. */}
 
       <header
         className="sticky top-0 z-40 glass border-b border-[#2d2d35]"
