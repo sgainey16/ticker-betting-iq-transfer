@@ -12,25 +12,30 @@ import { ChevronDown } from "lucide-react";
 // discusses. SECONDARY unfolds on "Show more" for the deeper crowd. We're
 // deliberately generous with what's included — hockey stats are fun to
 // read, and the format is dead simple.
+// PRIMARY: the five headline metrics — "translate data into meaning" set.
+// Hits + Power Play were dropped from top-level per product direction
+// (Hits over-index in perceived importance vs. actual game impact) and
+// live under SECONDARY now.
+//
+// `derived: true` = read from the backend's `derived.{home,away}` block
+// (Ticker Model estimates — Highlightly doesn't publish xG or HDCF).
 const PRIMARY = [
   { key: "Shots",                 label: "Shots on Goal" },
-  { key: "Hits",                  label: "Hits" },
-  { key: "__chances__",           label: "Scoring Chances", derived: (own, opp) => {
-      const s = Number(own?.["Shots"] ?? 0);
-      const b = Number(opp?.["Blocked Shots"] ?? 0);
-      if (own?.["Shots"] == null && opp?.["Blocked Shots"] == null) return "—";
-      return s + b;
-    } },
+  { key: "xg",                    label: "Expected Goals",  derived: true, tag: "MODEL",
+    fmt: (v) => v == null ? "—" : Number(v).toFixed(1) },
+  { key: "hdc",                   label: "High-Danger",     derived: true, tag: "MODEL" },
+  { key: "scoring_chances",       label: "Scoring Chances", derived: true },
   { key: "Faceoff Win Percent",   label: "Faceoffs",   fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
-  { key: "__pp_ratio__",          label: "Power Play", derived: (own) => {
+];
+
+const SECONDARY = [
+  { key: "Hits",                  label: "Hits" },
+  { key: "__pp_ratio__",          label: "Power Play", derivedFmt: (own) => {
       const g = own?.["Power Play Goals"];
       const opp = own?.["Power Play Opportunities"];
       if (g == null || opp == null) return "—";
       return `${Number(g)}/${Number(opp)}`;
     } },
-];
-
-const SECONDARY = [
   { key: "Blocked Shots",         label: "Blocked Shots" },
   { key: "Power Play Percentage", label: "PP %",       fmt: (v) => v == null ? "—" : `${Number(v).toFixed(0)}%` },
   { key: "Short Handed Goals",    label: "Shorthanded Goals" },
@@ -121,11 +126,10 @@ export default function PostGameStats({ segment }) {
               {/* Primary rows — biggest / most important */}
               <div className="space-y-2.5">
                 {PRIMARY.map((m) => (
-                  <StatLine key={m.key} label={m.label}
-                    away={m.derived ? m.derived(data.away?.stats, data.home?.stats) : data.away?.stats?.[m.key]}
-                    home={m.derived ? m.derived(data.home?.stats, data.away?.stats) : data.home?.stats?.[m.key]}
-                    fmt={m.fmt}
-                    derived={!!m.derived} />
+                  <StatLine key={m.key} label={m.label} tag={m.tag}
+                    away={resolveVal(m, data, "away")}
+                    home={resolveVal(m, data, "home")}
+                    fmt={m.fmt} />
                 ))}
               </div>
 
@@ -143,16 +147,15 @@ export default function PostGameStats({ segment }) {
                 <div className="space-y-2.5 mt-3">
                   {SECONDARY.map((m) => (
                     <StatLine key={m.key} label={m.label}
-                      away={m.derived ? m.derived(data.away?.stats, data.home?.stats) : data.away?.stats?.[m.key]}
-                      home={m.derived ? m.derived(data.home?.stats, data.away?.stats) : data.home?.stats?.[m.key]}
-                      fmt={m.fmt}
-                      derived={!!m.derived} />
+                      away={resolveVal(m, data, "away")}
+                      home={resolveVal(m, data, "home")}
+                      fmt={m.fmt} />
                   ))}
                 </div>
               )}
 
               <div className="pt-3 text-[9px] font-accent uppercase tracking-widest text-white/25 text-right">
-                Source · Highlightly · Scoring Chances = SoG + Opp Blocks
+                Source · Highlightly · xG &amp; High-Danger = Ticker Model estimates
               </div>
             </>
           )}
@@ -162,32 +165,48 @@ export default function PostGameStats({ segment }) {
   );
 }
 
+// Value resolver — handles three cases:
+//   1. `derived: true`  → pull from data.derived.{side}.{key} (Ticker Model)
+//   2. `derivedFmt`     → formatter callback receiving the team's stats obj
+//   3. raw key          → straight lookup on data.{side}.stats[key]
+function resolveVal(meta, data, side) {
+  if (meta.derived) return data?.derived?.[side]?.[meta.key];
+  if (meta.derivedFmt) return meta.derivedFmt(data?.[side]?.stats, data?.[side === "home" ? "away" : "home"]?.stats);
+  return data?.[side]?.stats?.[meta.key];
+}
+
 // One row: `[big away number]   [label]   [big home number]`
 // The winning side gets full opacity; the trailing side dims slightly so
-// the eye reads the delta without any chart. `derived` values (e.g. "1/4"
-// PP goals-over-opps) skip the numeric win-compare because the string
-// form encodes both parts — we just render both in full opacity.
-function StatLine({ label, away, home, fmt, derived }) {
-  let awayWin = false, homeWin = false;
-  if (!derived) {
-    const a = numeric(away);
-    const h = numeric(home);
-    awayWin = a > h;
-    homeWin = h > a;
-  }
+// the eye reads the delta without any chart. Non-numeric (string) values
+// skip the win-compare and show both in full opacity.
+function StatLine({ label, away, home, fmt, tag }) {
   const format = fmt || ((v) => (v == null ? "—" : String(v)));
+  const a = numeric(away);
+  const h = numeric(home);
+  // If either side comes through as a non-numeric string ("1/4"), skip
+  // dimming — both parts are meaningful in the string form.
+  const isPair = typeof away === "string" && /\D/.test(away);
+  const awayWin = !isPair && a > h;
+  const homeWin = !isPair && h > a;
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
       <div className={`text-right font-headline text-2xl sm:text-3xl leading-none ${
-        derived || awayWin ? "text-white" : "text-white/50"
+        isPair || awayWin ? "text-white" : "text-white/50"
       }`}>
         {format(away)}
       </div>
-      <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60 px-2 min-w-[110px]">
-        {label}
+      <div className="text-center px-2 min-w-[110px]">
+        <div className="font-accent text-[10px] uppercase tracking-[0.25em] text-white/60">
+          {label}
+        </div>
+        {tag && (
+          <div className="font-accent text-[8px] tracking-[0.3em] text-[#1E5BFF] mt-0.5">
+            {tag}
+          </div>
+        )}
       </div>
       <div className={`text-left font-headline text-2xl sm:text-3xl leading-none ${
-        derived || homeWin ? "text-white" : "text-white/50"
+        isPair || homeWin ? "text-white" : "text-white/50"
       }`}>
         {format(home)}
       </div>

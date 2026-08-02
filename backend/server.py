@@ -732,15 +732,25 @@ POSTGAME_STATS_TTL = 6 * 3600  # (informational — uses default cache TTL)
 @api.get("/recap-show/post-game-stats")
 async def recap_show_post_game_stats(match_id: int):
     """Comparison box score for a completed match. Returns null-safe
-    empty payload if Highlightly is disabled or the game has no stats."""
-    cache_key = ("postgame-stats", match_id)
+    empty payload if Highlightly is disabled or the game has no stats.
+
+    Also includes the Ticker Model overlay — derived xG / High-Danger
+    Chances, the Game Control Score /100, and the objective Game Story
+    bullets. All computed deterministically from the box score (no LLM)."""
+    cache_key = ("postgame-stats-v4", match_id)
     cached = _cache_get(cache_key)
     if cached is not None:
         return {"cached": True, **cached}
     stats = await highlightly.get_match_stats(match_id)
     if not stats:
         return {"ready": False, "match_id": match_id}
+    from game_story import compute_game_story
+    story_bundle = compute_game_story(stats)
     payload = {"ready": True, **stats}
+    if story_bundle.get("ready"):
+        payload["control"] = story_bundle["control"]
+        payload["derived"] = story_bundle["derived"]
+        payload["story"]   = story_bundle["story"]
     _cache_set(cache_key, payload)
     return {"cached": False, **payload}
 

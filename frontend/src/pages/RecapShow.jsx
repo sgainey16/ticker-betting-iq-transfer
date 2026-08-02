@@ -3,6 +3,7 @@ import { api } from "@/lib/api";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import TwoHostDesk from "@/components/TwoHostDesk";
 import PostGameStats from "@/components/PostGameStats";
+import GameStory from "@/components/GameStory";
 import PlayByPlayPanel from "@/components/PlayByPlayPanel";
 import { playStinger } from "@/lib/stinger";
 import {
@@ -237,6 +238,13 @@ export default function RecapShow() {
         }}
       />
       </div>
+
+      {/* Game Story — signature "translate data into meaning" panel.
+       * Game Control Score /100 + objective "Why X Lost" bullets.
+       * Full-width above the split. */}
+      {currentSegment && (
+        <GameStory segment={currentSegment} />
+      )}
 
       {/* Play-By-Play + Post-Game Stats — split screen below the segment rail.
        * Videos-first (left): every goal with scorer/assists/time/situation +
