@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
-  ChevronRight, TrendingUp, AlertTriangle,
+  ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
 } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
@@ -129,9 +129,20 @@ const TEAMS = {
       { name: "David Reinbacher", pos: "D", tag: "Shoulder",    status: "IR",          eta: "Unknown",  impact: "low"    },
     ],
     injuryImpact: "moderate",
+    accuracyLeaders: [
+      { name: "Cole Caufield",    pos: "RW", stat: "Shooting %",     value: "17.4%", rank: 4  },
+      { name: "Nick Suzuki",      pos: "C",  stat: "Face-off Win %", value: "54.8%", rank: 9  },
+      { name: "Sam Montembeault", pos: "G",  stat: "Save %",         value: ".914",  rank: 8  },
+      { name: "Lane Hutson",      pos: "D",  stat: "+/-",            value: "+22",   rank: 6  },
+    ],
+    highlights: [
+      { title: "Suzuki wrister roofs it top corner",  when: "1st · 8:42",  team: "MTL" },
+      { title: "Caufield PP one-timer from the dot",  when: "2nd · 14:11", team: "MTL" },
+      { title: "Montembeault paddle-save robbery",    when: "3rd · 5:03",  team: "MTL" },
+    ],
     tonight: {
       opp: "BOS", oppName: "BOS", venue: "TD Garden, Boston, MA", time: "TONIGHT 7:00 PM ET",
-      projectedEdge: { home: 55, away: 45 }, // MTL vs BOS
+      projectedEdge: { home: 55, away: 45 },
     },
   },
   BOS: {
@@ -217,6 +228,17 @@ const TEAMS = {
       { name: "Matt Poitras",    pos: "C", tag: "Shoulder",    status: "OUT",        eta: "May 15",    impact: "medium" },
     ],
     injuryImpact: "moderate",
+    accuracyLeaders: [
+      { name: "David Pastrnak",  pos: "RW", stat: "Shooting %",     value: "16.8%", rank: 5  },
+      { name: "Charlie Coyle",   pos: "C",  stat: "Face-off Win %", value: "58.2%", rank: 3  },
+      { name: "Jeremy Swayman",  pos: "G",  stat: "Save %",         value: ".928",  rank: 2  },
+      { name: "Charlie McAvoy",  pos: "D",  stat: "+/-",            value: "+34",   rank: 2  },
+    ],
+    highlights: [
+      { title: "Pastrnak snipes short-side",           when: "1st · 12:04", team: "BOS" },
+      { title: "Swayman robs a two-on-none",           when: "2nd · 7:38",  team: "BOS" },
+      { title: "Marchand cheeky lacrosse pass to Pasta",when: "3rd · 15:12",team: "BOS" },
+    ],
     tonight: {
       opp: "MTL", oppName: "MTL", venue: "TD Garden, Boston, MA", time: "TONIGHT 7:00 PM ET",
       projectedEdge: { home: 62, away: 38 },
@@ -435,17 +457,27 @@ function StoryAtAGlance({ team }) {
           );
         })}
       </div>
-      {/* Reggie's quote */}
-      <div className="mt-5 flex items-start gap-4 pt-4 border-t border-white/10">
+      {/* Reggie's quote — Ticker Blue accent card for eye attraction */}
+      <div className="mt-5 rounded-lg p-4 flex items-start gap-4"
+           style={{
+             background: "linear-gradient(135deg, rgba(30,91,255,0.18) 0%, rgba(30,91,255,0.04) 100%)",
+             border: "1px solid rgba(30,91,255,0.55)",
+             boxShadow: "0 0 24px -8px rgba(30,91,255,0.45)",
+           }}>
         <div className="h-14 w-14 rounded-full flex-shrink-0 flex items-center justify-center"
-             style={{ background: "linear-gradient(135deg, #1E5BFF33, #1E5BFF11)", border: "1px solid #1E5BFF66" }}>
+             style={{ background: "#1E5BFF33", border: "1.5px solid #1E5BFF" }}>
           <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#1E5BFF" }}>RH</span>
         </div>
         <div className="flex-1">
-          <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.28em", color: "#1E5BFF" }}>
-            REGGIE HARLOW
+          <div className="flex items-center gap-2">
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#1E5BFF" }}>
+              REGGIE HARLOW
+            </span>
+            <span className="text-[10px] text-white/45" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.25em" }}>
+              · YOUR HOST
+            </span>
           </div>
-          <div className="mt-1 text-[16px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+          <div className="mt-1.5 text-[17px] text-white" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
             "{team.reggieQuote}"
           </div>
         </div>
@@ -512,9 +544,14 @@ function MomentumMeter({ team }) {
   return (
     <div className="rounded-lg border border-white/10 bg-black/40 p-5">
       <div className="flex items-center justify-between mb-3">
-        <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.28em", color: "#a0a0a5" }}>
-          MOMENTUM METER
-        </span>
+        <div>
+          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.3em", color: "#fff" }}>
+            LAST 10
+          </span>
+          <span className="ml-2 text-[11px] text-white/45" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em" }}>
+            · MOMENTUM
+          </span>
+        </div>
         <Info className="w-3.5 h-3.5 text-white/30" />
       </div>
       <div className="flex items-end gap-1.5 mb-2">
@@ -659,6 +696,102 @@ function InjuryImpact({ team }) {
 
 /* ---------------------------- PAGE ---------------------------- */
 
+function TeamLeadersAccuracy({ team }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/40 p-5" data-testid="team-leaders-accuracy">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Crosshair className="w-4 h-4 text-sky-400" />
+          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.28em", color: "#fff" }}>
+            TEAM LEADERS · ACCURACY
+          </span>
+        </div>
+        <span className="text-[11px] text-white/45" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em" }}>
+          THIS SEASON
+        </span>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {team.accuracyLeaders.map((p, i) => {
+          const c = rankColor(p.rank);
+          return (
+            <button key={i}
+                    className="rounded-md border border-white/10 bg-black/50 hover:border-white/40 p-3 text-left transition-colors"
+                    data-testid={`accuracy-leader-${i}`}>
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-9 rounded-full flex items-center justify-center flex-shrink-0"
+                     style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)" }}>
+                  <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "12px", color: "#a0a0a5" }}>
+                    {p.name.split(" ").map(n => n[0]).join("")}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: "#fff", lineHeight: 1.15 }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.15em", color: "#a0a0a5" }}>
+                    {p.pos} · {p.stat.toUpperCase()}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2 flex items-baseline justify-between">
+                <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "28px", color: "#fff", lineHeight: 1 }}>
+                  {p.value}
+                </div>
+                <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", color: c.color, letterSpacing: "0.15em" }}>
+                  {rankBadge(p.rank)} NHL
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function HighlightsRail({ team }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/40 p-5" data-testid="highlights-rail">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Play className="w-4 h-4 text-red-400" fill="currentColor" />
+          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.28em", color: "#fff" }}>
+            LAST NIGHT'S HIGHLIGHTS
+          </span>
+        </div>
+        <Link to="/" className="text-[13px] text-sky-400 hover:text-sky-300 flex items-center gap-1"
+              style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>
+          Full Recap Show <ChevronRight className="w-3 h-3" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {team.highlights.map((h, i) => (
+          <button key={i}
+                  className="group relative aspect-video rounded-md overflow-hidden border border-white/10 hover:border-white/40 transition-all"
+                  style={{ background: `linear-gradient(135deg, ${team.primary}44 0%, #0b0b10 70%)` }}
+                  data-testid={`highlight-tile-${i}`}>
+            <div className="absolute inset-0 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+              <TeamLogo code={h.team} size={64} />
+            </div>
+            <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black to-transparent text-left">
+              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: "#fff", lineHeight: 1.25 }}>
+                {h.title}
+              </div>
+              <div className="mt-0.5" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.2em", color: "#a0a0a5" }}>
+                {h.when}
+              </div>
+            </div>
+            <div className="absolute top-2 right-2 h-10 w-10 rounded-full flex items-center justify-center bg-red-600/95 group-hover:scale-110 transition-transform"
+                 style={{ boxShadow: "0 4px 20px -4px rgba(239,68,68,0.7)" }}>
+              <Play className="w-4 h-4 text-white translate-x-[1.5px]" fill="currentColor" />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function HomeV2() {
   const [params, setParams] = useSearchParams();
   const [teamCode, setTeamCode] = useState(() => params.get("team")?.toUpperCase() || "MTL");
@@ -690,9 +823,13 @@ export default function HomeV2() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {TEAM_ORDER.map((c) => (
+          {/* Filter the CURRENT team out — showing it twice is redundant
+           * (we already have the big header logo). Switcher is for scouting
+           * other franchises. */}
+          {TEAM_ORDER.filter((c) => c !== teamCode).map((c) => (
             <button key={c} onClick={() => setTeamCode(c)}
-                    className={`h-10 w-10 rounded-md flex items-center justify-center border transition-all ${c === teamCode ? "border-white shadow-lg scale-105" : "border-white/15 hover:border-white/50"}`}
+                    className="h-10 w-10 rounded-md flex items-center justify-center border border-white/15 hover:border-white/50 transition-all"
+                    title={`Peek at ${TEAMS[c].name}`}
                     data-testid={`home-v2-team-${c}`}>
               <TeamLogo code={c} size={26} />
             </button>
@@ -725,7 +862,13 @@ export default function HomeV2() {
           <PillarCard title="SPECIAL TEAMS" icon={Zap}    color={team.pillars.specialTeams.color} pillar={team.pillars.specialTeams} />
         </div>
 
-        {/* Row 4 — Momentum + Reggie's Keys + Injuries */}
+        {/* Row 4 — Team Leaders (accuracy) */}
+        <TeamLeadersAccuracy team={team} />
+
+        {/* Row 5 — Last Night's Highlights (video rail) */}
+        <HighlightsRail team={team} />
+
+        {/* Row 6 — Last 10 + Reggie's Keys + Injuries */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MomentumMeter team={team} />
           <ReggieKeys team={team} />
