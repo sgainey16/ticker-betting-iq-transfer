@@ -51,7 +51,11 @@ _audio_dir.mkdir(parents=True, exist_ok=True)
 
 def _load_saved_voice_choices():
     """On import, load any previously-selected voices from voice_choices.json
-    and update ANALYST_VOICES so they persist across backend restarts."""
+    and update ANALYST_VOICES so they persist across backend restarts.
+
+    Overrides both `voice_id` and per-voice `settings` (stability, style,
+    speed…). This lets us tune Reggie's cadence / Marc's warmth from disk
+    without touching source code."""
     choices_path = _audio_dir / "voice_choices.json"
     if not choices_path.exists():
         return
@@ -61,6 +65,8 @@ def _load_saved_voice_choices():
         for aid, cfg in data.items():
             if aid in ANALYST_VOICES and cfg.get("voice_id"):
                 ANALYST_VOICES[aid]["voice_id"] = cfg["voice_id"]
+                if isinstance(cfg.get("settings"), dict):
+                    ANALYST_VOICES[aid]["settings"] = cfg["settings"]
                 logger.info("Loaded saved voice for %s: %s", aid, cfg["voice_id"])
     except Exception as e:
         logger.warning("Failed to load voice_choices.json: %s", e)

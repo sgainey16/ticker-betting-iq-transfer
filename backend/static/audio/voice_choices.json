@@ -30,14 +30,14 @@
     }
   },
   "reggie": {
-    "voice_id": "xlMuE31yicdJYxPOyMin",
-    "voice_name": "Reggie (user upload)",
+    "voice_id": "ErXwobaYiN019PkySvjV",
+    "voice_name": "Antoni (neutral friendly)",
     "settings": {
-      "stability": 0.4,
-      "similarity_boost": 0.75,
-      "style": 0.55,
+      "stability": 0.55,
+      "similarity_boost": 0.78,
+      "style": 0.35,
       "use_speaker_boost": true,
-      "speed": 1.05
+      "speed": 1.02
     }
   }
 }
