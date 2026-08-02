@@ -37,7 +37,7 @@ function App() {
             <Route path="/" element={<RecapShow />} />
             <Route path="/show" element={<Home />} />
             <Route path="/recap" element={<Navigate to="/" replace />} />
-            <Route path="/press-conference" element={<TeamRoomAudition />} />
+            <Route path="/press-conference" element={<Navigate to="/home-v2" replace />} />
             <Route path="/uncut/canucks" element={<CanucksUncut />} />
             <Route path="/home-v2" element={<HomeV2 />} />
             <Route path="/player/:slug" element={<PlayerProfile />} />

@@ -19,7 +19,7 @@ const NAV = [
   { to: "/", end: true, label: "Recap", testid: TEST_IDS.nav.recaps },
   { to: "/show", label: "Show", testid: TEST_IDS.nav.broadcast },
   { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
-  { to: "/press-conference", label: "Home", testid: TEST_IDS.nav.presser },
+  { to: "/home-v2", label: "Home", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
   { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
 ];
@@ -46,6 +46,7 @@ function LayoutInner({ children }) {
     location.pathname === "/" ||
     location.pathname.startsWith("/scoreboard") ||
     location.pathname.startsWith("/press-conference") ||
+    location.pathname.startsWith("/home-v2") ||
     location.pathname.startsWith("/back-office");
   const needsMiniBarPadding = !isHome && !isQuietRoute;
 
