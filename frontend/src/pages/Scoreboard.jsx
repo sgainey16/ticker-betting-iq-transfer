@@ -3,6 +3,7 @@ import { ChevronDown, VolumeX, Volume2, Radio } from "lucide-react";
 import { useLive } from "@/lib/liveContext";
 import { TeamLogo } from "@/lib/teamLogos";
 import { BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
+import NHLShield from "@/components/NHLShield";
 
 // The Scoreboard tab. In demo mode this shows 4 mock games with a live
 // ticker feel — clock, period, PP/PK, score updating every ~12s. When we
@@ -24,6 +25,12 @@ export default function Scoreboard() {
 
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
+            <div className="flex items-center gap-2.5 mb-1">
+              <NHLShield size={22} />
+              <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/50">
+                NHL · Tonight's Board
+              </span>
+            </div>
             <h1 className="font-headline text-4xl sm:text-5xl text-white">Scoreboard</h1>
             <p className="text-white/60 mt-2 text-sm max-w-xl">
               Tonight's board — clock, period, special teams, and a red-light alert every time the puck hits the back of the net.

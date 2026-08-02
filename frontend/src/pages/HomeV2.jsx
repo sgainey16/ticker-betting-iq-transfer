@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
+import NHLShield from "@/components/NHLShield";
 
 /* ================================================================
    SEED DATA — mirrors the V2 mockup. Real NHL/Highlightly hydration
@@ -817,8 +818,10 @@ export default function HomeV2() {
             <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "26px", letterSpacing: "0.02em", color: "#fff", lineHeight: 1 }}>
               {team.name.toUpperCase()}
             </div>
-            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
-              {team.division.toUpperCase()}
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.3em", color: "#a0a0a5" }}
+                 className="flex items-center gap-1.5">
+              <NHLShield size={12} className="opacity-80" />
+              <span>NHL · {team.division.toUpperCase()}</span>
             </div>
           </div>
         </div>

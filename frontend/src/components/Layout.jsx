@@ -4,6 +4,7 @@ import { Radio, Settings, Volume2, VolumeX } from "lucide-react";
 import ReggieAssistant from "@/components/ReggieAssistant";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
+import NHLShield from "@/components/NHLShield";
 import { TMark } from "@/lib/brand";
 import { BroadcastProvider } from "@/lib/broadcastContext";
 import { LiveProvider, useLive } from "@/lib/liveContext";
@@ -132,9 +133,18 @@ function LayoutInner({ children }) {
       </main>
 
       <footer className={`max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5 ${needsMiniBarPadding ? "pb-24" : ""}`}>
-        <div>The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <NHLShield size={14} className="opacity-60" />
+          <span>The Ticker · Phase 1 · NHL Desk · For entertainment &amp; decision insights — never a wager</span>
+        </div>
         <div className="text-white/30" data-testid="sportradar-attribution">
           NHL data provided by <span className="text-white/50">Sportradar</span>
+        </div>
+        <div className="text-white/25 normal-case tracking-normal text-[10px] pt-2 max-w-3xl">
+          The Ticker is an independent sports commentary product and is not affiliated with,
+          endorsed by, or sponsored by the National Hockey League. NHL and the NHL Shield are
+          registered trademarks of the National Hockey League. All team marks and logos are
+          the property of their respective teams.
         </div>
       </footer>
 
