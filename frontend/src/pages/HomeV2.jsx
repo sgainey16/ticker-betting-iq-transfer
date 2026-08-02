@@ -283,66 +283,76 @@ function ArrowTrend({ trend }) {
 
 function CupScoreCard({ team }) {
   const { cupScore } = team;
-  const [openBreakdown, setOpenBreakdown] = useState(false);
+  const [showWhy, setShowWhy] = useState(false);
   // Colored ring around the number
   const ringColor = cupScore.value >= 75 ? "#22c55e" : cupScore.value >= 55 ? "#eab308" : "#ef4444";
   const trending = cupScore.trend > 0 ? "TRENDING UP" : cupScore.trend < 0 ? "TRENDING DOWN" : "STEADY";
   const trendColor = cupScore.trend > 0 ? "#22c55e" : cupScore.trend < 0 ? "#ef4444" : "#a0a0a5";
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 p-6" data-testid="cup-score-card">
-      <div className="grid md:grid-cols-2 gap-6 items-center">
-        {/* Left — the score with SVG ring */}
-        <div className="flex items-center gap-5">
-          <div className="relative" style={{ width: 130, height: 130 }}>
-            <svg width="130" height="130" viewBox="0 0 130 130">
-              <circle cx="65" cy="65" r="56" stroke="rgba(255,255,255,0.08)" strokeWidth="10" fill="none" />
-              <circle
-                cx="65" cy="65" r="56"
-                stroke={ringColor} strokeWidth="10" fill="none"
-                strokeLinecap="round"
-                strokeDasharray={`${(cupScore.value / 100) * 2 * Math.PI * 56} ${2 * Math.PI * 56}`}
-                transform="rotate(-90 65 65)"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "56px", color: "#fff", lineHeight: 1 }}>
-                {cupScore.value}
-              </span>
-              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.2em", color: "#a0a0a5" }}>
-                /100
-              </span>
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "14px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
-                CUP SCORE
-              </span>
-              <span className="text-white/25" title="Composite team rating — see breakdown">
-                <Info className="w-3.5 h-3.5" />
-              </span>
-              <span className="ml-1 text-[9px] text-white/45" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>™</span>
-            </div>
-            <div className="mt-2 flex items-center gap-1.5">
-              <ArrowTrend trend={cupScore.trend} />
-              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.2em", color: trendColor }}>
-                {trending}
-              </span>
-            </div>
-            <div className="mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "14px", color: "#a0a0a5" }}>
-              {cupScore.trend > 0 ? "+" : ""}{cupScore.trend} pts last {cupScore.trendWindow}
-            </div>
+    <div className="rounded-lg border border-white/10 bg-black/40 p-4" data-testid="cup-score-card">
+      {/* Single compact row — ring + label + trend + Why toggle */}
+      <div className="flex items-center gap-4">
+        {/* Score ring — shrunk from 130 to 88 */}
+        <div className="relative flex-shrink-0" style={{ width: 88, height: 88 }}>
+          <svg width="88" height="88" viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="38" stroke="rgba(255,255,255,0.08)" strokeWidth="7" fill="none" />
+            <circle
+              cx="44" cy="44" r="38"
+              stroke={ringColor} strokeWidth="7" fill="none"
+              strokeLinecap="round"
+              strokeDasharray={`${(cupScore.value / 100) * 2 * Math.PI * 38} ${2 * Math.PI * 38}`}
+              transform="rotate(-90 44 44)"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "34px", color: "#fff", lineHeight: 1 }}>
+              {cupScore.value}
+            </span>
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "9px", letterSpacing: "0.2em", color: "#a0a0a5" }}>
+              /100
+            </span>
           </div>
         </div>
+        {/* Middle — label + trend */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
+              CUP SCORE
+            </span>
+            <span className="text-[9px] text-white/45" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>™</span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <ArrowTrend trend={cupScore.trend} />
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.2em", color: trendColor }}>
+              {trending}
+            </span>
+          </div>
+          <div className="mt-0.5" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "12px", color: "#a0a0a5" }}>
+            {cupScore.trend > 0 ? "+" : ""}{cupScore.trend} pts last {cupScore.trendWindow}
+          </div>
+        </div>
+        {/* Why? toggle — reveals the breakdown on tap */}
+        <button
+          onClick={() => setShowWhy((v) => !v)}
+          className="flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md border border-white/10 hover:border-white/30 text-sky-400 hover:text-sky-300 transition-colors"
+          style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.2em" }}
+          data-testid="cup-score-why-toggle"
+          aria-expanded={showWhy}
+        >
+          {showWhy ? "HIDE" : "WHY?"}
+          <ChevronRight className={`w-3 h-3 transition-transform ${showWhy ? "rotate-90" : ""}`} />
+        </button>
+      </div>
 
-        {/* Right — the transparent breakdown */}
-        <div>
-          <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
+      {/* Breakdown — collapsed by default. Shows on Why? tap. */}
+      {showWhy && (
+        <div className="mt-4 pt-4 border-t border-white/10" data-testid="cup-score-breakdown">
+          <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
             HOW IT'S CALCULATED
           </div>
           <div className="mt-2 space-y-1.5">
             {cupScore.breakdown.map((b) => (
-              <div key={b.label} className="flex items-center justify-between text-[15px]">
+              <div key={b.label} className="flex items-center justify-between text-[14px]">
                 <span className="text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>
                   {b.label} ({b.value})
                 </span>
@@ -352,15 +362,8 @@ function CupScoreCard({ team }) {
               </div>
             ))}
           </div>
-          <button
-            onClick={() => setOpenBreakdown(!openBreakdown)}
-            className="mt-3 text-[13px] text-sky-400 hover:text-sky-300 flex items-center gap-1"
-            style={{ fontFamily: "Rajdhani", fontWeight: 600 }}
-          >
-            Learn more <ChevronRight className="w-3 h-3" />
-          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
