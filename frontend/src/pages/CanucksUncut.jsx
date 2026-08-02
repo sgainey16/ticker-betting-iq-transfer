@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, Pause, SkipForward, RotateCcw } from "lucide-react";
 import { API, BACKEND_URL } from "@/lib/api";
 import { TMark, C } from "@/lib/brand";
+import HostPortrait from "@/components/HostPortrait";
 
 // ------------------------------ SCRIPT ------------------------------
 
@@ -283,10 +284,24 @@ export default function CanucksUncut() {
 
       {/* Stage */}
       <div className="max-w-5xl mx-auto px-6 py-10">
-        {/* Two-host desk */}
+        {/* Two-host desk — actual illustrated portraits, not initials.
+         * Whichever host is currently speaking gets a bright ring; the
+         * other dims slightly so the eye tracks the audio automatically. */}
         <div className="grid grid-cols-2 gap-6 mb-10">
-          <HostCard name="Reggie Harlow" role="Color · Anchor" initials="RH" active={isReggie && playing} />
-          <HostCard name="Marc Collins" role="Analytics · Co-Host" initials="MC" active={!isReggie && playing && currentLine} />
+          <div className={`relative rounded-2xl overflow-hidden border-2 transition-all ${isReggie && playing ? "border-[#1E5BFF] shadow-[0_0_40px_-8px_rgba(30,91,255,0.7)]" : "border-white/10 opacity-70"}`}>
+            <HostPortrait persona="reggie" size={260} showName={false} className="!rounded-none" />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-4 pt-8 pb-3">
+              <div className="font-headline text-white text-lg">Reggie Banks</div>
+              <div className="font-accent text-[10px] uppercase tracking-[0.28em] text-white/60">Color · Anchor</div>
+            </div>
+          </div>
+          <div className={`relative rounded-2xl overflow-hidden border-2 transition-all ${!isReggie && playing && currentLine ? "border-[#c9d4ff] shadow-[0_0_40px_-8px_rgba(201,212,255,0.55)]" : "border-white/10 opacity-70"}`}>
+            <HostPortrait persona="marc"   size={260} showName={false} className="!rounded-none" />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/70 to-transparent px-4 pt-8 pb-3">
+              <div className="font-headline text-white text-lg">Marc Doyle</div>
+              <div className="font-accent text-[10px] uppercase tracking-[0.28em] text-white/60">Analytics · Co-Host</div>
+            </div>
+          </div>
         </div>
 
         {/* Current line — big broadcast lower-third */}
