@@ -239,22 +239,22 @@ export default function RecapShow() {
       />
       </div>
 
-      {/* Game Story — signature "translate data into meaning" panel.
-       * Game Control Score /100 + objective "Why X Lost" bullets.
-       * Full-width above the split. */}
-      {currentSegment && (
-        <GameStory segment={currentSegment} />
-      )}
-
-      {/* Play-By-Play + Post-Game Stats — split screen below the segment rail.
+      {/* Play-By-Play + Post-Game Stats — split screen.
        * Videos-first (left): every goal with scorer/assists/time/situation +
-       * tap-to-play modal. Stats (right): shot/hit/PP box score.
+       * tap-to-play modal. Stats (right): full box score, all rows open.
        * Mobile: stacked, play-by-play still on top. */}
       {currentSegment && (
         <div className="grid gap-3 md:grid-cols-2">
           <PlayByPlayPanel segment={currentSegment} />
           <PostGameStats segment={currentSegment} />
         </div>
+      )}
+
+      {/* Game Story — signature "translate data into meaning" panel.
+       * Sits below the highlights + stats split so the flow is:
+       * watch → read the numbers → hear the story. Compact horizontal. */}
+      {currentSegment && (
+        <GameStory segment={currentSegment} />
       )}
 
       {/* Hidden audio element for host lines */}

@@ -50,7 +50,6 @@ const _cache = new Map(); // match_id → response
 export default function PostGameStats({ segment }) {
   const matchId = segment?.match_id;
   const [open, setOpen] = useState(true);
-  const [showMore, setShowMore] = useState(false);
   const [data, setData] = useState(() => _cache.get(matchId) || null);
   const [loading, setLoading] = useState(false);
 
@@ -123,7 +122,7 @@ export default function PostGameStats({ segment }) {
                 </div>
               </div>
 
-              {/* Primary rows — biggest / most important */}
+              {/* Primary + Secondary — all rows always open. Keep scrolling. */}
               <div className="space-y-2.5">
                 {PRIMARY.map((m) => (
                   <StatLine key={m.key} label={m.label} tag={m.tag}
@@ -133,26 +132,17 @@ export default function PostGameStats({ segment }) {
                 ))}
               </div>
 
-              {/* Show-more toggle */}
-              <button
-                onClick={() => setShowMore((v) => !v)}
-                className="mt-5 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-[#1E5BFF]/60 hover:border-[#1E5BFF] bg-[#1E5BFF]/10 hover:bg-[#1E5BFF]/20 py-3 font-accent text-xs uppercase tracking-[0.3em] text-[#1E5BFF] transition-all shadow-[0_0_18px_-6px_rgba(30,91,255,0.6)] hover:shadow-[0_0_24px_-4px_rgba(30,91,255,0.8)]"
-                data-testid="post-game-stats-more"
-              >
-                {showMore ? "Show Less" : "Show More Stats"}
-                <ChevronDown className={`w-4 h-4 transition-transform ${showMore ? "rotate-180" : ""}`} />
-              </button>
+              {/* Divider between headline metrics and the rest */}
+              <div className="my-4 border-t border-white/5" />
 
-              {showMore && (
-                <div className="space-y-2.5 mt-3">
-                  {SECONDARY.map((m) => (
-                    <StatLine key={m.key} label={m.label}
-                      away={resolveVal(m, data, "away")}
-                      home={resolveVal(m, data, "home")}
-                      fmt={m.fmt} />
-                  ))}
-                </div>
-              )}
+              <div className="space-y-2.5">
+                {SECONDARY.map((m) => (
+                  <StatLine key={m.key} label={m.label}
+                    away={resolveVal(m, data, "away")}
+                    home={resolveVal(m, data, "home")}
+                    fmt={m.fmt} />
+                ))}
+              </div>
 
               <div className="pt-3 text-[9px] font-accent uppercase tracking-widest text-white/25 text-right">
                 Source · Highlightly · xG &amp; High-Danger = Ticker Model estimates
