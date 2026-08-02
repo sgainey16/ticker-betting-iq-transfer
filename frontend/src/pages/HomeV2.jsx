@@ -813,9 +813,13 @@ function AnalystsOnDeck({ team }) {
       data-testid="analysts-on-deck"
     >
       <div className="grid md:grid-cols-[auto_1fr] gap-0">
-        <div className="p-4 flex gap-3 items-stretch border-b md:border-b-0 md:border-r border-white/10 bg-black/30">
-          <HostPortrait persona="reggie" size={168} />
-          <HostPortrait persona="marc"   size={168} />
+        {/* Portrait pair — sharing one desk. Marc is mirrored so both hosts
+         * face each other across the center seam (broadcast eye-contact
+         * illusion — TV directors use the same trick on split-screen). */}
+        <div className="p-4 flex items-stretch border-b md:border-b-0 md:border-r border-white/10 bg-black/30">
+          <HostPortrait persona="reggie" size={200} className="rounded-r-none border-r-0" />
+          <div className="w-px bg-[#1E5BFF]/40 flex-shrink-0" />
+          <HostPortrait persona="marc"   size={200} mirror className="rounded-l-none border-l-0" />
         </div>
         <div className="p-5 flex flex-col justify-center gap-2">
           <div className="flex items-center gap-2">
