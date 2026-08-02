@@ -95,6 +95,18 @@ const PLAYERS = {
         pctOfCap: "9.2%",
         deadCapIfBoughtOut: "Complex — signing-bonus heavy, effective buyout minimal savings",
       },
+      impact: {
+        tier: "BARGAIN",
+        tierTone: "green",
+        bullets: [
+          { label: "Cap Efficiency", text: "$7.88M for a captain-tier 1C on pace for 32G/90P — market rate for this production is $10M+. Roughly $2M of surplus value per year." },
+          { label: "Roster Flexibility", text: "Well-structured base + bonus mix keeps Suzuki cheap in flat-cap years. Frees room to extend Guhle, Hutson, Slafkovsky without a crunch." },
+          { label: "Term Risk", text: "Deal runs through age 30. Fully inside his prime window — no albatross tail-end years to plan around." },
+          { label: "Movability", text: "M-NTC starting Y5 means he can be moved if the team asks. Contract is asset, not anchor." },
+          { label: "Cup Window Impact", text: "This is exactly the deal a rebuilding team needs — the captain is locked, cheap, and productive for the entire competitive window." },
+        ],
+        verdict: "Team-friendly. This is the contract you build a Cup around.",
+      },
     },
   },
   "pastrnak-bos": {
@@ -164,6 +176,18 @@ const PLAYERS = {
       cap: {
         pctOfCap: "13.1%",
         deadCapIfBoughtOut: "Buyout ineffective — signing bonuses cannot be bought out. Trade only.",
+      },
+      impact: {
+        tier: "FAIR VALUE · TAIL RISK",
+        tierTone: "gold",
+        bullets: [
+          { label: "Cap Efficiency", text: "$11.25M for a 45-goal, 100-point sniper is market rate today. Bargain if he holds this pace; overpriced the moment he drops off." },
+          { label: "Roster Flexibility", text: "13.1% of cap on one winger is heavy. Locks Boston into supporting cast for the length of the deal — no room for a second $10M forward." },
+          { label: "Term Risk", text: "Contract runs through age 34. Back four years (2027-31) carry the aging-curve risk that undoes most 8-year deals." },
+          { label: "Movability", text: "Full NMC through 2027-28 hands Pastrnak all leverage. Signing-bonus structure means buyout is off the table — trade is the only exit." },
+          { label: "Cup Window Impact", text: "Front-loaded value years align with Boston's Cup window. If they can't win by 2027, the contract becomes the problem, not the answer." },
+        ],
+        verdict: "Elite production justifies the price today. The tail years carry real risk with no easy exit.",
       },
     },
   },
@@ -600,6 +624,71 @@ function ContractCard({ contract, teamColor }) {
         <div className="mt-4 text-[13px] text-white/60" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.5 }}>
           <span style={{ color: "#eab308", fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.2em", fontSize: "11px" }}>BUYOUT NOTE · </span>
           {contract.cap.deadCapIfBoughtOut}
+        </div>
+      </div>
+
+      {/* CONTRACT IMPACT — Marc's short-form team analysis. Ticker Blue
+       * accent so it pops as the "what does this MEAN for the team" beat. */}
+      {contract.impact && <ContractImpact impact={contract.impact} />}
+    </div>
+  );
+}
+
+function ContractImpact({ impact }) {
+  const tierColor = { green: "#22c55e", gold: "#eab308", red: "#ef4444", blue: "#38bdf8" }[impact.tierTone] || "#38bdf8";
+  return (
+    <div className="mt-5 rounded-lg p-5"
+         style={{
+           background: "linear-gradient(135deg, rgba(30,91,255,0.18) 0%, rgba(30,91,255,0.03) 100%)",
+           border: "1px solid rgba(30,91,255,0.55)",
+           boxShadow: "0 0 24px -8px rgba(30,91,255,0.4)",
+         }}
+         data-testid="contract-impact">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-9 w-9 rounded-full flex items-center justify-center"
+               style={{ background: "rgba(201,212,255,0.15)", border: "1px solid rgba(201,212,255,0.35)" }}>
+            <span style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "12px", color: "#c9d4ff" }}>MC</span>
+          </div>
+          <div>
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#c9d4ff" }}>
+              CONTRACT IMPACT · TEAM ANALYSIS
+            </span>
+            <div className="text-[10px] text-white/45" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.25em" }}>
+              MARC'S SHORT-FORM READ
+            </div>
+          </div>
+        </div>
+        <span className="px-3 py-1 rounded"
+              style={{
+                background: `${tierColor}22`,
+                border: `1px solid ${tierColor}66`,
+                fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.2em",
+                color: tierColor,
+              }}>
+          {impact.tier}
+        </span>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-x-6 gap-y-3 pt-2">
+        {impact.bullets.map((b, i) => (
+          <div key={i} className="border-l-2 pl-3" style={{ borderColor: "#1E5BFF55" }}>
+            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em", color: "#7ea3ff" }}>
+              {b.label.toUpperCase()}
+            </div>
+            <div className="mt-1 text-[14px] text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.4 }}>
+              {b.text}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-white/10">
+        <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.3em", color: "#1E5BFF" }}>
+          MARC'S VERDICT
+        </div>
+        <div className="mt-1 text-[17px] text-white" style={{ fontFamily: "Rajdhani", fontWeight: 700, lineHeight: 1.35, letterSpacing: "0.01em" }}>
+          "{impact.verdict}"
         </div>
       </div>
     </div>
