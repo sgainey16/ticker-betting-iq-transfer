@@ -72,8 +72,11 @@ function LayoutInner({ children }) {
             </div>
             <div className="leading-tight">
               <div className="font-headline text-lg text-white">THE TICKER</div>
-              <div className="font-accent text-[10px] text-white/50 tracking-[0.3em]">
-                SPORTS NETWORK
+              <div className="flex items-center gap-1.5">
+                <NHLShield size={11} className="opacity-80" />
+                <div className="font-accent text-[10px] text-white/50 tracking-[0.3em]">
+                  NHL DESK
+                </div>
               </div>
             </div>
           </Link>
@@ -95,6 +98,15 @@ function LayoutInner({ children }) {
           </nav>
 
           <div className="flex items-center gap-3">
+            {/* NHL bug — broadcast-style network shield, always visible top-right */}
+            <div className="hidden md:flex items-center gap-2 pr-2 border-r border-white/10 mr-1"
+                 title="NHL on The Ticker">
+              <NHLShield size={22} />
+              <div className="leading-tight">
+                <div className="font-accent text-[11px] tracking-[0.2em] text-white font-bold">NHL</div>
+                <div className="font-accent text-[8px] tracking-[0.28em] text-white/50">ON THE TICKER</div>
+              </div>
+            </div>
             <div className="hidden sm:flex items-center gap-2 text-xs font-accent uppercase tracking-widest">
               <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
               <span className="text-[#1e5dff]">Live</span>
