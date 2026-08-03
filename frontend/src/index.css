@@ -1,5 +1,5 @@
 /* The Ticker — global styles */
-@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Oswald:wght@500;600;700&family=Archivo:wght@500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -29,7 +29,10 @@ body,
 
 body {
   margin: 0;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Archivo", system-ui, sans-serif;
+  /* Minimum body weight — Archivo at 500 has real presence without shouting.
+   * Prevents thin/dainty rendering that Inter 400 had. */
+  font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background:
@@ -37,6 +40,34 @@ body {
     radial-gradient(900px 500px at 90% 10%, rgba(0, 229, 255, 0.06), transparent 70%),
     var(--bg);
 }
+
+/* Opacity floor — lift any low-opacity utility above /55 to a readable
+ * /75-ish tint. Sports-broadcast-adjacent apps skew boldly-legible, not
+ * whisper-quiet. Override where genuinely needed with inline style.
+ *
+ * Targets Tailwind's compiled classes for `text-white/{opacity}`.
+ * (opacity 0-55 gets bumped to 75; higher opacities untouched.) */
+.text-white\/10 { color: rgba(255,255,255,0.75) !important; }
+.text-white\/15 { color: rgba(255,255,255,0.75) !important; }
+.text-white\/20 { color: rgba(255,255,255,0.75) !important; }
+.text-white\/25 { color: rgba(255,255,255,0.75) !important; }
+.text-white\/30 { color: rgba(255,255,255,0.75) !important; }
+.text-white\/35 { color: rgba(255,255,255,0.78) !important; }
+.text-white\/40 { color: rgba(255,255,255,0.80) !important; }
+.text-white\/45 { color: rgba(255,255,255,0.82) !important; }
+.text-white\/50 { color: rgba(255,255,255,0.85) !important; }
+.text-white\/55 { color: rgba(255,255,255,0.87) !important; }
+.text-white\/60 { color: rgba(255,255,255,0.88) !important; }
+
+/* Minimum font size floor — no dainty micro-copy. Text at 8-10px promotes
+ * to 12px for legibility across the broadcast/data-dense surfaces. */
+[class*="text-[8px]"],
+[class*="text-[9px]"],
+[class*="text-[10px]"] { font-size: 12px !important; }
+[class*="text-[11px]"] { font-size: 13px !important; }
+
+/* Boost weight on small tracked-out labels — Oswald reads better at 700 */
+.font-accent { font-weight: 700; }
 
 .font-headline {
   font-family: "Rajdhani", sans-serif;
