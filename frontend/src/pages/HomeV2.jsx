@@ -370,48 +370,47 @@ function CupScoreCard({ team }) {
 
 function NextGameCard({ team }) {
   const t = team;
-  const opp = TEAMS[t.tonight.opp];
   const { projectedEdge } = t.tonight;
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 p-5" data-testid="next-game-card">
-      <div className="flex items-center justify-between mb-3">
-        <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#a0a0a5" }}>
-          NEXT GAME
-        </span>
-        <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.25em", color: "#1E5BFF" }}>
-          {t.tonight.time}
+    <div className="rounded-lg border border-white/10 bg-black/40 p-3" data-testid="next-game-card">
+      {/* Header row — tighter spacing, single line */}
+      <div className="flex items-center justify-between mb-2">
+        <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em", color: "#a0a0a5" }}>
+          NEXT GAME · {t.tonight.time}
         </span>
       </div>
-      <div className="flex items-center justify-around py-2">
-        <div className="flex flex-col items-center gap-1">
-          <TeamLogo code={t.code} size={64} />
-          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px" }}>{t.code}</div>
+      {/* Matchup row — logos inline with codes, no vertical stack */}
+      <div className="flex items-center justify-center gap-3 py-1.5">
+        <div className="flex items-center gap-2">
+          <TeamLogo code={t.code} size={32} />
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px" }}>{t.code}</div>
         </div>
-        <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "22px", color: "#a0a0a5" }}>VS</div>
-        <div className="flex flex-col items-center gap-1">
-          <TeamLogo code={t.tonight.opp} size={64} />
-          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px" }}>{t.tonight.opp}</div>
+        <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: "#a0a0a5" }}>VS</div>
+        <div className="flex items-center gap-2">
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px" }}>{t.tonight.opp}</div>
+          <TeamLogo code={t.tonight.opp} size={32} />
         </div>
       </div>
-      <div className="text-center text-[13px] text-white/60 mb-3" style={{ fontFamily: "Rajdhani", fontWeight: 600, letterSpacing: "0.05em" }}>
+      {/* Venue — one small line */}
+      <div className="text-center text-[11px] text-white/50 mb-2" style={{ fontFamily: "Rajdhani", fontWeight: 600, letterSpacing: "0.04em" }}>
         {t.tonight.venue}
       </div>
-      <div className="pt-3 border-t border-white/10">
-        <div className="flex items-center justify-between text-[11px] mb-2" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.28em" }}>
-          <span className="text-white/60">PROJECTED EDGE</span>
-          <span className="text-white/40">TICKER MODEL</span>
+      {/* Projected Edge bar — minimized, no separator line */}
+      <div>
+        <div className="flex items-center justify-between text-[9px] mb-1" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.25em" }}>
+          <span className="text-white/50">PROJ EDGE</span>
+          <span className="text-white/30">TICKER MODEL</span>
         </div>
-        <div className="relative h-3 rounded-full bg-white/10 overflow-hidden">
+        <div className="relative h-2 rounded-full bg-white/10 overflow-hidden">
           <div className="absolute inset-y-0 left-0" style={{ width: `${projectedEdge.home}%`, background: "linear-gradient(90deg, #ef4444, #eab308)" }} />
-          <div className="absolute inset-y-0 top-0 bottom-0" style={{ left: `${projectedEdge.home}%`, right: 0, background: "rgba(255,255,255,0.1)" }} />
         </div>
-        <div className="mt-1 flex justify-between text-[13px]" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>
+        <div className="mt-0.5 flex justify-between text-[11px]" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>
           <span style={{ color: "#ef4444" }}>{projectedEdge.home}%</span>
-          <span className="text-white/60">{projectedEdge.away}%</span>
+          <span className="text-white/50">{projectedEdge.away}%</span>
         </div>
       </div>
-      <button className="mt-4 w-full py-2.5 rounded-md border border-white/15 hover:border-white/40 text-white/90"
-              style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.2em" }}
+      <button className="mt-2 w-full py-1.5 rounded-md border border-white/10 hover:border-white/30 text-white/80"
+              style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.2em" }}
               data-testid="matchup-preview-btn">
         MATCHUP PREVIEW →
       </button>

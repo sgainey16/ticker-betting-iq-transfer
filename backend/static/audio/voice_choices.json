@@ -28,16 +28,5 @@
       "use_speaker_boost": true,
       "speed": 1.02
     }
-  },
-  "reggie": {
-    "voice_id": "ErXwobaYiN019PkySvjV",
-    "voice_name": "Antoni (neutral friendly)",
-    "settings": {
-      "stability": 0.55,
-      "similarity_boost": 0.78,
-      "style": 0.35,
-      "use_speaker_boost": true,
-      "speed": 1.02
-    }
   }
 }
