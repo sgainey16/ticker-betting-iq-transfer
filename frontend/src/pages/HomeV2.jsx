@@ -433,28 +433,60 @@ function StoryAtAGlance({ team }) {
       </div>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {team.story.map((s, i) => {
-          const Icon = STORY_ICONS[s.icon] || Target;
           const isGood = s.tone === "good";
+          // Extract the numeric rank (e.g. "4" from "#4 in NHL") so we
+          // can show it as the hero of the card — the number IS the story.
+          const rankNum = (String(s.rank).match(/\d+/) || [""])[0];
+          const rankTail = String(s.rank).replace(/#?\d+/, "").trim(); // "in NHL"
           return (
             <div
               key={i}
-              className="rounded-lg p-4 border text-center"
+              className="relative rounded-lg border overflow-hidden group hover:scale-[1.02] transition-transform"
               style={{
-                background: isGood ? "linear-gradient(180deg, #14532d33, #0b0b1080)" : "linear-gradient(180deg, #7f1d1d33, #0b0b1080)",
-                borderColor: isGood ? "#16a34a55" : "#dc262655",
+                background: isGood
+                  ? "linear-gradient(160deg, rgba(34,197,94,0.14) 0%, rgba(11,11,16,0.9) 65%)"
+                  : "linear-gradient(160deg, rgba(239,68,68,0.14) 0%, rgba(11,11,16,0.9) 65%)",
+                borderColor: isGood ? "rgba(34,197,94,0.35)" : "rgba(239,68,68,0.35)",
               }}
             >
-              <div className="flex justify-center mb-2">
-                <Icon className="w-8 h-8" style={{ color: isGood ? "#22c55e" : "#f87171" }} />
-              </div>
-              <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px", color: "#fff", lineHeight: 1.15 }}>
-                {s.label}
-              </div>
-              <div className="mt-2" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.15em", color: isGood ? "#22c55e" : "#f87171" }}>
-                {s.rank}
-              </div>
-              <div className="mt-0.5 text-[12px] text-white/60" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>
-                {s.value}
+              {/* Broadcast-style vertical color rail on the left */}
+              <div className="absolute inset-y-0 left-0 w-[3px]"
+                   style={{ background: isGood ? "#22c55e" : "#ef4444" }} />
+              <div className="p-3.5 pl-5">
+                {/* Hero rank number — this is the story */}
+                <div className="flex items-baseline gap-1.5">
+                  <span
+                    style={{
+                      fontFamily: "Rajdhani",
+                      fontWeight: 700,
+                      fontSize: "42px",
+                      lineHeight: 1,
+                      color: isGood ? "#22c55e" : "#f87171",
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    #{rankNum}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "Oswald",
+                      fontWeight: 700,
+                      fontSize: "9px",
+                      letterSpacing: "0.28em",
+                      color: "#a0a0a5",
+                    }}
+                    className="uppercase"
+                  >
+                    {rankTail || "in NHL"}
+                  </span>
+                </div>
+                {/* Label + raw value */}
+                <div className="mt-2" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "13px", color: "#fff", lineHeight: 1.2 }}>
+                  {s.label}
+                </div>
+                <div className="mt-0.5 tabular-nums" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px", letterSpacing: "0.1em", color: "#ffffff99" }}>
+                  {s.value}
+                </div>
               </div>
             </div>
           );
