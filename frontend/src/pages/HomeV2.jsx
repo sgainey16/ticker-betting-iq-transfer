@@ -24,7 +24,6 @@ import {
 import { TeamLogo } from "@/lib/teamLogos";
 import { TMark, C } from "@/lib/brand";
 import NHLShield from "@/components/NHLShield";
-import HostPortrait, { HostDuoRow } from "@/components/HostPortrait";
 
 /* ================================================================
    SEED DATA — mirrors the V2 mockup. Real NHL/Highlightly hydration
@@ -607,15 +606,11 @@ function ReggieKeys({ team }) {
   const { reggieKeys } = team;
   return (
     <div className="rounded-lg border border-white/10 bg-black/40 p-5 relative overflow-hidden">
-      <div className="flex items-center gap-3 mb-3">
-        {/* Reggie portrait — small circle, actual character face */}
-        <HostPortrait persona="reggie" size={44} showName={false} className="rounded-full" />
-        <div className="flex-1 min-w-0">
-          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.28em", color: "#a0a0a5" }}>
-            REGGIE'S KEYS TO TONIGHT
-          </span>
-        </div>
-        <Info className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
+      <div className="flex items-center justify-between mb-3">
+        <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "13px", letterSpacing: "0.28em", color: "#a0a0a5" }}>
+          REGGIE'S KEYS TO TONIGHT
+        </span>
+        <Info className="w-3.5 h-3.5 text-white/30" />
       </div>
       <div className="space-y-3">
         <div>
@@ -801,45 +796,6 @@ function HighlightsRail({ team }) {
   );
 }
 
-// Analysts on Deck — a slim two-portrait strip showing which Reggie/Marc
-// faces are "on the desk" for this page. Both images pull from the route-
-// aware picker so tomorrow's page will show a different pair.
-function AnalystsOnDeck({ team }) {
-  const nextGame = team?.nextGame;
-  const kicker   = nextGame ? `Live at ${nextGame.time || "puck drop"}` : "Live from the desk";
-  return (
-    <section
-      className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#0b0b10] via-[#0b0b10] to-[#111428] overflow-hidden"
-      data-testid="analysts-on-deck"
-    >
-      <div className="grid md:grid-cols-[auto_1fr] gap-0">
-        {/* Portrait pair — sharing one desk. Marc is mirrored so both hosts
-         * face each other across the center seam (broadcast eye-contact
-         * illusion — TV directors use the same trick on split-screen). */}
-        <div className="p-4 flex items-stretch border-b md:border-b-0 md:border-r border-white/10 bg-black/30">
-          <HostPortrait persona="reggie" size={200} className="rounded-r-none border-r-0" />
-          <div className="w-px bg-[#1E5BFF]/40 flex-shrink-0" />
-          <HostPortrait persona="marc"   size={200} mirror className="rounded-l-none border-l-0" />
-        </div>
-        <div className="p-5 flex flex-col justify-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-red-500 live-pulse" />
-            <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.35em", color: "#a0a0a5" }}>
-              ON THE DESK · {kicker.toUpperCase()}
-            </div>
-          </div>
-          <div className="font-headline text-2xl sm:text-3xl text-white leading-tight">
-            Reggie &amp; Marc are already on your team.
-          </div>
-          <div className="text-white/70 text-sm sm:text-base leading-snug max-w-xl">
-            Everything below — Cup Score, Story at a Glance, matchup keys — is what these two
-            are going to walk through on tonight's broadcast. Tap any card to hear their take.
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 
 
@@ -898,11 +854,6 @@ export default function HomeV2() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-5">
-        {/* Analysts on Deck — Reggie + Marc portraits. The visible face on
-         * each page rotates deterministically (see lib/hostImages.js), so
-         * Home V2 lands on their warm "welcome home" state. */}
-        <AnalystsOnDeck team={team} />
-
         {/* Row 1 — Cup Score + Next Game */}
         <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
           <CupScoreCard team={team} />
