@@ -25,6 +25,7 @@ import CanucksUncut from "@/pages/CanucksUncut";
 import HomeV2 from "@/pages/HomeV2";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Lineup from "@/pages/Lineup";
+import OhlHome from "@/pages/ohl/OhlHome";
 import { Toaster } from "sonner";
 
 function App() {
@@ -40,6 +41,11 @@ function App() {
             <Route path="/press-conference" element={<Navigate to="/home-v2" replace />} />
             <Route path="/uncut/canucks" element={<CanucksUncut />} />
             <Route path="/home-v2" element={<HomeV2 />} />
+            {/* OHL sidecar route — vibe-check for the junior hockey product.
+             * Fully isolated from the NHL pages; nothing here touches the
+             * working Ticker. Kill or promote independently. */}
+            <Route path="/ohl" element={<Navigate to="/ohl/home" replace />} />
+            <Route path="/ohl/home" element={<OhlHome />} />
             <Route path="/player/:slug" element={<PlayerProfile />} />
             <Route path="/lineup/:team" element={<Lineup />} />
             <Route path="/lineup" element={<Lineup />} />
