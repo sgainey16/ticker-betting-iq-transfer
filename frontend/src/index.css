@@ -27,6 +27,18 @@ body,
   min-height: 100vh;
 }
 
+html, body {
+  /* Prevent iOS Safari from bounce-scrolling past the content edges, which
+   * is the #1 trigger that makes the tab bar slide back into view mid-scroll.
+   * `overscroll-behavior-y: contain` = no rubber-band = Safari stays hidden
+   * longer during normal reads. */
+  overscroll-behavior-y: contain;
+  /* Lock the viewport to the dynamic viewport height so Safari's chrome
+   * appearing/disappearing doesn't relayout the whole page (which also
+   * triggers chrome reappearance in a feedback loop). */
+  height: 100%;
+}
+
 body {
   margin: 0;
   font-family: "Archivo", system-ui, sans-serif;
