@@ -61,27 +61,27 @@ function LayoutInner({ children }) {
         className="sticky top-0 z-40 glass border-b border-[#2d2d35]"
         role="banner"
       >
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 landscape:h-12 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 landscape:h-12 flex items-center justify-between gap-2 sm:gap-4">
           <Link
             to="/"
-            className="flex items-center gap-3 group"
+            className="flex items-center gap-2 sm:gap-3 group flex-shrink-0 min-w-0"
             data-testid="brand-link"
           >
-            <div className="flex items-center justify-center" data-testid="brand-mark">
-              <TMark size={44} variant="light" />
+            <div className="flex items-center justify-center flex-shrink-0" data-testid="brand-mark">
+              <TMark size={36} variant="light" />
             </div>
-            <div className="leading-tight">
-              <div className="font-headline text-lg text-white">THE TICKER</div>
-              <div className="flex items-center gap-1.5">
-                <NHLShield size={11} className="opacity-80" />
-                <div className="font-accent text-[10px] text-white/50 tracking-[0.3em]">
+            <div className="leading-tight min-w-0">
+              <div className="font-headline text-base sm:text-lg text-white whitespace-nowrap">THE TICKER</div>
+              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                <NHLShield size={11} className="opacity-80 flex-shrink-0" />
+                <div className="font-accent text-[10px] text-white/50 tracking-[0.28em]">
                   NHL DESK
                 </div>
               </div>
             </div>
           </Link>
 
-          <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <nav className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar min-w-0 flex-1 justify-center">
             {NAV.map((n) => (
               <NavLink
                 key={n.to}
@@ -97,17 +97,19 @@ function LayoutInner({ children }) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            {/* NHL bug — broadcast-style network shield, always visible top-right */}
-            <div className="hidden md:flex items-center gap-2 pr-2 border-r border-white/10 mr-1"
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            {/* NHL bug — broadcast-style network shield, always visible.
+             * `whitespace-nowrap` + tight leading prevents the 3-line wrap
+             * we were seeing on narrow landscape iPhones. */}
+            <div className="hidden lg:flex items-center gap-2 pr-2 border-r border-white/10 mr-1 whitespace-nowrap"
                  title="NHL on The Ticker">
-              <NHLShield size={22} />
-              <div className="leading-tight">
+              <NHLShield size={20} className="flex-shrink-0" />
+              <div className="leading-none">
                 <div className="font-accent text-[11px] tracking-[0.2em] text-white font-bold">NHL</div>
-                <div className="font-accent text-[8px] tracking-[0.28em] text-white/50">ON THE TICKER</div>
+                <div className="font-accent text-[8px] tracking-[0.25em] text-white/50 mt-0.5">ON THE TICKER</div>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs font-accent uppercase tracking-widest">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-accent uppercase tracking-widest">
               <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
               <span className="text-[#1e5dff]">Live</span>
             </div>
@@ -115,7 +117,7 @@ function LayoutInner({ children }) {
               to="/back-office"
               data-testid={TEST_IDS.nav.backOffice}
               className={({ isActive }) =>
-                `h-9 w-9 rounded-md flex items-center justify-center transition-colors ${
+                `h-9 w-9 rounded-md flex items-center justify-center transition-colors flex-shrink-0 ${
                   isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                 }`
               }

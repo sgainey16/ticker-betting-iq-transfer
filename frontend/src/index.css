@@ -35,6 +35,12 @@ body {
   font-weight: 500;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* iOS safe-area padding — respects notch/home indicator when Added to
+   * Home Screen (PWA standalone mode). No visible effect in normal Safari. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
   background:
     radial-gradient(1200px 600px at 12% -10%, rgba(30, 93, 255, 0.10), transparent 70%),
     radial-gradient(900px 500px at 90% 10%, rgba(0, 229, 255, 0.06), transparent 70%),

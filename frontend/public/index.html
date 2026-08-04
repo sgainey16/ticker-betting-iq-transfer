@@ -2,9 +2,21 @@
 <html lang="en">
     <head>
         <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="description" content="A product of emergent.sh" />
+        <!-- viewport-fit=cover pushes app content edge-to-edge under the iOS
+             notch and home indicator. Combined with the Apple meta tags below,
+             it gives Add-to-Home-Screen users a fullscreen, no-browser-chrome
+             standalone experience — no Safari tab bar sliding down. -->
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+        <meta name="theme-color" content="#0b0b10" />
+        <meta name="description" content="The Ticker — AI Sports Network" />
+        <!-- iOS PWA support — when user taps Share → Add to Home Screen,
+             the app launches in a standalone frame without Safari's URL bar,
+             tab strip, or bottom toolbar. Full broadcast-app feel. -->
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="The Ticker" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="format-detection" content="telephone=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap" rel="stylesheet" />

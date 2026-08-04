@@ -84,14 +84,10 @@ export default function PostGameStats({ segment }) {
           <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1E5BFF]">
             Post-Game Stats
           </div>
-          <div className="hidden sm:flex items-center gap-2">
-            {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-5 h-5 object-contain" />}
-            <span className="font-headline text-white text-sm">{away.code}</span>
-            <span className="text-white/30">·</span>
-            <span className="font-headline text-white text-sm">{data?.score?.current || "Final"}</span>
-            <span className="text-white/30">·</span>
-            <span className="font-headline text-white text-sm">{home.code}</span>
-            {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-5 h-5 object-contain" />}
+          <div className="hidden sm:flex items-center gap-2.5">
+            {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-8 h-8 object-contain" />}
+            <span className="font-headline text-white text-base">{data?.score?.current || "Final"}</span>
+            {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-8 h-8 object-contain" />}
           </div>
         </div>
         <ChevronDown className={`w-4 h-4 text-white/60 transition-transform ${open ? "rotate-180" : ""}`} />
@@ -109,16 +105,14 @@ export default function PostGameStats({ segment }) {
           )}
           {data?.ready && (
             <>
-              {/* Team header row — big logos + team names */}
+              {/* Team header row — logo-only, no city abbreviations */}
               <div className="grid grid-cols-3 items-center pb-3 mb-2 border-b border-white/10">
-                <div className="flex items-center gap-2 justify-start">
-                  {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-9 h-9 object-contain" />}
-                  <span className="font-headline text-white text-base">{away.code}</span>
+                <div className="flex items-center justify-start">
+                  {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
                 </div>
-                <div className="text-center font-accent text-[10px] uppercase tracking-[0.3em] text-white/40">vs</div>
-                <div className="flex items-center gap-2 justify-end">
-                  <span className="font-headline text-white text-base">{home.code}</span>
-                  {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-9 h-9 object-contain" />}
+                <div className="text-center font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">vs</div>
+                <div className="flex items-center justify-end">
+                  {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
                 </div>
               </div>
 
