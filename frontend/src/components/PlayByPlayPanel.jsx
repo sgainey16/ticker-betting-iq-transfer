@@ -73,8 +73,9 @@ export default function PlayByPlayPanel({ segment }) {
         <div className="text-sm text-white/40 py-4 text-center">No play-by-play available</div>
       )}
 
-      {/* Scrollable list — first 4 rows visible full-size, rest scroll into view */}
-      <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 no-scrollbar" data-testid="pbp-list">
+      {/* Scrollable list — expanded max-height so larger logos still fit
+       * multiple rows in view; scroll for the rest. */}
+      <div className="space-y-2.5 max-h-[560px] overflow-y-auto pr-1 no-scrollbar" data-testid="pbp-list">
         {plays.map((p, i) => {
           const sit = SITUATION_STYLE[p.situation] || SITUATION_STYLE.EV;
           const hasClip = !!p.clip;
@@ -91,13 +92,22 @@ export default function PlayByPlayPanel({ segment }) {
               }`}
               data-testid={`pbp-row-${i}`}
             >
-              {/* Team logo + play overlay — larger tile, near-edge-to-edge logo */}
-              <div className="relative flex-shrink-0 h-24 w-24 rounded-md bg-black/60 flex items-center justify-center border border-white/10">
-                <TeamLogo code={p.team_code} className="h-[84px] w-[84px] object-contain" />
+              {/* Team logo tile — big framed box, logo fills nearly to edges.
+               * Inline styles used to avoid Tailwind arbitrary-value purge
+               * issues that were silently dropping the size classes. */}
+              <div
+                className="relative flex-shrink-0 flex items-center justify-center rounded-lg border border-white/15 bg-black/40"
+                style={{ width: 128, height: 128 }}
+              >
+                <TeamLogo
+                  code={p.team_code}
+                  size={118}
+                  className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+                />
                 {hasClip && (
-                  <span className="absolute -bottom-1.5 -right-1.5 h-6 w-6 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
-                        style={{ boxShadow: "0 0 12px -2px rgba(239,68,68,0.9)" }}>
-                    <Play className="w-3 h-3 text-white translate-x-[0.5px]" fill="currentColor" />
+                  <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
+                        style={{ width: 30, height: 30, boxShadow: "0 0 14px -2px rgba(239,68,68,0.9)" }}>
+                    <Play className="w-3.5 h-3.5 text-white translate-x-[0.5px]" fill="currentColor" />
                   </span>
                 )}
               </div>
