@@ -458,23 +458,33 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip })
               </div>
             </button>
 
-            {/* BOTTOM BANNER — highlight thumbnail with play button
-             *   Sits flush against the logo banner (no gap, hairline divider)
-             *   so it reads as one connected card. Tapping the button (or
-             *   the thumbnail itself) jumps straight into that game's clip. */}
-            {thumb && (
+            {/* BOTTOM BANNER — highlight thumbnail with play button.
+             * When the clip is a YouTube embed we use its thumbnail; when
+             * it's a direct MP4 (e.g. ESPN CDN) there's no YT thumb, so we
+             * render a fallback tile with "HIGHLIGHTS" wordmark + play
+             * button so the game card doesn't look broken. */}
+            {s.clip && (
               <button
                 onClick={() => onJumpToClip(i)}
                 data-testid={`recap-segment-clip-${s.match_id}`}
                 aria-label={`Play highlights for ${s.away.code} at ${s.home.code}`}
                 className="w-full relative block group border-t border-white/10 aspect-video overflow-hidden"
               >
-                <img
-                  src={thumb}
-                  alt=""
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt=""
+                    loading="lazy"
+                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  /* Fallback tile — dark gradient + faint team logos so the
+                   * missing-thumbnail case still reads as a highlight card. */
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-gradient-to-br from-[#1a1a2e] via-[#0f0f1a] to-[#1a0f1f]">
+                    {s.away.logo_url && <img src={s.away.logo_url} alt="" className="h-10 w-10 object-contain opacity-40" />}
+                    {s.home.logo_url && <img src={s.home.logo_url} alt="" className="h-10 w-10 object-contain opacity-40" />}
+                  </div>
+                )}
                 {/* Dark scrim so the play icon reads on any thumbnail */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-black/40" />
                 {/* Play button — big red circle, unmissable */}

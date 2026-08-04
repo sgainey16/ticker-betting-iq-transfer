@@ -92,21 +92,22 @@ export default function PlayByPlayPanel({ segment }) {
               }`}
               data-testid={`pbp-row-${i}`}
             >
-              {/* Team logo tile — big framed box, logo fills nearly to edges.
-               * Inline styles used to avoid Tailwind arbitrary-value purge
-               * issues that were silently dropping the size classes. */}
+              {/* Team logo tile — responsive: compact 68px on phones so
+               * multiple rows fit on-screen, 128px on desktop for impact.
+               * Inline `style` needed on the outer div (Tailwind arbitrary
+               * sizes were being purged); logo `size` prop overrides the
+               * component's default. */}
               <div
-                className="relative flex-shrink-0 flex items-center justify-center rounded-lg border border-white/15 bg-black/40"
-                style={{ width: 128, height: 128 }}
+                className="relative flex-shrink-0 flex items-center justify-center rounded-lg border border-white/15 bg-black/40 tile-highlight"
               >
                 <TeamLogo
                   code={p.team_code}
-                  size={118}
-                  className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
+                  size={62}
+                  className="drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] tile-highlight-logo"
                 />
                 {hasClip && (
                   <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
-                        style={{ width: 30, height: 30, boxShadow: "0 0 14px -2px rgba(239,68,68,0.9)" }}>
+                        style={{ width: 26, height: 26, boxShadow: "0 0 14px -2px rgba(239,68,68,0.9)" }}>
                     <Play className="w-3.5 h-3.5 text-white translate-x-[0.5px]" fill="currentColor" />
                   </span>
                 )}

@@ -105,15 +105,13 @@ export default function PostGameStats({ segment }) {
           )}
           {data?.ready && (
             <>
-              {/* Team header row — logo-only, no city abbreviations */}
-              <div className="grid grid-cols-3 items-center pb-3 mb-2 border-b border-white/10">
-                <div className="flex items-center justify-start">
-                  {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
-                </div>
-                <div className="text-center font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">vs</div>
-                <div className="flex items-center justify-end">
-                  {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
-                </div>
+              {/* Team header row — logos hugging the VS divider, not
+               * pinned to the panel edges. Both marks stay visible even at
+               * narrower widths. */}
+              <div className="flex items-center justify-center gap-6 sm:gap-10 pb-3 mb-2 border-b border-white/10">
+                {away.logo_url && <img src={away.logo_url} alt={away.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
+                <div className="font-accent text-[11px] uppercase tracking-[0.3em] text-white/50">vs</div>
+                {home.logo_url && <img src={home.logo_url} alt={home.code} className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]" />}
               </div>
 
               {/* Primary + Secondary — all rows always open. Keep scrolling. */}
