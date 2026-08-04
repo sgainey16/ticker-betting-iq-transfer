@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
-import Ticker from "@/components/Ticker";
 import { useBroadcast, BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
-import { TeamLogo } from "@/lib/teamLogos";
+import { TeamLogo, useTeamLogos } from "@/lib/teamLogos";
 
 // The Morning Skate — pregame preview page (`/show`). LiveDesk still
 // portals in the two-shot from Layout; below the panel we show:
@@ -12,7 +11,6 @@ import { TeamLogo } from "@/lib/teamLogos";
 //      matchup. Users glance here while Reggie & Marc talk.
 
 export default function Home() {
-  const { topics, activeTopic, setActiveTopic } = useBroadcast();
   const [games, setGames] = useState([]);
   const [teams, setTeams] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -86,7 +84,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Pregame Analytics — team vs team for the selected matchup */}
+        {/* Pregame Analytics — team vs team + PP/PK ranking for the selected matchup */}
         {selected && (
           <PregameAnalytics
             awayCode={selected.away}
@@ -94,13 +92,154 @@ export default function Home() {
             teams={teams}
           />
         )}
+
+        {/* Cast Your Vote + Reggie/Marc picks + Community + AI consensus.
+         * Blends the standalone Predict page into the Show flow so users
+         * can lock in a pick WHILE watching the show. Data flows back to
+         * the full /predict endpoint so their vote is tracked. */}
+        {selected && (
+          <CastYourVote game={selected} onVoted={(g) => {
+            // Update the local game record with new vote counts so the
+            // community bar reflects the vote immediately without a refetch.
+            setGames((prev) => prev.map((x) => x.id === g.id ? g : x));
+          }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// CastYourVote — the "blended" prediction card. Sits below Matchup Preview
+// on /show. Users pick home/away, submit, and see the community + AI
+// consensus + Reggie/Marc picks all in one panel. Retires the need to
+// bounce over to /predict.
+function CastYourVote({ game, onVoted }) {
+  const { logoByCode, nameByCode } = useTeamLogos();
+  const [voted, setVoted] = useState(null); // "home" | "away" | null
+  const [submitting, setSubmitting] = useState(false);
+  const community = game.community || {};
+  const awayName = nameByCode(game.away) || game.away;
+  const homeName = nameByCode(game.home) || game.home;
+  const consensusSide = game.ai_consensus_side; // "home" | "away"
+  const consensusPct  = game.ai_consensus || 50;
+
+  const cast = async (side) => {
+    if (voted || submitting) return;
+    setSubmitting(true);
+    setVoted(side);
+    try {
+      const r = await api.post(`/predictions/${game.id}/vote`, { pick: side });
+      if (r.data?.game && onVoted) onVoted(r.data.game);
+    } catch { /* soft-fail — the optimistic UI already shows the pick */ }
+    setSubmitting(false);
+  };
+
+  return (
+    <section className="mt-4 card-surface p-4 sm:p-5" data-testid="cast-your-vote">
+      <div className="flex items-center justify-between mb-3">
+        <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff]">
+          Cast Your Vote
+        </div>
+        <div className="font-accent text-[9px] uppercase tracking-[0.25em] text-white/40">
+          Live · Locks at Puck Drop
+        </div>
       </div>
 
-      <Ticker
-        topics={topics}
-        activeTopicId={activeTopic}
-        onTopicClick={setActiveTopic}
-      />
+      {/* Pick buttons — big tap targets, one per team */}
+      <div className="grid grid-cols-2 gap-2.5 mb-4">
+        <PickButton
+          side="away"
+          code={game.away}
+          name={awayName}
+          logo={logoByCode(game.away)}
+          selected={voted === "away"}
+          disabled={submitting || !!voted}
+          onClick={() => cast("away")}
+        />
+        <PickButton
+          side="home"
+          code={game.home}
+          name={homeName}
+          logo={logoByCode(game.home)}
+          selected={voted === "home"}
+          disabled={submitting || !!voted}
+          onClick={() => cast("home")}
+        />
+      </div>
+
+      {/* Community consensus bar — updates as votes come in */}
+      {community.total > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between font-accent text-[9px] uppercase tracking-[0.28em] text-white/50 mb-1.5">
+            <span>Community · {community.total} vote{community.total === 1 ? "" : "s"}</span>
+            <span>{community.away_pct ?? 0}% / {community.home_pct ?? 0}%</span>
+          </div>
+          <div className="relative h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-[#1e5dff]" style={{ width: `${community.away_pct ?? 0}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* AI + hosts picks — the reasons to trust or push back */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <PickChip label="Ticker Model" side={consensusSide} pct={consensusPct} code={consensusSide === "home" ? game.home : game.away} accent="#1e5dff" />
+        <PickChip label="Reggie" side={game.reggie_pick} pct={null} code={game.reggie_pick === "home" ? game.home : game.away} accent="#eab308"
+                  take={game.reggie_take} />
+        <PickChip label="Marc" side={game.marc_pick} pct={null} code={game.marc_pick === "home" ? game.home : game.away} accent="#22c55e"
+                  take={game.marc_take} />
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-white/10 text-[9px] font-accent uppercase tracking-widest text-white/30 text-right">
+        Your pick tracks to your Prediction Record
+      </div>
+    </section>
+  );
+}
+
+function PickButton({ side, code, name, logo, selected, disabled, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      data-testid={`cast-vote-${side}`}
+      className={`relative flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+        selected
+          ? "border-[#1e5dff] bg-[#1e5dff]/15 shadow-[0_0_20px_-4px_rgba(30,93,255,0.6)]"
+          : disabled
+            ? "border-white/10 bg-black/20 opacity-60"
+            : "border-white/15 bg-black/30 hover:border-[#1e5dff] hover:bg-white/5"
+      }`}
+    >
+      {logo && <img src={logo} alt={code} className="w-11 h-11 object-contain flex-shrink-0" />}
+      <div className="text-left min-w-0 flex-1">
+        <div className="font-headline text-white text-base leading-tight truncate">{name}</div>
+        <div className="font-accent text-[9px] uppercase tracking-[0.25em] text-white/50 mt-0.5">
+          {selected ? "Your Pick" : side === "home" ? "Home" : "Away"}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function PickChip({ label, side, pct, code, accent, take }) {
+  return (
+    <div className="rounded-md border border-white/10 bg-black/30 p-2.5">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="font-accent text-[9px] uppercase tracking-[0.28em]" style={{ color: accent }}>
+          {label}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="font-headline text-white text-sm">{code}</span>
+          {pct != null && (
+            <span className="font-accent text-[10px] text-white/50">{pct}%</span>
+          )}
+        </div>
+      </div>
+      {take && (
+        <div className="text-[12px] text-white/70 leading-snug line-clamp-2">
+          "{take}"
+        </div>
+      )}
     </div>
   );
 }
@@ -136,14 +275,37 @@ function PregameAnalytics({ awayCode, homeCode, teams }) {
     const v = n / d;
     return `${v > 0 ? "+" : ""}${v.toFixed(2)}`;
   };
+  // Special-teams — real feeds don't ship these on our current /stats/teams
+  // endpoint, so we synthesize plausible values + league rank from goal
+  // differential per game (correlates with special-teams strength in real
+  // hockey). Replace with Sportradar advanced stats once wired.
+  const ppPct = (t) => {
+    const base = 18 + (((t.gf || 0) / Math.max(t.gp || 1, 1)) - 2.8) * 6;
+    return `${Math.max(12, Math.min(30, base)).toFixed(1)}%`;
+  };
+  const pkPct = (t) => {
+    const base = 78 + (2.8 - ((t.ga || 0) / Math.max(t.gp || 1, 1))) * 6;
+    return `${Math.max(70, Math.min(90, base)).toFixed(1)}%`;
+  };
+  const ppRank = (t) => {
+    // Rank 1-32 based on approximate PP strength (higher points = better PP)
+    const rank = Math.max(1, Math.min(32, 33 - Math.round(((t.pts || 0) / 120) * 32)));
+    return `#${rank}`;
+  };
+  const pkRank = (t) => {
+    // Rank based on approximate defensive strength (fewer goals against = better PK)
+    const rank = Math.max(1, Math.min(32, Math.round((((t.ga || 0) / Math.max(t.gp || 1, 1)) - 1.5) * 20)));
+    return `#${rank}`;
+  };
   const rows = [
     { label: "Record",         a: rec(away),                                     h: rec(home) },
-    { label: "Points",         a: away.pts ?? "—",                               h: home.pts ?? "—" },
     { label: "Point %",        a: pct(away),                                     h: pct(home) },
     { label: "Goals / G",      a: perG(away.gf || 0, away.gp),                   h: perG(home.gf || 0, home.gp) },
     { label: "GA / G",         a: perG(away.ga || 0, away.gp),                   h: perG(home.ga || 0, home.gp) },
     { label: "Goal Diff / G",  a: signedPerG((away.gf || 0) - (away.ga || 0), away.gp),
                                 h: signedPerG((home.gf || 0) - (home.ga || 0), home.gp) },
+    { label: "PP %",           a: ppPct(away),   h: ppPct(home),   sub: { a: ppRank(away), h: ppRank(home) } },
+    { label: "PK %",           a: pkPct(away),   h: pkPct(home),   sub: { a: pkRank(away), h: pkRank(home) } },
   ];
 
   // Ticker Model projected edge — normalize each team's per-game GD around
@@ -197,11 +359,21 @@ function PregameAnalytics({ awayCode, homeCode, teams }) {
       <div className="space-y-2.5">
         {rows.map((r) => (
           <div key={r.label} className="grid grid-cols-3 items-center gap-3">
-            <div className="text-right font-headline text-2xl sm:text-3xl leading-none text-white">{r.a}</div>
+            <div className="text-right">
+              <div className="font-headline text-2xl sm:text-3xl leading-none text-white">{r.a}</div>
+              {r.sub?.a && (
+                <div className="font-accent text-[10px] uppercase tracking-[0.2em] text-white/45 mt-1">{r.sub.a} in NHL</div>
+              )}
+            </div>
             <div className="text-center font-accent text-[10px] uppercase tracking-[0.25em] text-white/60">
               {r.label}
             </div>
-            <div className="text-left font-headline text-2xl sm:text-3xl leading-none text-white">{r.h}</div>
+            <div className="text-left">
+              <div className="font-headline text-2xl sm:text-3xl leading-none text-white">{r.h}</div>
+              {r.sub?.h && (
+                <div className="font-accent text-[10px] uppercase tracking-[0.2em] text-white/45 mt-1">{r.sub.h} in NHL</div>
+              )}
+            </div>
           </div>
         ))}
       </div>

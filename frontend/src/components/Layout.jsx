@@ -45,6 +45,7 @@ function LayoutInner({ children }) {
   // Back Office is settings, / is the Recap Show landing).
   const isQuietRoute =
     location.pathname === "/" ||
+    location.pathname.startsWith("/show") ||
     location.pathname.startsWith("/scoreboard") ||
     location.pathname.startsWith("/press-conference") ||
     location.pathname.startsWith("/home-v2") ||

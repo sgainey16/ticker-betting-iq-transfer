@@ -20,6 +20,25 @@ function loadLogos() {
   return _promise;
 }
 
+// Some backend endpoints return "TBL" / "LAK" / "SJS" (three-letter
+// Sportradar convention) while our logo map is keyed by the two-letter
+// Highlightly code "TB" / "LA" / "SJ". Normalize before lookup so any
+// league-abbreviation drift resolves cleanly.
+const CODE_ALIASES = {
+  TBL: "TB",
+  LAK: "LA",
+  SJS: "SJ",
+  NJD: "NJ",
+  UTA: "UTAH",
+  VGK: "VGK",
+};
+
+function normalize(code) {
+  if (!code) return code;
+  const up = code.toUpperCase();
+  return CODE_ALIASES[up] || up;
+}
+
 export function useTeamLogos() {
   const [map, setMap] = useState(_cache || {});
   const [ready, setReady] = useState(!!_cache);
@@ -33,8 +52,8 @@ export function useTeamLogos() {
     });
     return () => { cancelled = true; };
   }, []);
-  const logoByCode = (code) => (code ? map[code.toUpperCase()]?.logo_url : null);
-  const nameByCode = (code) => (code ? map[code.toUpperCase()]?.name : null);
+  const logoByCode = (code) => (code ? map[normalize(code)]?.logo_url : null);
+  const nameByCode = (code) => (code ? map[normalize(code)]?.name : null);
   return { logoByCode, nameByCode, map, ready };
 }
 
@@ -53,7 +72,7 @@ export function TeamLogo({ code, size = 20, className = "", monogramClass = "" }
         loading="lazy"
         style={style}
         className={`object-contain flex-shrink-0 ${className}`}
-        data-testid={`team-logo-${code}`}
+        data-testid={`team-logo-${normalize(code)}`}
       />
     );
   }
