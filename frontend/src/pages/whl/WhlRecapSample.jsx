@@ -5,7 +5,9 @@
 // its own AI-generated analysis card. This is the video-overlay engine's
 // UI-side companion — how the recap is presented on the page.
 
-import { Play, Zap, Shield, AlertOctagon, Target } from "lucide-react";
+import { useState, useRef } from "react";
+import { Play, Pause, Loader2, Zap, Shield, AlertOctagon, Target } from "lucide-react";
+import { api } from "@/lib/api";
 
 const GAME = {
   date: "Sat · Apr 5, 2026",
@@ -217,9 +219,57 @@ function EventCard({ event }) {
   const style = KIND_STYLE[event.kind];
   const Icon = style.Icon;
   const teamColor = event.team === "KAM" ? "#F58220" : "#8B0000";
+  // Each card owns its own audio state so tapping one plays THAT event's
+  // unique Reggie+Marc take (not the shared LiveDesk audio). Generated on
+  // demand via /api/recap-show/line-audio → ElevenLabs.
+  const [state, setState] = useState("idle"); // idle | loading | playing | error
+  const audioRef = useRef(null);
+  const urlsRef = useRef({ reggie: null, marc: null }); // cache generated URLs
+  const backend = process.env.REACT_APP_BACKEND_URL;
+
+  const stopPlayback = () => {
+    const a = audioRef.current;
+    if (a) { try { a.pause(); a.currentTime = 0; } catch {} }
+    setState("idle");
+  };
+
+  const fetchLine = async (speaker, text) => {
+    if (urlsRef.current[speaker]) return urlsRef.current[speaker];
+    const r = await api.get(`/recap-show/line-audio?speaker=${speaker}&text=${encodeURIComponent(text)}`);
+    const url = r.data?.audio_url;
+    if (!url) throw new Error("no audio url");
+    const full = url.startsWith("http") ? url : `${backend}${url}`;
+    urlsRef.current[speaker] = full;
+    return full;
+  };
+
+  const play = async () => {
+    if (state === "playing") { stopPlayback(); return; }
+    if (state === "loading") return;
+    setState("loading");
+    try {
+      // Generate Reggie first, then Marc — play them back-to-back.
+      const reggieUrl = await fetchLine("reggie", event.reggie);
+      const marcUrl   = await fetchLine("marc",   event.marc);
+      const a = audioRef.current || new Audio();
+      audioRef.current = a;
+      a.src = reggieUrl;
+      setState("playing");
+      a.onended = () => {
+        // Chain into Marc's take
+        a.onended = () => setState("idle");
+        a.src = marcUrl;
+        a.play().catch(() => setState("idle"));
+      };
+      await a.play();
+    } catch {
+      setState("error");
+      setTimeout(() => setState("idle"), 1500);
+    }
+  };
+
   return (
-    <div className="rounded-lg border border-white/10 bg-black/40 overflow-hidden">
-      {/* Header strip */}
+    <div className="rounded-lg border border-white/10 bg-black/40 overflow-hidden" data-testid={`whl-event-${event.t.replace(/[^a-z0-9]/gi,'-')}`}>
       <div className="flex items-center gap-3 p-3 border-b border-white/5" style={{ background: `linear-gradient(90deg, ${teamColor}20, transparent 60%)` }}>
         <div className="flex-shrink-0 h-10 w-10 rounded-md flex items-center justify-center" style={{ background: `${style.color}25`, border: `1px solid ${style.color}55` }}>
           <Icon className="w-5 h-5" style={{ color: style.color }} />
@@ -241,21 +291,33 @@ function EventCard({ event }) {
         </div>
       </div>
 
-      {/* Video placeholder + AI takes */}
       <div className="grid md:grid-cols-[240px_1fr] gap-0">
-        {/* Video placeholder — represents where the branded overlay clip renders */}
-        <button className="relative aspect-video md:aspect-square bg-gradient-to-br from-[#1a1a2e] via-[#0f0f1a] to-[#1a0f1f] flex items-center justify-center group border-b md:border-b-0 md:border-r border-white/5">
+        <button
+          onClick={play}
+          disabled={state === "loading"}
+          data-testid={`whl-event-play-${event.t.replace(/[^a-z0-9]/gi,'-')}`}
+          className="relative aspect-video md:aspect-square bg-gradient-to-br from-[#1a1a2e] via-[#0f0f1a] to-[#1a0f1f] flex items-center justify-center group border-b md:border-b-0 md:border-r border-white/5 focus:outline-none focus:ring-2 focus:ring-[#F58220]"
+        >
           <div className="absolute inset-2 border border-white/5 rounded-md pointer-events-none" />
           <div className="text-center">
-            <span className="mx-auto h-12 w-12 rounded-full bg-[#F58220] group-hover:bg-[#ff9042] flex items-center justify-center shadow-[0_0_20px_-2px_rgba(245,130,32,0.85)] transition-colors">
-              <Play className="w-5 h-5 text-white translate-x-[1px]" fill="currentColor" />
+            <span className={`mx-auto h-12 w-12 rounded-full flex items-center justify-center shadow-[0_0_20px_-2px_rgba(245,130,32,0.85)] transition-colors ${
+              state === "playing" ? "bg-red-600 hover:bg-red-500" : "bg-[#F58220] group-hover:bg-[#ff9042]"
+            }`}>
+              {state === "loading" ? (
+                <Loader2 className="w-5 h-5 text-white animate-spin" />
+              ) : state === "playing" ? (
+                <Pause className="w-5 h-5 text-white" fill="currentColor" />
+              ) : (
+                <Play className="w-5 h-5 text-white translate-x-[1px]" fill="currentColor" />
+              )}
             </span>
-            <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/50 mt-2">Ticker Overlay Clip</div>
-            <div className="font-accent text-[8px] tracking-[0.25em] text-white/30 mt-0.5">15 sec · Voice · Score Bug · Lower-3rd</div>
+            <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/50 mt-2">
+              {state === "playing" ? "Playing Take" : state === "loading" ? "Generating…" : state === "error" ? "Try Again" : "Play Take"}
+            </div>
+            <div className="font-accent text-[8px] tracking-[0.25em] text-white/30 mt-0.5">Reggie → Marc · unique per event</div>
           </div>
         </button>
 
-        {/* AI Takes — Reggie + Marc */}
         <div className="p-3 sm:p-4 space-y-3">
           <TakeBlock host="reggie" accent="#F58220" role="Reggie · Anchor" text={event.reggie} />
           <TakeBlock host="marc" accent="#22d3ee" role="Marc · Numbers" text={event.marc} />
