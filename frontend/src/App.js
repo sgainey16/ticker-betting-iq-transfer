@@ -27,6 +27,7 @@ import PlayerProfile from "@/pages/PlayerProfile";
 import Lineup from "@/pages/Lineup";
 import OhlHome from "@/pages/ohl/OhlHome";
 import WhlRecapSample from "@/pages/whl/WhlRecapSample";
+import WhlDeskShow from "@/pages/whl/WhlDeskShow";
 import { Toaster } from "sonner";
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
             <Route path="/ohl" element={<Navigate to="/ohl/home" replace />} />
             <Route path="/ohl/home" element={<OhlHome />} />
             <Route path="/whl/recap-sample" element={<WhlRecapSample />} />
+            <Route path="/whl/desk-show" element={<WhlDeskShow />} />
             <Route path="/player/:slug" element={<PlayerProfile />} />
             <Route path="/lineup/:team" element={<Lineup />} />
             <Route path="/lineup" element={<Lineup />} />
