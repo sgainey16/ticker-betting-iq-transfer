@@ -26,6 +26,7 @@ import HomeV2 from "@/pages/HomeV2";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Lineup from "@/pages/Lineup";
 import OhlHome from "@/pages/ohl/OhlHome";
+import WhlRecapSample from "@/pages/whl/WhlRecapSample";
 import { Toaster } from "sonner";
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
              * working Ticker. Kill or promote independently. */}
             <Route path="/ohl" element={<Navigate to="/ohl/home" replace />} />
             <Route path="/ohl/home" element={<OhlHome />} />
+            <Route path="/whl/recap-sample" element={<WhlRecapSample />} />
             <Route path="/player/:slug" element={<PlayerProfile />} />
             <Route path="/lineup/:team" element={<Lineup />} />
             <Route path="/lineup" element={<Lineup />} />
