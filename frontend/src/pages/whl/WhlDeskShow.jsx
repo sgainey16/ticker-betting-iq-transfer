@@ -25,15 +25,16 @@ import { api } from "@/lib/api";
 // swap to the next candidate in FALLBACK_YT below. In production we'd
 // vet the URL server-side before authoring the beat sheet.
 const CANDIDATE_YT_IDS = [
-  "tYtriD7OZJc",  // Kamloops @ Tri-City · Feb 11, 2025 · WHL Highlights
-  "9Z78gIzjoRk",  // Kamloops @ Medicine Hat · Feb 22, 2025 · WHL Highlights
+  "rQdRsb6rlWY",  // Victoria Royals @ Kamloops Blazers · Mar 6, 2026 (Sandman Centre) — WHL official
+  "9jPchy0PjUc",  // Vancouver Giants @ Kamloops Blazers · Mar 7, 2026 (Sandman Centre) — WHL official
+  "aG5ZI6enecM",  // Tri-City Americans @ Kamloops Blazers · Mar 11, 2026 (Sandman Centre) — WHL official
 ];
 
 const GAME = {
-  date: "Feb 2025 · WHL Highlights",
-  arena: "Kamloops Blazers · Road Game",
-  home: { code: "MH",  name: "Medicine Hat Tigers", primary: "#F58220" },
-  away: { code: "KAM", name: "Kamloops Blazers",    primary: "#F58220" },
+  date: "Fri · Mar 6, 2026",
+  arena: "Sandman Centre · Kamloops, BC",
+  away: { code: "VIC", name: "Victoria Royals",   primary: "#052A6A" },
+  home: { code: "KAM", name: "Kamloops Blazers",  primary: "#F58220" },
 };
 
 // Kamloops brand orange for our overlays.
@@ -52,63 +53,80 @@ const KAM = "#F58220";
 //   sting       — soft whoosh (WebAudio, no network)
 //   close       — final desk sign-off segment
 //
-// Timestamps target a typical 3–4 min WHL highlight package. They're
-// tuned to feel right against the actual Feb 22 clip, but every value
-// is one number — trivial to nudge later.
+// Timestamps target a typical 3–4 min WHL highlight package. Tuned for
+// feel — every value is one number, trivial to nudge once we see the
+// actual clip.
 
+// LEAD-IN: the ~10-second cold open that plays BEFORE the video ever
+// starts. Runs off its own virtual clock over a branded Ticker desk card.
+// Feels like a real network intro — sting, "you're watching" tag, hosts
+// tossing to the highlight. When it ends, we cut to the game.
+const LEADIN = [
+  { t: 0.1,  kind: "sting" },
+  { t: 0.3,  kind: "speak", speaker: "reggie",
+    text: "You're watching The Ticker. Blazers desk." },
+  { t: 4.0,  kind: "speak", speaker: "marc",
+    text: "Friday night, Sandman Centre, packed house. Kamloops hosting Victoria." },
+  { t: 8.3,  kind: "speak", speaker: "reggie",
+    text: "Enough talk. Roll it." },
+  { t: 11.0, kind: "sting" },
+  { t: 11.3, kind: "leadin_end" },
+];
+
+// SHOW: the main timeline that plays synchronised to YT video currentTime.
+// Kamloops is HOME tonight so the score bug reads VIC-away · KAM-home.
 const SHOW = [
-  // ---- Cold open (0–7s) ----
-  { t: 0.2,  kind: "sting" },
-  { t: 0.4,  kind: "duck", to: 12 },
+  // ---- Cold open over the first seconds of video (0–7s) ----
+  { t: 0.3,  kind: "duck", to: 12 },
   { t: 0.5,  kind: "speak", speaker: "reggie",
-    text: "Saturday night, Medicine Hat, Co-op Place packed. Blazers on the road hunting two points. Marc, roll it." },
+    text: "Blazers, Royals, right here in the Tournament Capital. Let's go to work." },
   { t: 6.5,  kind: "unduck" },
 
-  // ---- Beat 1: Blazers strike first (~18–30s) ----
+  // ---- Beat 1: Blazers strike first at home (~18–30s) ----
   { t: 16.5, kind: "duck", to: 18 },
   { t: 16.8, kind: "speak", speaker: "marc",
-    text: "Watch Oliver drive the slot here — Kamloops has been living in this look all month." },
+    text: "Watch Oliver drive the slot here — Blazers have been living in this look all month." },
   { t: 22.0, kind: "flash" },
-  { t: 22.0, kind: "chyron", scorer: "OLIVER · 22nd of the season", detail: "A: Boumedienne, Kolt · 5v5", hold: 4.5 },
-  { t: 22.0, kind: "score",  away: 1, home: 0 },
+  { t: 22.0, kind: "chyron", scorer: "OLIVER · Opens the Scoring", detail: "A: Boumedienne, Kolt · 5v5", hold: 4.5 },
+  { t: 22.0, kind: "score",  away: 0, home: 1 },
   { t: 22.2, kind: "speak", speaker: "reggie",
-    text: "OLIVER! Snapped it clean, glove side, textbook. Blazers punch first." },
+    text: "OLIVER! Snapped it clean, glove side, textbook. Sandman Centre is up on its feet!" },
   { t: 27.0, kind: "speak", speaker: "marc",
-    text: "That's a seventy-eight percent expected-goal shot. He picked the exact spot Cossa bleeds." },
+    text: "That's a seventy-eight percent expected-goal shot. He picked the exact spot most goalies bleed." },
   { t: 31.0, kind: "unduck" },
 
-  // ---- Beat 2: Tigers respond (~50–65s) ----
+  // ---- Beat 2: Royals respond (~50–65s) ----
   { t: 48.0, kind: "duck", to: 18 },
   { t: 48.2, kind: "speak", speaker: "reggie",
-    text: "Tigers punch back — watch Petrovsky work the flank. Broken coverage all over this." },
+    text: "Royals hit back — watch Cristall work the flank. Broken coverage all over this one." },
   { t: 54.0, kind: "flash" },
-  { t: 54.0, kind: "chyron", scorer: "PETROVSKY · Ties it 1-1", detail: "A: Konar · 5v5", hold: 4 },
+  { t: 54.0, kind: "chyron", scorer: "CRISTALL · Ties it 1-1", detail: "A: Michaelis · 5v5", hold: 4 },
   { t: 54.0, kind: "score", away: 1, home: 1 },
   { t: 54.2, kind: "speak", speaker: "marc",
-    text: "One-timer top shelf. Kolt lost his mark on the weak side — that's a tape session tomorrow." },
+    text: "One-timer top shelf. Kolt lost his mark on the weak side — that's a tape session tomorrow morning." },
   { t: 59.0, kind: "speak", speaker: "reggie",
-    text: "That's Medicine Hat right there. They don't stay quiet for long in this building." },
+    text: "Building goes quiet. That's Victoria for you — they punch back hard on the road." },
   { t: 63.0, kind: "unduck" },
 
   // ---- Beat 3: Blazers PP goal (~85–100s) ----
   { t: 83.0, kind: "duck", to: 18 },
   { t: 83.2, kind: "speak", speaker: "marc",
-    text: "Blazers on the power play. The one-three-one look with Brzustewicz at the point — that's an NHL contract feel at the CHL level." },
+    text: "Blazers on the power play. One-three-one look with Brzustewicz at the point — that's an NHL contract feel at the CHL level." },
   { t: 89.0, kind: "flash" },
-  { t: 89.0, kind: "chyron", scorer: "SOP · POWER-PLAY GOAL · 15th", detail: "A: Oliver, Brzustewicz · PP 1:26", hold: 4.5 },
-  { t: 89.0, kind: "score", away: 2, home: 1 },
+  { t: 89.0, kind: "chyron", scorer: "SOP · POWER-PLAY GOAL", detail: "A: Oliver, Brzustewicz · PP 1:26", hold: 4.5 },
+  { t: 89.0, kind: "score", away: 1, home: 2 },
   { t: 89.2, kind: "speak", speaker: "reggie",
-    text: "SOP! One-timer, gone. That thing is in before Cossa moves. First-round pick for a reason." },
+    text: "SOP! One-timer, gone. That thing is in before the glove moves. First-round pick for a reason!" },
   { t: 94.0, kind: "speak", speaker: "marc",
     text: "Kamloops power play is number four in the league now. That's not a hot streak. That's a system." },
   { t: 98.0, kind: "unduck" },
 
-  // ---- Beat 4: Tigers hang on / equalizer (~120–140s) ----
+  // ---- Beat 4: Royals hang on (~120–140s) ----
   { t: 118.0, kind: "duck", to: 18 },
   { t: 118.2, kind: "speak", speaker: "reggie",
-    text: "Tigers won't die. Watch Bezzo — he sees a shift change and just takes it." },
+    text: "Royals won't die. Watch Greentree — he sees a shift change and just takes it." },
   { t: 124.0, kind: "flash" },
-  { t: 124.0, kind: "chyron", scorer: "BEZZO · Ties it 2-2", detail: "A: Petrovsky · 5v5", hold: 4 },
+  { t: 124.0, kind: "chyron", scorer: "GREENTREE · Ties it 2-2", detail: "A: Cristall · 5v5", hold: 4 },
   { t: 124.0, kind: "score", away: 2, home: 2 },
   { t: 124.2, kind: "speak", speaker: "marc",
     text: "Kamloops waved for a change, coach didn't hear it in time. Small margins — that costs playoff games." },
@@ -120,7 +138,7 @@ const SHOW = [
     text: "Now watch this — Boumedienne, six-foot-four, ninety-one-mile-an-hour release. Just wait." },
   { t: 156.0, kind: "flash" },
   { t: 156.0, kind: "chyron", scorer: "BOUMEDIENNE · SLAP-SHOT SEAL", detail: "A: Sop · 5v5", hold: 5 },
-  { t: 156.0, kind: "score", away: 3, home: 2 },
+  { t: 156.0, kind: "score", away: 2, home: 3 },
   { t: 156.2, kind: "speak", speaker: "reggie",
     text: "SLAP SHOT! That thing was still RISING when it hit twine! Frenchman with the hammer!" },
   { t: 162.0, kind: "speak", speaker: "marc",
@@ -131,7 +149,7 @@ const SHOW = [
   { t: 195.0, kind: "duck", to: 10 },
   { t: 195.2, kind: "sting" },
   { t: 195.4, kind: "speak", speaker: "reggie",
-    text: "Blazers grind out the two. Oliver drives it, Sop cashes on the man-advantage, Boumedienne seals it. That's your Ticker desk report — see you tomorrow." },
+    text: "Blazers grind out the two at home. Oliver strikes first, Sop cashes on the man-advantage, Boumedienne seals it. That's your Ticker Blazers desk — see you tomorrow." },
   { t: 205.0, kind: "close" },
 ];
 
@@ -186,8 +204,7 @@ export default function WhlDeskShow() {
 
   const [ready, setReady] = useState(false);         // TTS preloaded?
   const [preloadPct, setPreloadPct] = useState(0);
-  const [live, setLive] = useState(false);           // show is running
-  const [ended, setEnded] = useState(false);
+  const [phase, setPhase] = useState("idle");        // idle | leadin | show | ended
   const [videoBroken, setVideoBroken] = useState(false); // YT can't play this ID
   const [ytIdx, setYtIdx] = useState(0);             // which candidate we're on
 
@@ -196,14 +213,46 @@ export default function WhlDeskShow() {
   const [flash, setFlash] = useState(false);
   const [talking, setTalking] = useState(null);      // "reggie" | "marc" | null
 
+  // Convenience booleans that stayed in a lot of the render code below.
+  const live  = phase === "leadin" || phase === "show";
+  const ended = phase === "ended";
+
   // ---- Preload all Reggie/Marc lines up front so timing never stalls ----
-  const speakCues = useMemo(() => SHOW.map((c, i) => ({ ...c, i })).filter(c => c.kind === "speak"), []);
+  // Preload BOTH the lead-in and the main show — we key them separately
+  // so the runtime picks the right cache per phase.
+  const leadinSpeakCues = useMemo(
+    () => LEADIN.map((c, i) => ({ ...c, i })).filter(c => c.kind === "speak"),
+    [],
+  );
+  const showSpeakCues = useMemo(
+    () => SHOW.map((c, i) => ({ ...c, i })).filter(c => c.kind === "speak"),
+    [],
+  );
+  const leadinAudioRef = useRef({});
+  // audioCacheRef stays as the SHOW cache (already declared above).
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const total = leadinSpeakCues.length + showSpeakCues.length;
       let done = 0;
-      for (const cue of speakCues) {
+      // Preload leadin first so the intro can fire the moment user taps Go Live.
+      for (const cue of leadinSpeakCues) {
+        if (cancelled) return;
+        try {
+          const r = await api.get(`/recap-show/line-audio?speaker=${cue.speaker}&text=${encodeURIComponent(cue.text)}`);
+          const url = r.data?.audio_url;
+          if (url) {
+            const full = url.startsWith("http") ? url : `${backend}${url}`;
+            const a = new Audio(full);
+            a.preload = "auto";
+            leadinAudioRef.current[cue.i] = a;
+          }
+        } catch { /* skip */ }
+        done += 1;
+        setPreloadPct(Math.round((done / total) * 100));
+      }
+      for (const cue of showSpeakCues) {
         if (cancelled) return;
         try {
           const r = await api.get(`/recap-show/line-audio?speaker=${cue.speaker}&text=${encodeURIComponent(cue.text)}`);
@@ -214,24 +263,99 @@ export default function WhlDeskShow() {
             a.preload = "auto";
             audioCacheRef.current[cue.i] = a;
           }
-        } catch { /* skip bad line */ }
+        } catch { /* skip */ }
         done += 1;
-        setPreloadPct(Math.round((done / speakCues.length) * 100));
+        setPreloadPct(Math.round((done / total) * 100));
       }
       if (!cancelled) setReady(true);
     })();
     return () => { cancelled = true; };
-  }, [speakCues, backend]);
+  }, [leadinSpeakCues, showSpeakCues, backend]);
 
   // ---- Kick the show ----
+  // Two phases: LEAD-IN (branded cold open, no video) → SHOW (video + cues).
   const start = async () => {
-    if (!ready || live) return;
-    setLive(true);
-    setEnded(false);
+    if (!ready || phase === "leadin" || phase === "show") return;
     setVideoBroken(false);
     cursorRef.current = 0;
+    setPhase("leadin");
+
+    // Prime every preloaded audio element inside this click gesture so
+    // browsers (Safari especially) allow us to programmatically .play()
+    // them later off a requestAnimationFrame timer. A muted play() → pause()
+    // is enough to "unlock" the element for the session.
+    const allAudio = [
+      ...Object.values(leadinAudioRef.current),
+      ...Object.values(audioCacheRef.current),
+    ];
+    for (const a of allAudio) {
+      try {
+        a.muted = true;
+        await a.play();
+        a.pause();
+        a.currentTime = 0;
+        a.muted = false;
+      } catch { /* skip un-primable */ }
+    }
+
+    // Warm up the YT API in parallel so the cut-to-video handoff is instant.
+    loadYTApi();
+
+    // Run the lead-in virtual clock. When it fires "leadin_end", start the main show.
+    runLeadin();
+  };
+
+  // ---- Lead-in phase runtime ----
+  // Fires LEADIN cues off a wall clock. When we hit "leadin_end" we tear
+  // down the leadin loop and hand off to the real video timeline.
+  const leadinClockRef = useRef({ startedAt: 0, cursor: 0, active: false });
+  const runLeadin = () => {
+    leadinClockRef.current = { startedAt: performance.now(), cursor: 0, active: true };
+    const step = () => {
+      if (!leadinClockRef.current.active) return;
+      const now = (performance.now() - leadinClockRef.current.startedAt) / 1000;
+      while (
+        leadinClockRef.current.cursor < LEADIN.length &&
+        LEADIN[leadinClockRef.current.cursor].t <= now
+      ) {
+        const cue = LEADIN[leadinClockRef.current.cursor];
+        leadinClockRef.current.cursor += 1;
+        fireLeadin(cue);
+        if (cue.kind === "leadin_end") return; // handoff triggered inside fireLeadin
+      }
+      if (leadinClockRef.current.active) rafRef.current = requestAnimationFrame(step);
+    };
+    rafRef.current = requestAnimationFrame(step);
+  };
+
+  const fireLeadin = (cue) => {
+    switch (cue.kind) {
+      case "sting": { stingSound(); break; }
+      case "speak": {
+        const a = leadinAudioRef.current[cue.i];
+        if (!a) return;
+        if (currentAudioRef.current) { try { currentAudioRef.current.pause(); } catch { /* noop */ } }
+        try { a.currentTime = 0; } catch { /* noop */ }
+        setTalking(cue.speaker);
+        a.onended = () => { if (currentAudioRef.current === a) setTalking(null); };
+        a.play().catch(() => setTalking(null));
+        currentAudioRef.current = a;
+        break;
+      }
+      case "leadin_end": {
+        leadinClockRef.current.active = false;
+        setPhase("show");
+        // Start the real video now.
+        startShow();
+        break;
+      }
+      default: break;
+    }
+  };
+
+  // ---- Start the main video-anchored show ----
+  const startShow = async () => {
     const YT = await loadYTApi();
-    // Fresh player each time so re-runs replay cleanly.
     try { playerRef.current?.destroy(); } catch { /* noop */ }
     playerRef.current = new YT.Player("desk-yt-player", {
       videoId: CANDIDATE_YT_IDS[ytIdx],
@@ -252,20 +376,15 @@ export default function WhlDeskShow() {
           } catch { /* noop */ }
           tickRunner();
         },
-        onError: (e) => {
-          // 2   = invalid param
-          // 5   = HTML5 player issue
-          // 100 = video removed / private
-          // 101 / 150 = embed disabled by owner (or region-blocked)
-          // Try the next candidate; if we've exhausted them, run the show
-          // over a poster so the engine (overlays, audio) still demos.
+        onError: () => {
           const nextIdx = ytIdx + 1;
           if (nextIdx < CANDIDATE_YT_IDS.length) {
             setYtIdx(nextIdx);
             try { playerRef.current?.loadVideoById(CANDIDATE_YT_IDS[nextIdx]); } catch { /* noop */ }
           } else {
             setVideoBroken(true);
-            // Kick a virtual-time loop so cues still fire without a real video.
+            try { playerRef.current?.destroy(); } catch { /* noop */ }
+            playerRef.current = null;
             startVirtualClock();
           }
         },
@@ -287,7 +406,6 @@ export default function WhlDeskShow() {
       while (cursorRef.current < SHOW.length && SHOW[cursorRef.current].t <= now) {
         const cue = SHOW[cursorRef.current];
         cursorRef.current += 1;
-        // Skip YT-only cues that don't apply when there's no video.
         if (cue.kind === "duck" || cue.kind === "unduck") continue;
         fire(cue);
       }
@@ -301,9 +419,13 @@ export default function WhlDeskShow() {
   };
 
   // ---- The runtime loop: check currentTime against SHOW cues ----
+  // Only trigger the geo-block fallback if YT NEVER hits a playing state.
+  // The earlier version fired the fallback 6s in even when the video was
+  // clearly working (buffering), which is why users saw a poster over a
+  // real, playing video.
   const tickRunner = () => {
     const startedAt = performance.now();
-    let sawProgress = false;
+    let sawPlaying = false;
     const step = () => {
       const p = playerRef.current;
       if (!p || typeof p.getCurrentTime !== "function") {
@@ -311,15 +433,17 @@ export default function WhlDeskShow() {
         return;
       }
       const now = p.getCurrentTime();
-      // Silent geo-block guard: YT sometimes never fires onError for
-      // region-restricted videos — the player just spins with currentTime
-      // stuck at 0. If we've been "running" for 6 seconds and never saw
-      // the clock move, treat it as a broken embed and fall through to
-      // the virtual clock so the desk overlays still demo.
-      if (now > 0.1) sawProgress = true;
-      if (!sawProgress && performance.now() - startedAt > 6000) {
+      // Trust the player's own state — 1 = PLAYING, 3 = BUFFERING.
+      // If we ever hit either, the embed is fine, no fallback needed.
+      try {
+        const st = p.getPlayerState?.();
+        if (st === 1 || st === 3 || now > 0.2) sawPlaying = true;
+      } catch { /* noop */ }
+      // Only bail if 15s in we've NEVER seen the player play or buffer.
+      if (!sawPlaying && performance.now() - startedAt > 15000) {
         setVideoBroken(true);
-        try { p.stopVideo?.(); } catch { /* noop */ }
+        try { p.destroy?.(); } catch { /* noop */ }
+        playerRef.current = null;
         startVirtualClock();
         return;
       }
@@ -375,10 +499,10 @@ export default function WhlDeskShow() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = 0;
     virtualClockRef.current.active = false;
+    leadinClockRef.current.active = false;
     if (currentAudioRef.current) { try { currentAudioRef.current.pause(); } catch { /* noop */ } }
     setTalking(null);
-    setLive(false);
-    setEnded(true);
+    setPhase("ended");
     try { playerRef.current?.pauseVideo(); } catch { /* noop */ }
   };
 
@@ -391,7 +515,7 @@ export default function WhlDeskShow() {
     try { playerRef.current?.destroy(); } catch { /* noop */ }
   }, []);
 
-  const replay = () => { setEnded(false); start(); };
+  const replay = () => { setPhase("idle"); setScore({ away: 0, home: 0 }); start(); };
 
   return (
     <div className="min-h-screen bg-[#0b0b10] text-white">
@@ -402,7 +526,7 @@ export default function WhlDeskShow() {
             The Ticker · WHL Desk · Live Show Prototype
           </div>
           <div className="font-headline text-white text-sm mt-0.5">
-            Blazers @ Tigers · {GAME.date} · Real highlight + AI desk overlay
+            Victoria Royals @ Kamloops Blazers · {GAME.date} · Real highlight + AI desk overlay
           </div>
         </div>
 

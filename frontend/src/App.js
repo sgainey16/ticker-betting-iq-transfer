@@ -28,6 +28,12 @@ import Lineup from "@/pages/Lineup";
 import OhlHome from "@/pages/ohl/OhlHome";
 import WhlRecapSample from "@/pages/whl/WhlRecapSample";
 import WhlDeskShow from "@/pages/whl/WhlDeskShow";
+import Onboarding from "@/pages/plus/Onboarding";
+import YourTicker from "@/pages/plus/YourTicker";
+import DivisionPage from "@/pages/plus/DivisionPage";
+import TeamPage from "@/pages/plus/TeamPage";
+import ProspectPage from "@/pages/plus/ProspectPage";
+import Upgrade from "@/pages/plus/Upgrade";
 import { Toaster } from "sonner";
 
 function App() {
@@ -50,6 +56,16 @@ function App() {
             <Route path="/ohl/home" element={<OhlHome />} />
             <Route path="/whl/recap-sample" element={<WhlRecapSample />} />
             <Route path="/whl/desk-show" element={<WhlDeskShow />} />
+            {/* Ticker+ cascade — CHL + NCAA personalization sidecar.
+             * All routes live under /plus/* so the NHL app is untouched. */}
+            <Route path="/plus" element={<Navigate to="/plus/your-ticker" replace />} />
+            <Route path="/plus/onboarding" element={<Onboarding />} />
+            <Route path="/plus/your-ticker" element={<YourTicker />} />
+            <Route path="/plus/chl/:division" element={<DivisionPage kind="chl" />} />
+            <Route path="/plus/ncaa/:conf" element={<DivisionPage kind="ncaa" />} />
+            <Route path="/plus/team/:code" element={<TeamPage />} />
+            <Route path="/plus/prospect/:id" element={<ProspectPage />} />
+            <Route path="/plus/upgrade" element={<Upgrade />} />
             <Route path="/player/:slug" element={<PlayerProfile />} />
             <Route path="/lineup/:team" element={<Lineup />} />
             <Route path="/lineup" element={<Lineup />} />

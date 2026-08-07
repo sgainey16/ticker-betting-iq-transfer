@@ -50,7 +50,11 @@ function LayoutInner({ children }) {
     location.pathname.startsWith("/press-conference") ||
     location.pathname.startsWith("/home-v2") ||
     location.pathname.startsWith("/back-office");
-  const needsMiniBarPadding = !isHome && !isQuietRoute;
+  // Ticker+ cascade lives outside the NHL broadcast frame entirely — hide
+  // the live audio player so its stream doesn't fight the onboarding /
+  // desk-show TTS.
+  const isPlusRoute = location.pathname.startsWith("/plus");
+  const needsMiniBarPadding = !isHome && !isQuietRoute && !isPlusRoute;
 
   return (
     <div className="min-h-screen">
