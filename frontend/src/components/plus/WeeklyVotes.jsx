@@ -16,7 +16,7 @@
 // quote for each entry defends the game.
 
 import { useMemo, useState } from "react";
-import { Zap, Lock, Heart } from "lucide-react";
+import { Zap, Lock, Heart, Trophy } from "lucide-react";
 
 const WEEK_ID = "2026-w06";
 const STORAGE_KEY = `ticker.weeklyvotes.${WEEK_ID}`;
@@ -110,6 +110,41 @@ const CATEGORIES = {
       },
     ],
   },
+  starpower: {
+    id: "starpower",
+    label: "Star Power",
+    tagline: "Who owned the night — across every league. Vote your one.",
+    entries: [
+      {
+        id: "sp-makar", league: "NHL", color: "#6F263D",
+        matchup: "COL vs VGK", where: "Ball Arena · Last night",
+        principal: "Cale Makar", opponent: "-",
+        frame: "1G · 2A · 8 shots · 26:04 TOI", tag: "Best D on Earth",
+        reggie: "Two assists, a highlight-reel goal, twenty-six minutes. He runs the game at both ends — nobody else is doing this shift.",
+      },
+      {
+        id: "sp-howard", league: "NCAA", color: "#00274C",
+        matchup: "MICH vs WISC", where: "Yost Ice Arena · Last night",
+        principal: "Gabe Howard", opponent: "-",
+        frame: "2G · 1A · Yost roars", tag: "Freshman owning grown men",
+        reggie: "Two goals as a freshman against a top-five program. Yost was electric — that's the future of Michigan hockey right there.",
+      },
+      {
+        id: "sp-petrov", league: "OHL", color: "#C41230",
+        matchup: "KIT vs LDN", where: "Aud · Last night",
+        principal: "Max Petrov", opponent: "-",
+        frame: "1G · 2A · captain's shift", tag: "Every shift a story",
+        reggie: "Two assists, a goal, a fight, and the buzzer-beating clear. Petrov plays 200 feet like a ten-year vet — NHL rooms are watching every shift.",
+      },
+      {
+        id: "sp-oliver", league: "WHL", color: "#F58220",
+        matchup: "KAM vs VIC", where: "Sandman Centre · Last night",
+        principal: "Kaid Oliver", opponent: "-",
+        frame: "2G · 1A · 24th of the year", tag: "First-round riser",
+        reggie: "Twenty-fourth of the year and he doesn't miss the top corner. Draft stock's climbing every week — teams have him top-fifteen now.",
+      },
+    ],
+  },
   culture: {
     id: "culture",
     label: "Culture",
@@ -129,6 +164,7 @@ const BASE_VOTES = {
   "nhl-flyers-bruins": 421,  "ahl-hershey-charlotte": 287, "whl-blazers-winterhawks": 356,
   "nhl-mccar-goal": 892,     "ahl-firebirds-goal": 244,    "whl-oliver-goal": 519,
   "nhl-makar-stretch": 613,  "ohl-petrov-backcheck": 385,  "ncaa-kelso-outlet": 292,
+  "sp-makar": 1284,          "sp-howard": 466,             "sp-petrov": 402,           "sp-oliver": 371,
 };
 
 function readStore() {
@@ -184,7 +220,7 @@ export function WeeklyVotes() {
             Vote the best of the week — every league on one card
           </div>
           <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5", marginTop: 4 }}>
-            Reggie and Marc's picks from NHL, AHL, WHL/OHL, and NCAA — you decide which one wins.
+            Reggie and Marc's picks across NHL, AHL, WHL/OHL, and NCAA — you pick the fight, the goal, the play, and the star.
           </div>
         </div>
       </div>
@@ -210,6 +246,7 @@ export function WeeklyVotes() {
             >
               {isLocked && <Lock className="w-3 h-3" />}
               {c.id === "culture" && !isLocked && <Heart className="w-3 h-3" />}
+              {c.id === "starpower" && <Trophy className="w-3 h-3" />}
               {c.label.toUpperCase()}
               {isActive && <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#F58220]" />}
             </button>

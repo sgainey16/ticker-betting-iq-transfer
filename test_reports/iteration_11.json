@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only smoke + functional tests for three new components on /home-v2 (TenTen 10@10 quiz, UnifiedTopPlays cream-rises rail, and WeeklyVotes StarPower tab), plus regressions on /home-v2 and /plus/onboarding. All 6 requested test suites PASSED end-to-end with zero JS console errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_11.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "UnifiedTopPlays.jsx: interleave logic uses `tiles.length % 2 === 0` after pushing nhl so junior tile gets inserted at even indices (0,2,4). Works for current 3 NHL + 2 junior mix (5 tiles) but could produce awkward ordering if NHL highlights array length changes; consider a simpler explicit interleave.",
+    "TenTen.jsx STORAGE_KEY is computed once at module load using todayKey(); if user keeps the SPA tab open past midnight, they'll continue writing to the previous day's key. Minor edge case — consider computing inside component.",
+    "WeeklyVotes.jsx has a 'weekly-votes' data-testid but MatchupTile lacks a data-testid attribute (not blocking test but reduces testability per code review guidelines)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100%"},
+  "test_credentials": "N/A",
+  "seed_data_creation": "None — components are localStorage-backed. Test cleared ticker.tenten.* and ticker.weeklyvotes.* keys before running.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified on /home-v2 (default MTL team). Results captured: UnifiedTopPlays renders 5 tiles (3 NHL MTL + 1 WHL Kamloops + 1 MIX marquee matchup Petrov vs Howard) with league chips and why-badges. TenTen full 10-question flow works with mid-flow reload persistence (3/10 -> reload -> still 3/10), tenten-done and tenten-restart both function. WeeklyVotes has all 5 tabs including starpower; sp-makar vote button switches to '✓ YOUR VOTE' and localStorage under ticker.weeklyvotes.2026-w06 updates correctly with {vote:sp-makar,tallies:{sp-makar:1}}. /plus/onboarding loads step 1 ('LET'S BUILD YOUR DESK') with 6-step progress indicator and no console errors. home-beyond-nhl section still renders below Top Plays. No ElevenLabs/audio errors observed.",
+  "test_evidence": {
+    "unified_tiles_captured": ["nhl-MTL-0","nhl-MTL-1","kam-vs-vic-mar6 (WHL)","nhl-MTL-2","matchup-petrov-vs-howard (MIX)"],
+    "tenten_flow": "0/10 -> click q1 -> 1/10 with q2 rendered -> q2,q3 -> 3/10 -> reload -> 3/10 -> q4..q10 -> tenten-done shown -> restart -> 0/10 with q1 back",
+    "starpower_entries": ["sp-makar (NHL)","sp-howard (NCAA)","sp-petrov (OHL)","sp-oliver (WHL)"],
+    "starpower_vote_localstorage": "ticker.weeklyvotes.2026-w06={\"starpower\":{\"vote\":\"sp-makar\",\"tallies\":{\"sp-makar\":1}}}",
+    "console_errors": 0
+  }
+}

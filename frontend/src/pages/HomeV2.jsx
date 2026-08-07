@@ -20,6 +20,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { PROSPECTS, PACKAGES } from "@/data/tickerCatalog";
 import { MatchupTile } from "@/components/plus/MatchupTile";
 import { WeeklyVotes } from "@/components/plus/WeeklyVotes";
+import { TenTen } from "@/components/plus/TenTen";
+import { UnifiedTopPlays } from "@/components/plus/UnifiedTopPlays";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -908,8 +910,10 @@ export default function HomeV2() {
         {/* Row 4 — Team Leaders (accuracy) */}
         <TeamLeadersAccuracy team={team} />
 
-        {/* Row 5 — Last Night's Highlights (video rail) */}
-        <HighlightsRail team={team} />
+        {/* Row 5 — Top Plays (unified rail — NHL + exceptional junior/NCAA
+         * blend in when the moment earns it). Replaces the NHL-only
+         * HighlightsRail. */}
+        <UnifiedTopPlays team={team} />
 
         {/* Row 6 — Last 10 + Reggie's Keys + Injuries */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -927,9 +931,15 @@ export default function HomeV2() {
          * league content when it doesn't. */}
         <BeyondTheNHL team={team} />
 
-        {/* Cross-league weekly voting rail — Fight / Goal / Play / Culture.
-         * This is where every hockey league lives on one card, and where
-         * every user click gets recorded as a behavioral signal for the
+        {/* 10 @ 10 — daily engagement quiz. Ten quick taps, mixed across
+         * hot topics, fav team, star power, draft board, prospect radar,
+         * and coach's read. This is the high-frequency signal loop that
+         * feeds the Ranker what a user actually cares about. */}
+        <TenTen />
+
+        {/* Cross-league weekly voting rail — Fight / Goal / Play / Star Power
+         * / Culture. This is where every hockey league lives on one card, and
+         * where every user click gets recorded as a behavioral signal for the
          * Ranker to learn from. Culture tab is deliberately locked as
          * "coming soon" so the roadmap is visible without being promised. */}
         <WeeklyVotes />
