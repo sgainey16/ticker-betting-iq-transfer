@@ -914,7 +914,49 @@ export default function HomeV2() {
           <ReggieKeys team={team} />
           <InjuryImpact team={team} />
         </div>
+
+        {/* Secondary exploration — clearly labeled as beta / preview so
+         * the flagship NHL experience above stays the star. This is the
+         * only entry point from the main app into the Ticker+ CHL/NCAA
+         * sidecar; nothing else has been reordered to make room for it. */}
+        <TickerPlusPreviewCard />
       </div>
     </div>
+  );
+}
+
+// -------- Ticker+ Preview Card --------
+// Small, deliberately-secondary discovery slot for the CHL/NCAA sidecar.
+// Never a hero. Just a "there's more here if you're curious" nudge.
+function TickerPlusPreviewCard() {
+  return (
+    <Link
+      to="/plus/onboarding"
+      data-testid="home-plus-preview"
+      className="group block rounded-xl border border-dashed border-[#F58220]/35 bg-gradient-to-r from-[#F58220]/[0.06] via-transparent to-transparent p-4 md:p-5 hover:border-[#F58220]/60 hover:bg-[#F58220]/[0.08] transition-all"
+    >
+      <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#F58220] animate-pulse" />
+          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+            Preview · Beta
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#fff", lineHeight: 1.2 }}>
+            Junior &amp; college hockey desks
+          </div>
+          <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "11px", letterSpacing: "0.18em", color: "#a0a0a5", marginTop: 2 }}>
+            WHL · OHL · NCAA · Prospect pipelines · Personalized for your team
+          </div>
+        </div>
+        <span
+          className="rounded-full border border-white/15 bg-black/50 px-4 py-1.5 group-hover:border-white/35 group-hover:bg-black/70 transition-all"
+          style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.3em", color: "#fff" }}
+        >
+          Take a look →
+        </span>
+      </div>
+    </Link>
   );
 }

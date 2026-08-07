@@ -103,6 +103,25 @@ function LayoutInner({ children }) {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            {/* Junior + college sidecar entry — clearly labeled "+" so it
+             * signals "extra, not primary". Doesn't compete with the NHL
+             * navigation above. Hidden on very narrow screens to keep the
+             * header tight. */}
+            <NavLink
+              to="/plus/onboarding"
+              data-testid="nav-plus"
+              className={({ isActive }) =>
+                `hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-full border transition-all whitespace-nowrap ${
+                  isActive
+                    ? "border-[#F58220] bg-[#F58220]/10 text-[#F58220]"
+                    : "border-white/15 text-white/60 hover:border-[#F58220]/60 hover:text-[#F58220]"
+                }`
+              }
+              title="Junior & college preview"
+            >
+              <span className="font-headline text-sm leading-none">+</span>
+              <span className="font-accent text-[9px] tracking-[0.28em] uppercase">Junior · NCAA</span>
+            </NavLink>
             {/* NHL bug — broadcast-style network shield, always visible.
              * `whitespace-nowrap` + tight leading prevents the 3-line wrap
              * we were seeing on narrow landscape iPhones. */}
