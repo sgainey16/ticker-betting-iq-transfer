@@ -943,6 +943,13 @@ export default function HomeV2() {
          * Ranker to learn from. Culture tab is deliberately locked as
          * "coming soon" so the roadmap is visible without being promised. */}
         <WeeklyVotes />
+
+        {/* Roots — a distinct tone/mood mode that honors the towns, rinks,
+         * coaches and lineages behind the players. Shell only for now
+         * (concept-in-product) — real stories arrive once research +
+         * Elite Prospects integration lands. See /app/memory/ROOTS_SEGMENT_SPEC.md
+         * and LANGUAGE_BIBLE.md §10.2. */}
+        <RootsSegment />
       </div>
     </div>
   );

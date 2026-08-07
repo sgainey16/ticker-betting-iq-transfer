@@ -210,6 +210,13 @@ export const PROSPECTS = [
     nhlOrbit: ["VAN", "SEA", "EDM"],
     tagline: "Two-way center with a first-round release. Scores in traffic.",
     developmentStory: "First WHL season as a 16-year-old was quiet. Second season he added ten pounds and a shot the goalie can't read — 22 goals through Christmas. Scouts love his shift-to-shift compete.",
+    // Roots connections — cross-referenced against the user's followed teams.
+    // Ribbons only light up when there's an actual overlap; nothing pings
+    // for fans of unrelated teams. See ROOTS_SEGMENT_SPEC.md for shape.
+    connections: [
+      { type: "trained_at", team: "VAN", league: "NHL", note: "Trained at the same Delta power-skating program that shaped four Canucks draft picks" },
+      { type: "family", relation: "father", team: "EDM", league: "NHL", era: "1990s", note: "Oilers bloodlines · Father played 62 games in Edmonton in the mid-90s" },
+    ],
   },
   {
     id: "boumedienne-owen", first: "Owen", last: "Boumedienne", pos: "D", age: 18,
@@ -217,6 +224,10 @@ export const PROSPECTS = [
     nhlOrbit: ["VAN", "MTL", "NYR"],
     tagline: "Six-foot-four D with a 91-mph release. Skates like a forward.",
     developmentStory: "Grew three inches between draft years and kept his edges. Runs the Blazers' PP1 and eats big minutes 5v5. Scouts describe the shot as 'punishing.'",
+    connections: [
+      { type: "family", relation: "father", team: "MTL", league: "NHL", era: "1990s", note: "Habs bloodlines · Dad wore the jersey in '94" },
+      { type: "hometown", team: "VAN", note: "Grew up thirty minutes from Rogers Arena" },
+    ],
   },
   {
     id: "sop-jaden", first: "Jaden", last: "Sop", pos: "RW", age: 18,
@@ -252,6 +263,10 @@ export const PROSPECTS = [
     nhlOrbit: ["TOR", "PHI"],
     tagline: "Kitchener's engine. Every shift matters to him.",
     developmentStory: "Doesn't lead the OHL in points, but leads the OHL in shifts-you-notice. Elite compete, elite hockey IQ, jumps in NHL video rooms.",
+    connections: [
+      { type: "played_for", team: "TOR", league: "OHL", years: "2022-23", note: "Former Toronto Marlboros minor-midget · same GTHL program as three current Leafs" },
+      { type: "family", relation: "uncle", team: "PHI", league: "NHL", era: "2000s", note: "Flyers bloodlines · Uncle skated 214 NHL games in orange and black" },
+    ],
   },
   {
     id: "trudeau-jack", first: "Jack", last: "Trudeau", pos: "RW", age: 18,
@@ -259,6 +274,9 @@ export const PROSPECTS = [
     nhlOrbit: ["MTL", "OTT"],
     tagline: "London Knights' finisher. Twenty-plus already.",
     developmentStory: "The Knights breed goal-scorers and Trudeau is the next one. Two-plus goals a week when the team plays fast.",
+    connections: [
+      { type: "family", relation: "father", team: "MTL", league: "NHL", era: "1990s", note: "Habs bloodlines · Dad suited up for Montreal in '95" },
+    ],
   },
 ];
 

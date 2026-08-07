@@ -10,6 +10,7 @@ import { useUserProfile } from "@/lib/userProfile";
 import { PackageCard } from "@/components/plus/PackageCard";
 import { GoDeeper } from "@/components/plus/GoDeeper";
 import { TeamLogo } from "@/components/plus/TeamLogo";
+import { RootsRibbon } from "@/components/plus/Roots";
 
 export default function ProspectPage() {
   const { id } = useParams();
@@ -81,6 +82,11 @@ export default function ProspectPage() {
           <div className="mt-6 font-headline text-white text-lg md:text-xl leading-snug max-w-2xl">
             {p.tagline}
           </div>
+
+          {/* Roots ribbons — only render when a connection matches the
+           * user's followed teams. Silent otherwise. This is Roots woven
+           * into the fabric, not appended as a card. */}
+          <RootsRibbon connections={p.connections} className="mt-4 max-w-2xl" />
 
           <div className="mt-4 flex flex-wrap gap-2">
             <span className="font-accent text-[9px] uppercase tracking-[0.28em] text-white/50">NHL orbit:</span>
