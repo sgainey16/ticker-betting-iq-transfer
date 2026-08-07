@@ -348,7 +348,7 @@ function StepChl({ draft, onToggle }) {
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 03" title="Local junior team?" subtitle="WHL, OHL, QMJHL. Your town's team. This is where the hyper-local desk lives." icon={MapPin} />
+      <StepHeader eyebrow="Step 03" title="A junior team you're curious about?" subtitle="Might be your town's team. Might be a league you've never watched. Fans who follow junior hockey see their NHL team's future two years earlier — this is where those kids are playing right now." icon={MapPin} />
       {suggested.length > 0 && (
         <>
           <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-[#F58220] max-w-2xl mx-auto">
@@ -397,7 +397,7 @@ function StepNcaa({ draft, onToggle }) {
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 04" title="College hockey?" subtitle="Alma mater, hometown school, or just the program that gave you a prospect to root for." icon={GraduationCap} />
+      <StepHeader eyebrow="Step 04" title="A college program to watch?" subtitle="Alma mater, hometown school, or just curious. Most Canadian fans don't watch the NCAA — but that's where 30%+ of American NHL players came from, and probably a couple of your team's prospects are there right now." icon={GraduationCap} />
       {suggested.length > 0 && (
         <>
           <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-[#F58220] max-w-2xl mx-auto">

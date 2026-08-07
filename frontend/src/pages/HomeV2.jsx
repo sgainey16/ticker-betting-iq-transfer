@@ -961,10 +961,15 @@ function BeyondTheNHL({ team }) {
       <div className="flex items-baseline justify-between">
         <div>
           <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
-            Beyond the NHL
+            Beyond the NHL · Cross-Border Watch
           </div>
           <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#fff", lineHeight: 1.2, marginTop: 2 }}>
-            The next wave — junior &amp; college hockey
+            Where your team's future is playing right now
+          </div>
+          <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5", marginTop: 4 }}>
+            {nhlCode
+              ? `The CHL and NCAA teams your ${nhlCode} prospects are quietly building their game with.`
+              : "The CHL and NCAA teams your NHL prospects are quietly building their game with."}
           </div>
         </div>
         <Link
@@ -988,6 +993,9 @@ function BeyondTheNHL({ team }) {
           </div>
           <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#fff", lineHeight: 1.2 }}>
             {nhlCode ? `Kids who could wear ${nhlCode}` : "Kids who could be drafted in June"}
+          </div>
+          <div className="mt-1" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5" }}>
+            Follow their game two years before your team calls them up.
           </div>
           <div className="mt-3 space-y-2">
             {pipeline.map(p => (

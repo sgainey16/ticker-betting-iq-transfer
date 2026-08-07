@@ -102,6 +102,30 @@ export default function ProspectPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-8">
+        {/* "About this league" — for the visitor who's never watched
+         * junior/college and just clicked a name from Beyond the NHL.
+         * Educational, not condescending. Two sentences max. */}
+        <section className="rounded-lg border border-white/10 bg-black/30 p-4">
+          <div className="font-accent text-[10px] uppercase tracking-[0.28em] text-[#F58220] mb-1.5">
+            About this league
+          </div>
+          <div className="text-white/80 text-[13px] leading-snug">
+            {p.juniorTeam ? (
+              <>
+                <span className="text-white">WHL (Western Hockey League)</span> — one of three Canadian Hockey League branches (WHL · OHL · QMJHL).
+                Feeds directly into the NHL Draft; roughly a third of active NHL players came through the CHL.
+                Kids play against pros-in-training from age 16 to 20.
+              </>
+            ) : (
+              <>
+                <span className="text-white">NCAA Division I</span> — the American college route to the NHL.
+                Roughly 30% of NHL rosters are NCAA alumni. Players stay in school 1-4 years while developing;
+                many are drafted while still in college.
+              </>
+            )}
+          </div>
+        </section>
+
         {/* Free tier development story */}
         <section>
           <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/85 mb-3">Development story</div>
