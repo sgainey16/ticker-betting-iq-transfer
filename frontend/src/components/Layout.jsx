@@ -103,12 +103,11 @@ function LayoutInner({ children }) {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Junior + college sidecar entry — clearly labeled "+" so it
-             * signals "extra, not primary". Doesn't compete with the NHL
-             * navigation above. Hidden on very narrow screens to keep the
-             * header tight. */}
+            {/* Junior + college sidecar entry — smart target: new users
+             * hit onboarding, returning users go straight to Your Ticker
+             * (via the /plus redirect + YourTicker's own onboarded check). */}
             <NavLink
-              to="/plus/onboarding"
+              to="/plus"
               data-testid="nav-plus"
               className={({ isActive }) =>
                 `hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-full border transition-all whitespace-nowrap ${

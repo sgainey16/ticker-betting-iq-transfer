@@ -931,7 +931,7 @@ export default function HomeV2() {
 function TickerPlusPreviewCard() {
   return (
     <Link
-      to="/plus/onboarding"
+      to="/plus"
       data-testid="home-plus-preview"
       className="group block rounded-xl border border-dashed border-[#F58220]/35 bg-gradient-to-r from-[#F58220]/[0.06] via-transparent to-transparent p-4 md:p-5 hover:border-[#F58220]/60 hover:bg-[#F58220]/[0.08] transition-all"
     >

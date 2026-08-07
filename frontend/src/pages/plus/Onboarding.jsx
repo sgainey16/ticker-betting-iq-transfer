@@ -51,7 +51,7 @@ async function tts(speaker, text, backend) {
 export default function Onboarding() {
   const nav = useNavigate();
   const backend = process.env.REACT_APP_BACKEND_URL;
-  const { profile, updateProfile } = useUserProfile();
+  const { profile, updateProfile, isOnboarded } = useUserProfile();
   const [step, setStep] = useState(0);
   const audioRef = useRef(null);
   const [ttsPlaying, setTtsPlaying] = useState(null); // "reggie" | "marc" | null
@@ -111,6 +111,28 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[#0b0b10] text-white flex flex-col">
+      {/* Already-onboarded soft banner — landing here directly (e.g. via the
+       * "Rebuild desk" button or manual URL) is fine, but signal clearly
+       * that this will overwrite the current desk. Never blocks progress. */}
+      {isOnboarded && (
+        <div className="bg-emerald-500/10 border-b border-emerald-500/25 px-4 md:px-6 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Check className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-accent text-[10px] uppercase tracking-[0.28em] text-emerald-400">Already set up</span>
+          </div>
+          <span className="font-accent text-[10px] uppercase tracking-[0.22em] text-white/70">
+            {profile.nickname ? `Welcome back, ${profile.nickname}.` : "You've already built your desk."} Continuing here will overwrite it.
+          </span>
+          <button
+            data-testid="ob-goto-yourticker"
+            onClick={() => nav("/plus/your-ticker")}
+            className="ml-auto rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-accent text-[9px] uppercase tracking-[0.28em] text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+          >
+            Skip to Your Ticker →
+          </button>
+        </div>
+      )}
+
       {/* Top progress rail */}
       <div className="border-b border-white/10 bg-black/60 backdrop-blur px-4 md:px-6 py-3 flex items-center gap-3">
         <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#F58220]">The Ticker</div>
