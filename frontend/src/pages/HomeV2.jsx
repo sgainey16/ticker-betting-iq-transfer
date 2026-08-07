@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { PROSPECTS, PACKAGES } from "@/data/tickerCatalog";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -915,48 +916,166 @@ export default function HomeV2() {
           <InjuryImpact team={team} />
         </div>
 
-        {/* Secondary exploration — clearly labeled as beta / preview so
-         * the flagship NHL experience above stays the star. This is the
-         * only entry point from the main app into the Ticker+ CHL/NCAA
-         * sidecar; nothing else has been reordered to make room for it. */}
-        <TickerPlusPreviewCard />
+        {/* Beyond the NHL — content-forward gateway to the wider hockey
+         * world (CHL + NCAA today; ECHL + AHL as they come online). Sized
+         * as one row of HomeV2 so it feels native, not gated. Each tile is
+         * real content pulled from the same catalog as the /plus cascade —
+         * no signup required to click through. Personalizes to the visitor's
+         * NHL team's orbit when profile exists, falls back to top-ranked
+         * league content when it doesn't. */}
+        <BeyondTheNHL team={team} />
       </div>
     </div>
   );
 }
 
-// -------- Ticker+ Preview Card --------
-// Small, deliberately-secondary discovery slot for the CHL/NCAA sidecar.
-// Never a hero. Just a "there's more here if you're curious" nudge.
-function TickerPlusPreviewCard() {
+// -------- Beyond the NHL --------
+// Three tiles: Prospect Pipeline (kids in this team's NHL orbit), Junior
+// Highlight (real desk-show link), NCAA Storyline. Sits inside HomeV2 as
+// one native section — no beta/gate framing.
+function BeyondTheNHL({ team }) {
+  // Which NHL team is the visitor rooting for? HomeV2's `team` prop has a
+  // `code` field (e.g. "MTL"), we use it to find orbit-relevant prospects.
+  const nhlCode = team?.code || null;
+
+  // 1. Prospect Pipeline — top 3 by draft rank, orbit-boosted for this team.
+  const pipeline = [...PROSPECTS]
+    .sort((a, b) => {
+      const aOrbit = nhlCode && a.nhlOrbit?.includes(nhlCode) ? -1 : 0;
+      const bOrbit = nhlCode && b.nhlOrbit?.includes(nhlCode) ? -1 : 0;
+      if (aOrbit !== bOrbit) return aOrbit - bOrbit;
+      return (a.draftRank || 999) - (b.draftRank || 999);
+    })
+    .slice(0, 3);
+
+  // 2. Junior highlight — first WHL desk-show-capable package.
+  const juniorPkg = PACKAGES.find(p => p.league === "WHL" && p.video?.route)
+    || PACKAGES.find(p => p.league === "WHL");
+
+  // 3. NCAA storyline — first NCAA package with a prospect featured.
+  const ncaaPkg = PACKAGES.find(p => p.league === "NCAA" && (p.prospects || []).length > 0)
+    || PACKAGES.find(p => p.league === "NCAA");
+
   return (
-    <Link
-      to="/plus"
-      data-testid="home-plus-preview"
-      className="group block rounded-xl border border-dashed border-[#F58220]/35 bg-gradient-to-r from-[#F58220]/[0.06] via-transparent to-transparent p-4 md:p-5 hover:border-[#F58220]/60 hover:bg-[#F58220]/[0.08] transition-all"
-    >
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#F58220] animate-pulse" />
-          <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
-            Preview · Beta
-          </span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#fff", lineHeight: 1.2 }}>
-            Junior &amp; college hockey desks
+    <div className="space-y-3" data-testid="home-beyond-nhl">
+      <div className="flex items-baseline justify-between">
+        <div>
+          <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+            Beyond the NHL
           </div>
-          <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "11px", letterSpacing: "0.18em", color: "#a0a0a5", marginTop: 2 }}>
-            WHL · OHL · NCAA · Prospect pipelines · Personalized for your team
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#fff", lineHeight: 1.2, marginTop: 2 }}>
+            The next wave — junior &amp; college hockey
           </div>
         </div>
-        <span
-          className="rounded-full border border-white/15 bg-black/50 px-4 py-1.5 group-hover:border-white/35 group-hover:bg-black/70 transition-all"
-          style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.3em", color: "#fff" }}
+        <Link
+          to="/plus"
+          data-testid="home-beyond-explore"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 hover:border-white/30 hover:bg-black/60 transition-all"
+          style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em", color: "#fff" }}
         >
-          Take a look →
+          Explore All →
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Prospect Pipeline tile */}
+        <div className="rounded-lg border border-white/10 bg-black/40 p-4 hover:border-white/25 transition-colors">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#F58220]" />
+            <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+              {nhlCode ? `${nhlCode} pipeline` : "Prospect pipeline"}
+            </span>
+          </div>
+          <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#fff", lineHeight: 1.2 }}>
+            {nhlCode ? `Kids who could wear ${nhlCode}` : "Kids who could be drafted in June"}
+          </div>
+          <div className="mt-3 space-y-2">
+            {pipeline.map(p => (
+              <Link
+                key={p.id}
+                to={`/plus/prospect/${p.id}`}
+                data-testid={`home-beyond-prospect-${p.id}`}
+                className="group flex items-start gap-2 -mx-2 px-2 py-1.5 rounded hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "14px", color: "#fff", lineHeight: 1.2 }}>
+                    {p.first} {p.last}
+                    <span className="ml-1.5" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.22em", color: "#a0a0a5" }}>
+                      · {p.pos} · #{p.draftRank}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5" }}>
+                    {p.juniorTeam ? `WHL · ${p.juniorTeam}` : `NCAA · ${p.ncaaTeam}`}
+                  </div>
+                </div>
+                <span className="text-white/30 group-hover:text-[#F58220] transition-colors" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "11px" }}>›</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Junior highlight tile */}
+        {juniorPkg && (
+          <Link
+            to={juniorPkg.video?.route || `/plus/team/${juniorPkg.teams?.[0]}`}
+            data-testid="home-beyond-junior"
+            className="group rounded-lg border border-white/10 bg-black/40 p-4 hover:border-white/25 transition-colors flex flex-col"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F58220] animate-pulse" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+                Junior desk · WHL
+              </span>
+            </div>
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#fff", lineHeight: 1.2 }}>
+              {juniorPkg.title}
+            </div>
+            <div className="mt-1.5" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5" }}>
+              {juniorPkg.subtitle}
+            </div>
+            <div className="mt-auto pt-3 flex items-center gap-2 text-white/70 group-hover:text-white transition-colors">
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em" }}>
+                {juniorPkg.hosts?.[0]?.text ? `"${juniorPkg.hosts[0].text}"` : "Watch the desk →"}
+              </span>
+            </div>
+          </Link>
+        )}
+
+        {/* NCAA storyline tile */}
+        {ncaaPkg && (
+          <Link
+            to={ncaaPkg.prospects?.[0] ? `/plus/prospect/${ncaaPkg.prospects[0]}` : `/plus/team/${ncaaPkg.teams?.[0]}`}
+            data-testid="home-beyond-ncaa"
+            className="group rounded-lg border border-white/10 bg-black/40 p-4 hover:border-white/25 transition-colors flex flex-col"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F58220]" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+                NCAA storyline
+              </span>
+            </div>
+            <div style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#fff", lineHeight: 1.2 }}>
+              {ncaaPkg.title}
+            </div>
+            <div className="mt-1.5" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.18em", color: "#a0a0a5" }}>
+              {ncaaPkg.subtitle}
+            </div>
+            <div className="mt-auto pt-3 flex items-center gap-2 text-white/70 group-hover:text-white transition-colors">
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em" }}>
+                {ncaaPkg.hosts?.[0]?.text ? `"${ncaaPkg.hosts[0].text}"` : "Read more →"}
+              </span>
+            </div>
+          </Link>
+        )}
+      </div>
+
+      {/* Future-leagues signal — appears understated so it's not a promise,
+       * just a hint at the wider hockey vision. */}
+      <div className="pt-1 flex items-center gap-2 text-white/40">
+        <span style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.28em" }}>
+          ECHL &amp; AHL desks · Coming as their seasons hit
         </span>
       </div>
-    </Link>
+    </div>
   );
 }
