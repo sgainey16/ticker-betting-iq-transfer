@@ -16,8 +16,9 @@ import { Link, Navigate } from "react-router-dom";
 import { useMemo } from "react";
 import { Compass, Star, TrendingUp, RefreshCw } from "lucide-react";
 import { useUserProfile } from "@/lib/userProfile";
-import { PACKAGES, PROSPECTS, rankPackages, teamByCode } from "@/data/tickerCatalog";
+import { PACKAGES, PROSPECTS, rankPackages, teamByCode, suggestJuniorTeamsForNhl, suggestNcaaTeamsForNhl } from "@/data/tickerCatalog";
 import { PackageCard } from "@/components/plus/PackageCard";
+import { TeamLogo } from "@/components/plus/TeamLogo";
 
 export default function YourTicker() {
   const { profile, isOnboarded, clearProfile } = useUserProfile();
@@ -39,6 +40,22 @@ export default function YourTicker() {
   const myProspects = (profile.prospects || [])
     .map(id => PROSPECTS.find(p => p.id === id))
     .filter(Boolean);
+
+  // Quick-switch logos row — surfaces up to 6 team shortcuts near the very
+  // top of the home. Prefers user's own teams first, then blends in a couple
+  // suggested ones from the same NHL orbit so the row is always populated
+  // even for a user who skipped the team-picking onboarding steps.
+  const quickTeams = (() => {
+    const own = myTeams.slice(0, 4);
+    if (own.length >= 4) return own;
+    const seen = new Set(own.map(t => t.code));
+    // Fill from the same NHL affinity across CHL + NCAA.
+    const suggest = [
+      ...(profile.nhl_team ? suggestJuniorTeamsForNhl(profile.nhl_team) : []),
+      ...(profile.nhl_team ? suggestNcaaTeamsForNhl(profile.nhl_team) : []),
+    ].filter(t => !seen.has(t.code)).slice(0, 4 - own.length);
+    return [...own, ...suggest];
+  })();
 
   return (
     <div className="min-h-screen bg-[#0b0b10] text-white">
@@ -67,6 +84,29 @@ export default function YourTicker() {
             <RefreshCw className="w-3 h-3" /> Rebuild desk
           </Link>
         </div>
+
+        {/* Quick team switcher — small logos near the top for lateral hop.
+            Own teams first, then affinity-suggested teams to keep the row full. */}
+        {quickTeams.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap -mt-2">
+            <span className="font-accent text-[9px] uppercase tracking-[0.28em] text-white/45">
+              Quick switch:
+            </span>
+            {quickTeams.map(t => (
+              <Link
+                key={t.code}
+                data-testid={`yt-quick-${t.code}`}
+                to={`/plus/team/${t.code}`}
+                className="group flex items-center gap-2 rounded-full border border-white/12 bg-black/40 pl-1.5 pr-3 py-1 hover:border-white/30 hover:bg-black/60 transition-all"
+              >
+                <TeamLogo team={t} size={22} className="border border-white/15" />
+                <span className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/75 group-hover:text-white">
+                  {t.name.split(" ").slice(-1)[0]}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Hero package */}
         {hero && (
@@ -98,10 +138,7 @@ export default function YourTicker() {
                   to={`/plus/team/${t.code}`}
                   className="flex items-center gap-2 rounded-full border border-white/15 bg-black/40 pl-2 pr-4 py-1.5 hover:border-white/30 hover:bg-black/60 transition-all"
                 >
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center font-headline text-[9px] text-white shadow"
-                    style={{ background: t.primary }}
-                  >{t.code}</span>
+                  <TeamLogo team={t} size={24} />
                   <span className="font-accent text-[10px] uppercase tracking-[0.24em] text-white/85">{t.name}</span>
                 </Link>
               ))}

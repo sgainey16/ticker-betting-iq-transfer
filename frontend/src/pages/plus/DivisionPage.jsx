@@ -10,6 +10,7 @@ import { ChevronLeft, MapPin } from "lucide-react";
 import { CHL_DIVISIONS, NCAA_CONFERENCES, PACKAGES, rankPackages } from "@/data/tickerCatalog";
 import { useUserProfile } from "@/lib/userProfile";
 import { PackageCard } from "@/components/plus/PackageCard";
+import { TeamLogo } from "@/components/plus/TeamLogo";
 
 function findDivision(kind, code) {
   if (kind === "chl") return CHL_DIVISIONS.find(d => d.code.toLowerCase() === code.toLowerCase());
@@ -83,9 +84,7 @@ export default function DivisionPage({ kind }) {
                 style={{ borderTopColor: t.primary, borderTopWidth: 3 }}
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center font-headline text-[10px] text-white shadow" style={{ background: t.primary }}>
-                    {t.code}
-                  </div>
+                  <TeamLogo team={t} size={32} />
                   <div className="min-w-0 flex-1">
                     <div className="font-headline text-white text-sm leading-tight truncate">{t.name.split(" ").slice(-1)[0]}</div>
                     <div className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/45 truncate flex items-center gap-1">

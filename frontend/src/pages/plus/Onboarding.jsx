@@ -24,6 +24,7 @@ import {
 } from "@/data/tickerCatalog";
 import { useUserProfile } from "@/lib/userProfile";
 import { api } from "@/lib/api";
+import { TeamLogo } from "@/components/plus/TeamLogo";
 
 const STEPS = ["welcome", "nickname", "nhl", "chl", "ncaa", "prospects", "interests", "reveal"];
 const KAM = "#F58220";
@@ -354,9 +355,7 @@ function ChlTile({ t, selected, onClick }) {
       className={`text-left rounded-lg border-2 transition-all p-3 ${selected ? "border-[#F58220] bg-[#F58220]/10 scale-[1.02]" : "border-white/10 bg-black/40 hover:border-white/25"}`}
     >
       <div className="flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center font-headline text-[10px] text-white shadow-lg" style={{ background: t.primary }}>
-          {t.code}
-        </div>
+        <TeamLogo team={t} size={28} />
         <div className="min-w-0">
           <div className="font-headline text-white text-sm leading-tight truncate">{t.name}</div>
           <div className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/50 truncate">
@@ -405,9 +404,7 @@ function NcaaTile({ t, selected, onClick }) {
       className={`text-left rounded-lg border-2 transition-all p-3 ${selected ? "border-[#F58220] bg-[#F58220]/10 scale-[1.02]" : "border-white/10 bg-black/40 hover:border-white/25"}`}
     >
       <div className="flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center font-headline text-[10px] text-white shadow-lg" style={{ background: t.primary }}>
-          {t.code.slice(0, 3)}
-        </div>
+        <TeamLogo team={t} size={28} />
         <div className="min-w-0">
           <div className="font-headline text-white text-sm leading-tight truncate">{t.name}</div>
           <div className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/50 truncate">

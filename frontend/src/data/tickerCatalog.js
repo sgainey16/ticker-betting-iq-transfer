@@ -47,6 +47,16 @@ export const NHL_TEAMS = [
 // layout without being the exact same component. Only populated for the
 // launch-pilot teams so far — others render a lighter card until we have
 // real data.
+//
+// LOGOS — NOT LICENSED FOR LAUNCH. See /app/memory/LEGAL_TODO.md.
+// URLs point at Wikipedia's Special:FilePath which resolves to a stable
+// image asset. Editorial / nominative-fair-use is generally defensible for
+// this identification purpose, but before public launch we need to swap in
+// either (a) team-supplied brand kit assets from a formal partnership, or
+// (b) a licensed data-provider CDN (Highlightly Pro / Sportradar). The
+// <TeamLogo> component gracefully falls back to a coloured initial badge
+// if any image fails to load.
+const WP = "https://en.wikipedia.org/wiki/Special:FilePath";
 export const CHL_DIVISIONS = [
   {
     league: "WHL",
@@ -55,6 +65,7 @@ export const CHL_DIVISIONS = [
     teams: [
       {
         code: "KAM", name: "Kamloops Blazers", city: "Kamloops, BC", primary: "#F58220", nhlAffinity: ["VAN", "SEA"],
+        logoUrl: `${WP}/Kamloops_Blazers_logo.svg`,
         stats: {
           record: { w: 34, l: 16, ot: 4, points: 72, standing: "2nd BC" },
           form: "7-2-1 last 10",
@@ -69,6 +80,7 @@ export const CHL_DIVISIONS = [
       },
       {
         code: "KEL", name: "Kelowna Rockets", city: "Kelowna, BC", primary: "#902A29", nhlAffinity: ["VAN", "SEA"],
+        logoUrl: `${WP}/Kelowna_Rockets_logo.svg`,
         stats: {
           record: { w: 38, l: 12, ot: 5, points: 81, standing: "1st BC" },
           form: "9-1-0 last 10",
@@ -83,6 +95,7 @@ export const CHL_DIVISIONS = [
       },
       {
         code: "VIC", name: "Victoria Royals", city: "Victoria, BC", primary: "#052A6A", nhlAffinity: ["VAN", "SEA"],
+        logoUrl: `${WP}/Victoria_Royals_logo.svg`,
         stats: {
           record: { w: 22, l: 26, ot: 6, points: 50, standing: "5th BC" },
           form: "4-6-0 last 10",
@@ -95,18 +108,18 @@ export const CHL_DIVISIONS = [
           reggieNote: "Andrew Cristall is putting up numbers most NHL forwards can't touch. The team around him is finding its identity — patience pays off.",
         },
       },
-      { code: "VAN", name: "Vancouver Giants", city: "Langley, BC", primary: "#B02531", nhlAffinity: ["VAN"] },
-      { code: "PG",  name: "Prince George Cougars", city: "Prince George, BC", primary: "#2C3E82", nhlAffinity: ["VAN", "EDM"] },
+      { code: "VAN", name: "Vancouver Giants",     city: "Langley, BC",       primary: "#B02531", nhlAffinity: ["VAN"],       logoUrl: `${WP}/Vancouver_Giants_logo.svg` },
+      { code: "PG",  name: "Prince George Cougars",city: "Prince George, BC", primary: "#2C3E82", nhlAffinity: ["VAN", "EDM"], logoUrl: `${WP}/Prince_George_Cougars_logo.svg` },
     ],
   },
   {
     league: "WHL", code: "US", name: "U.S. Division",
     teams: [
-      { code: "PDX", name: "Portland Winterhawks", city: "Portland, OR", primary: "#000000", nhlAffinity: ["SEA"] },
-      { code: "SPO", name: "Spokane Chiefs",       city: "Spokane, WA",  primary: "#C41230", nhlAffinity: ["SEA"] },
-      { code: "SEA", name: "Seattle Thunderbirds", city: "Kent, WA",     primary: "#003F87", nhlAffinity: ["SEA"] },
-      { code: "TRI", name: "Tri-City Americans",   city: "Kennewick, WA",primary: "#C8102E", nhlAffinity: ["SEA"] },
-      { code: "EVE", name: "Everett Silvertips",   city: "Everett, WA",  primary: "#0C2340", nhlAffinity: ["SEA"] },
+      { code: "PDX", name: "Portland Winterhawks", city: "Portland, OR",  primary: "#000000", nhlAffinity: ["SEA"], logoUrl: `${WP}/Portland_Winterhawks_logo.svg` },
+      { code: "SPO", name: "Spokane Chiefs",       city: "Spokane, WA",   primary: "#C41230", nhlAffinity: ["SEA"], logoUrl: `${WP}/Spokane_Chiefs_logo.svg` },
+      { code: "SEA", name: "Seattle Thunderbirds", city: "Kent, WA",      primary: "#003F87", nhlAffinity: ["SEA"], logoUrl: `${WP}/Seattle_Thunderbirds_logo.svg` },
+      { code: "TRI", name: "Tri-City Americans",   city: "Kennewick, WA", primary: "#C8102E", nhlAffinity: ["SEA"], logoUrl: `${WP}/Tri-City_Americans_logo.svg` },
+      { code: "EVE", name: "Everett Silvertips",   city: "Everett, WA",   primary: "#0C2340", nhlAffinity: ["SEA"], logoUrl: `${WP}/Everett_Silvertips_logo.svg` },
     ],
   },
   {
@@ -114,6 +127,7 @@ export const CHL_DIVISIONS = [
     teams: [
       {
         code: "KIT", name: "Kitchener Rangers", city: "Kitchener, ON", primary: "#C41230", nhlAffinity: ["TOR"],
+        logoUrl: `${WP}/Kitchener_Rangers_logo.svg`,
         stats: {
           record: { w: 30, l: 20, ot: 4, points: 64, standing: "3rd Mid" },
           form: "6-3-1 last 10",
@@ -126,9 +140,9 @@ export const CHL_DIVISIONS = [
           reggieNote: "Petrov's captaincy is the story. NHL rooms are already watching the tape. Fix the PP and this team goes deep.",
         },
       },
-      { code: "LDN", name: "London Knights",    city: "London, ON",   primary: "#0D6B37", nhlAffinity: ["TOR", "DET"] },
-      { code: "WSR", name: "Windsor Spitfires", city: "Windsor, ON",  primary: "#F58220", nhlAffinity: ["DET"] },
-      { code: "SAG", name: "Saginaw Spirit",    city: "Saginaw, MI",  primary: "#0F2A5A", nhlAffinity: ["DET"] },
+      { code: "LDN", name: "London Knights",    city: "London, ON",  primary: "#0D6B37", nhlAffinity: ["TOR", "DET"], logoUrl: `${WP}/London_Knights_logo.svg` },
+      { code: "WSR", name: "Windsor Spitfires", city: "Windsor, ON", primary: "#F58220", nhlAffinity: ["DET"],        logoUrl: `${WP}/Windsor_Spitfires_logo.svg` },
+      { code: "SAG", name: "Saginaw Spirit",    city: "Saginaw, MI", primary: "#0F2A5A", nhlAffinity: ["DET"],        logoUrl: `${WP}/Saginaw_Spirit_logo.svg` },
     ],
   },
 ];

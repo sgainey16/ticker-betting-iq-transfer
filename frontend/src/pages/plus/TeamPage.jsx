@@ -17,6 +17,7 @@ import {
 } from "@/data/tickerCatalog";
 import { useUserProfile } from "@/lib/userProfile";
 import { PackageCard } from "@/components/plus/PackageCard";
+import { TeamLogo } from "@/components/plus/TeamLogo";
 
 // Given a team, find its siblings inside the same division/conference for
 // the quick-switch chip row.
@@ -82,12 +83,7 @@ export default function TeamPage() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <div
-              className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center font-headline text-white shadow-2xl"
-              style={{ background: team.primary }}
-            >
-              <span className="text-lg md:text-xl">{team.code}</span>
-            </div>
+            <TeamLogo team={team} size={72} />
             <div className="flex-1 min-w-0">
               <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/80">
                 {team.league} · {team.division || team.conference || ""}
@@ -142,10 +138,7 @@ export default function TeamPage() {
                 className="group flex items-center gap-2 rounded-full border border-white/15 bg-black/40 pl-1.5 pr-3 py-1 hover:border-white/30 hover:bg-black/60 transition-all"
                 title={t.name}
               >
-                <span
-                  className="w-6 h-6 rounded-full flex items-center justify-center font-headline text-[9px] text-white shadow"
-                  style={{ background: t.primary }}
-                >{t.code}</span>
+                <TeamLogo team={t} size={22} className="border border-white/20" />
                 <span className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/75 group-hover:text-white">
                   {t.name.split(" ").slice(-1)[0]}
                 </span>

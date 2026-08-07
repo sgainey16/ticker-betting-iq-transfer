@@ -9,6 +9,7 @@ import { PROSPECTS, PACKAGES, rankPackages, teamByCode } from "@/data/tickerCata
 import { useUserProfile } from "@/lib/userProfile";
 import { PackageCard } from "@/components/plus/PackageCard";
 import { GoDeeper } from "@/components/plus/GoDeeper";
+import { TeamLogo } from "@/components/plus/TeamLogo";
 
 export default function ProspectPage() {
   const { id } = useParams();
@@ -50,11 +51,14 @@ export default function ProspectPage() {
           </Link>
 
           <div className="flex items-start gap-4">
-            <div
-              className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center font-headline text-white shadow-2xl"
-              style={{ background: primary }}
-            >
-              <span className="text-2xl md:text-3xl">{p.last[0]}{p.first[0]}</span>
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-16 h-16 md:w-20 md:h-20 rounded-2xl flex items-center justify-center font-headline text-white shadow-2xl"
+                style={{ background: primary }}
+              >
+                <span className="text-2xl md:text-3xl">{p.last[0]}{p.first[0]}</span>
+              </div>
+              {team && <TeamLogo team={team} size={28} />}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/80 flex items-center gap-2">
