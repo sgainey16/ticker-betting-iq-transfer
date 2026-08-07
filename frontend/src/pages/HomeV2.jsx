@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PROSPECTS, PACKAGES } from "@/data/tickerCatalog";
 import { MatchupTile } from "@/components/plus/MatchupTile";
+import { WeeklyVotes } from "@/components/plus/WeeklyVotes";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -925,6 +926,13 @@ export default function HomeV2() {
          * NHL team's orbit when profile exists, falls back to top-ranked
          * league content when it doesn't. */}
         <BeyondTheNHL team={team} />
+
+        {/* Cross-league weekly voting rail — Fight / Goal / Play / Culture.
+         * This is where every hockey league lives on one card, and where
+         * every user click gets recorded as a behavioral signal for the
+         * Ranker to learn from. Culture tab is deliberately locked as
+         * "coming soon" so the roadmap is visible without being promised. */}
+        <WeeklyVotes />
       </div>
     </div>
   );
