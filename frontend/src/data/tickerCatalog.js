@@ -337,13 +337,13 @@ export const PACKAGES = [
   },
   {
     id: "kam-vs-kel-rivalry-preview",
-    kind: "feature",
+    kind: "matchup",
     league: "WHL",
     division: "BC",
     teams: ["KAM", "KEL"],
     prospects: ["oliver-kaid"],
     title: "Highway 97: Blazers @ Rockets, Saturday",
-    subtitle: "Second-year Ranger vs first-place Rockets",
+    subtitle: "Second-place BC vs first-place BC · 8:00 PT",
     storyline: "rivalry",
     importance: 5,
     baseScore: 8.0,
@@ -353,6 +353,16 @@ export const PACKAGES = [
       { speaker: "marc",   text: "Rockets sit first in the division. Blazers get to punch up." },
     ],
     thumbTag: "PREVIEW",
+    matchup: {
+      away: { code: "KAM", label: "Blazers" },
+      home: { code: "KEL", label: "Rockets" },
+      when: "Sat · 8:00 PT",
+      where: "Prospera Place · Kelowna",
+    },
+    watchLinks: {
+      paid: { label: "Watch on CHL TV", provider: "CHL TV", url: "https://watch.chl.ca/", utm: "kam_kel_matchup_paid" },
+      free: { label: "Free preview clips", provider: "WHL YouTube", url: "https://www.youtube.com/@WHL/videos", utm: "kam_kel_matchup_free" },
+    },
   },
   // ---- Rest of BC Division ----
   {
@@ -473,13 +483,13 @@ export const PACKAGES = [
   },
   {
     id: "b1g-mich-vs-osu",
-    kind: "feature",
+    kind: "matchup",
     league: "NCAA",
     conference: "B1G",
     teams: ["MICH", "OSU"],
     prospects: ["howard-gabe"],
     title: "Michigan @ Ohio State · Saturday",
-    subtitle: "Top of the Big Ten on the line",
+    subtitle: "Top of the Big Ten on the line · 7:30 ET",
     storyline: "rivalry",
     importance: 5,
     baseScore: 7.8,
@@ -489,6 +499,46 @@ export const PACKAGES = [
       { speaker: "marc",   text: "Two top-fifteen programs, one weekend, three future NHL picks on the ice." },
     ],
     thumbTag: "PREVIEW",
+    matchup: {
+      away: { code: "MICH", label: "Wolverines" },
+      home: { code: "OSU",  label: "Buckeyes" },
+      when: "Sat · 7:30 ET",
+      where: "Value City Arena · Columbus",
+    },
+    watchLinks: {
+      paid: { label: "Watch on Big Ten+", provider: "Big Ten Plus", url: "https://bigtenplus.com/", utm: "b1g_mich_osu_paid" },
+      free: { label: "Free game preview", provider: "Big Ten YouTube", url: "https://www.youtube.com/@B1GHockey", utm: "b1g_mich_osu_free" },
+    },
+  },
+  // ---- Marquee prospect-vs-prospect matchup — the exact "collision course"
+  // ---- story we want driving traffic to CHL TV / FloHockey watch links.
+  {
+    id: "matchup-petrov-vs-howard",
+    kind: "matchup",
+    league: "MIX",
+    teams: ["KIT", "MICH"],
+    prospects: ["petrov-max", "howard-gabe"],
+    title: "Petrov vs Howard · Draft-eligible showcase",
+    subtitle: "Top-15 vs top-10 draft prospects, one week apart",
+    storyline: "rivalry",
+    importance: 5,
+    baseScore: 8.6,
+    video: { kind: "poster" },
+    hosts: [
+      { speaker: "reggie", text: "Two of the top ten kids in the class, playing on back-to-back nights." },
+      { speaker: "marc",   text: "Petrov works the shifts. Howard's got the hands. Bring popcorn." },
+    ],
+    thumbTag: "PREVIEW",
+    matchup: {
+      away: { code: "KIT",  label: "Petrov · Kitchener (OHL)" },
+      home: { code: "MICH", label: "Howard · Michigan (NCAA)" },
+      when: "Fri OHL · Sat NCAA",
+      where: "Both on national TV",
+    },
+    watchLinks: {
+      paid: { label: "Watch OHL on CHL TV", provider: "CHL TV",     url: "https://watch.chl.ca/",           utm: "matchup_petrov_ohl_paid" },
+      free: { label: "Michigan free clip",  provider: "B1G YouTube", url: "https://www.youtube.com/@B1GHockey", utm: "matchup_howard_ncaa_free" },
+    },
   },
   {
     id: "he-hockey-east-standings",

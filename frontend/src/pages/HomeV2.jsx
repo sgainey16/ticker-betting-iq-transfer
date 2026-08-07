@@ -18,6 +18,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { PROSPECTS, PACKAGES } from "@/data/tickerCatalog";
+import { MatchupTile } from "@/components/plus/MatchupTile";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -956,6 +957,12 @@ function BeyondTheNHL({ team }) {
   const ncaaPkg = PACKAGES.find(p => p.league === "NCAA" && (p.prospects || []).length > 0)
     || PACKAGES.find(p => p.league === "NCAA");
 
+  // 4. Matchup of the Week — highest-baseScore matchup with watch links.
+  //    This is the traffic-driver tile that clicks out to a rights-holder.
+  const matchupPkg = [...PACKAGES]
+    .filter(p => p.kind === "matchup" && p.watchLinks)
+    .sort((a, b) => (b.baseScore || 0) - (a.baseScore || 0))[0];
+
   return (
     <div className="space-y-3" data-testid="home-beyond-nhl">
       <div className="flex items-baseline justify-between">
@@ -981,6 +988,11 @@ function BeyondTheNHL({ team }) {
           Explore All →
         </Link>
       </div>
+
+      {/* Matchup of the Week — full-width hero above the three content tiles.
+       * Watch CTAs are the primary action (paid + free, UTM-tagged so we can
+       * prove traffic attribution to leagues and rights-holders). */}
+      {matchupPkg && <MatchupTile pkg={matchupPkg} />}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Prospect Pipeline tile */}
