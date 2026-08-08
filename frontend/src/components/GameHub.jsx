@@ -183,7 +183,32 @@ export function GameHub({
 
         {/* Right rail — pick badge + chevron */}
         <div className="flex items-center gap-3 flex-shrink-0 pl-2 border-l border-white/8">
-          {myPickSide ? (
+          {myPickSide && game.winner ? (
+            // Resolved: show right/wrong grade badge (green ✓ / red ✗)
+            (() => {
+              const correct = myPickSide === game.winner;
+              const bg = correct ? "#22c55e" : "#ef4444";
+              return (
+                <div className="flex items-center gap-2" data-testid={`game-hub-grade-${game.id}`}>
+                  <div className="text-right">
+                    <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">
+                      Your pick
+                    </div>
+                    <div className="font-headline text-sm" style={{ color: myPickSide === "home" ? homeAccent : awayAccent }}>
+                      {myPickSide === "home" ? homeCode : awayCode}
+                    </div>
+                  </div>
+                  <span
+                    className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
+                    style={{ background: bg, color: "#0b0b10" }}
+                    title={correct ? "Correct call" : "Missed this one"}
+                  >
+                    {correct ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : "×"}
+                  </span>
+                </div>
+              );
+            })()
+          ) : myPickSide ? (
             <div className="text-right">
               <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Your pick</div>
               <div className="font-headline text-sm" style={{ color: myPickSide === "home" ? homeAccent : awayAccent }}>

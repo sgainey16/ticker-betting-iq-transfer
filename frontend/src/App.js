@@ -24,6 +24,7 @@ import TeamRoomAudition from "@/pages/TeamRoomAudition";
 import CanucksUncut from "@/pages/CanucksUncut";
 import HomeV2 from "@/pages/HomeV2";
 import TonightGame from "@/pages/TonightGame";
+import Reels from "@/pages/Reels";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Lineup from "@/pages/Lineup";
 import OhlHome from "@/pages/ohl/OhlHome";
@@ -48,6 +49,7 @@ function App() {
             <Route path="/show" element={<Home />} />
             {/* Deep-link per-game route — same GameHub, always expanded. */}
             <Route path="/tonight/:gameId" element={<TonightGame />} />
+            <Route path="/reels" element={<Reels />} />
             {/* Legacy Picks route — merged into Tonight. Preserves any share
              * links or muscle-memory bookmarks users have from the old page. */}
             <Route path="/predictions" element={<Navigate to="/show" replace />} />

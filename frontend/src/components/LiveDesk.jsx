@@ -68,9 +68,7 @@ export default function LiveDesk({ autoFlow = true }) {
   // Presser (/press-conference) and Back Office are 1-on-1/settings flows.
   // Audition (/audition/*) plays raw broadcast clips — hosts must be silent
   // so the user can actually hear the clip audio.
-  // `/show` (Tonight) is now silent too — each game hub owns its own
-  // per-game segment on demand, no ambient loop.
-  const QUIET_ROUTES = ["/press-conference", "/back-office", "/audition", "/uncut", "/", "/show"];
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/audition", "/uncut", "/"];
   const isQuietRoute =
     location.pathname === "/" ||
     QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));

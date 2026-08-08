@@ -22,6 +22,7 @@ const NAV = [
   { to: "/show", label: "Tonight", testid: TEST_IDS.nav.broadcast },
   { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
   { to: "/home-v2", label: "Home", testid: TEST_IDS.nav.presser },
+  { to: "/reels", label: "Reels", testid: "nav-reels" },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
 ];
 

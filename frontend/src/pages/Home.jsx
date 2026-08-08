@@ -13,7 +13,9 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
+import { BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
 import { GameHub } from "@/components/GameHub";
+import { PickRecordCard } from "@/components/PickRecordCard";
 import { emitSignal } from "@/lib/signals";
 
 export default function Home() {
@@ -103,8 +105,13 @@ export default function Home() {
 
   return (
     <div className="max-w-3xl mx-auto py-6 space-y-4" data-testid="tonight-page">
-      {/* Header — brief chyron. No ambient host loop here; each game hosts
-       * its own segment. */}
+      {/* Broadcast panel — Reggie and Marc at the desk, up top. Their
+       * audio picks up wherever the user last left it (Pause button lives
+       * inside the panel). Each game hub still owns its own per-game
+       * segment when the user expands one. */}
+      <div id={BROADCAST_SLOT_ID} className="mb-2" data-testid="tonight-broadcast-slot" />
+
+      {/* Header — brief chyron. */}
       <div className="flex items-baseline justify-between">
         <div>
           <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.34em", color: "#F58220" }}>
@@ -123,6 +130,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Pick record — the daily-return hook. Shows your accuracy vs Reggie
+       * & Marc, current streak, all-time record. This is the main engagement
+       * mechanism (per user's direction to prioritize prediction accuracy
+       * over content voting). */}
+      <PickRecordCard userName={userName} />
 
       {/* Sequential game hubs — only one open at a time. */}
       {games.length === 0 && (
