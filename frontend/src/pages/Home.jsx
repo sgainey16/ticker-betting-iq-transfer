@@ -62,12 +62,18 @@ export default function Home() {
   }, [myPreds]);
 
   async function submitPick(gameId, side) {
-    if (pickedSideByGame[gameId]) return;
+    // Allow re-picks (backend upserts) — no-op only if user tapped the
+    // side they already had picked.
+    if (pickedSideByGame[gameId] === side) return;
     setSubmitting(s => ({ ...s, [gameId]: true }));
-    // Optimistic: append to myPreds so the UI shows chosen immediately
-    setMyPreds(prev => [...prev, { game_id: gameId, pick: side, user_name: userName }]);
+    const prevPick = pickedSideByGame[gameId];
+    // Optimistic: swap-or-append so the UI shows chosen immediately
+    setMyPreds(prev => {
+      const others = prev.filter(p => p.game_id !== gameId);
+      return [...others, { game_id: gameId, pick: side, user_name: userName }];
+    });
     // Emit signal — a real pick is a very strong signal.
-    emitSignal({ kind: "game_pick", league: "NHL", target: gameId, weight: 2 });
+    emitSignal({ kind: prevPick ? "game_pick_change" : "game_pick", league: "NHL", target: gameId, weight: 2 });
     try {
       await api.post("/predictions", {
         user_name: userName,
@@ -78,7 +84,10 @@ export default function Home() {
       refresh();
     } catch (e) {
       // Roll back optimistic pick
-      setMyPreds(prev => prev.filter(p => p.game_id !== gameId));
+      setMyPreds(prev => {
+        const others = prev.filter(p => p.game_id !== gameId);
+        return prevPick ? [...others, { game_id: gameId, pick: prevPick, user_name: userName }] : others;
+      });
     } finally {
       setSubmitting(s => ({ ...s, [gameId]: false }));
     }
@@ -164,8 +173,8 @@ export default function Home() {
             const myPick = pickedSideByGame[g.id];
             const resolved = !!g.winner;
             const correct = resolved && myPick && myPick === g.winner;
-            const kickoff = g.starts_at
-              ? new Date(g.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            const kickoff = g.start_iso
+              ? new Date(g.start_iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
               : "TBD";
             return (
               <Link

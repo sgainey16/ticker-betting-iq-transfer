@@ -966,6 +966,28 @@ async def radio_stations():
 
 
 # ---------- Predictions ----------
+def _live_start_iso(base_iso: str, offset_hours: float) -> str:
+    """Return the stored start_iso if it's in the future, otherwise return
+    a slot on the NEXT upcoming evening so the demo/voting flow stays live.
+    Uses `offset_hours` (minutes of variation between games) so tonight's
+    slate keeps its 30-minute stagger."""
+    try:
+        stored = datetime.fromisoformat(base_iso.replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc)
+        if stored > now:
+            return base_iso
+        # Pick the next 7pm ET (00:00 UTC next day) if it's already past today.
+        # Simple and reliable across timezones.
+        anchor = now.replace(hour=23, minute=0, second=0, microsecond=0)
+        if anchor <= now:
+            from datetime import timedelta as _td
+            anchor = anchor + _td(days=1)
+        from datetime import timedelta as _td
+        return (anchor + _td(hours=offset_hours)).isoformat().replace("+00:00", "Z")
+    except Exception:
+        return base_iso
+
+
 @api.get("/predictions/games")
 async def predictions_games():
     """Games enriched with panel picks, AI consensus, and community vote tally.
@@ -983,11 +1005,14 @@ async def predictions_games():
         tally.setdefault(gid, {"home": 0, "away": 0})[side] = row["count"]
 
     out = []
-    for g in GAMES:
+    for idx, g in enumerate(GAMES):
         votes = tally.get(g["id"], {"home": 0, "away": 0})
         total = votes["home"] + votes["away"]
+        # Stagger tonight's slate by 30 minutes so kickoffs feel real.
+        live_iso = _live_start_iso(g["start_iso"], offset_hours=idx * 0.5)
         out.append({
             **g,
+            "start_iso": live_iso,
             "community": {
                 "home_votes": votes["home"],
                 "away_votes": votes["away"],
@@ -1014,15 +1039,58 @@ async def create_prediction(inp: PredictionCreate):
     if inp.pick not in ("home", "away"):
         raise HTTPException(status_code=400, detail="Pick must be 'home' or 'away'")
 
+    # Lock picks once the puck drops. Users can change their mind up until
+    # game start, but never after. Guards against late-swaps that would
+    # game the community tally. We use the LIVE (demo-shifted) start_iso
+    # so pick-lock lines up with what /predictions/games returns to the UI.
+    try:
+        idx = next((i for i, x in enumerate(GAMES) if x["id"] == inp.game_id), 0)
+        live_iso = _live_start_iso(game["start_iso"], offset_hours=idx * 0.5)
+        start = datetime.fromisoformat(live_iso.replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) >= start:
+            raise HTTPException(status_code=409, detail="Game already started — picks are locked")
+    except HTTPException:
+        raise
+    except Exception:
+        pass
+
+    user_name = inp.user_name.strip()
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # Upsert on (user_name, game_id) — allow pick changes until start.
+    existing = await db.predictions.find_one({"user_name": user_name, "game_id": inp.game_id})
+    if existing:
+        await db.predictions.update_one(
+            {"user_name": user_name, "game_id": inp.game_id},
+            {"$set": {"pick": inp.pick, "reasoning": inp.reasoning.strip(), "updated_at": now_iso}},
+        )
+        return Prediction(
+            id=existing.get("id"),
+            user_name=user_name,
+            game_id=inp.game_id,
+            pick=inp.pick,
+            reasoning=inp.reasoning.strip(),
+            created_at=existing.get("created_at", now_iso),
+        )
+
     pred = Prediction(
-        user_name=inp.user_name.strip(),
+        user_name=user_name,
         game_id=inp.game_id,
         pick=inp.pick,
         reasoning=inp.reasoning.strip(),
-        created_at=datetime.now(timezone.utc).isoformat(),
+        created_at=now_iso,
     )
     await db.predictions.insert_one(pred.model_dump())
     return pred
+
+
+@api.get("/predictions/mine")
+async def my_predictions(user_name: str):
+    """Every pick this user has ever made. Frontend uses this to hydrate
+    the pick state so a user's calls persist across sessions."""
+    q = {"user_name": user_name}
+    docs = await db.predictions.find(q, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"predictions": docs}
 
 
 @api.get("/predictions")

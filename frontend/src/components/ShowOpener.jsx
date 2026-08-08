@@ -104,7 +104,7 @@ export function ShowOpener({
           </div>
           <div className="mt-0.5 transition-opacity" key={beatIdx}
                style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "16px", color: "#fff", lineHeight: 1.3, opacity: playing ? 1 : 0.7 }}>
-            {beat?.text || (variant === "recap" ? "Last night in one tight room." : "Read the room before you make your call.")}
+            {beat?.text || (variant === "recap" ? "Highlights of the night — one tight room." : "Read the room before you make your call.")}
           </div>
         </div>
 

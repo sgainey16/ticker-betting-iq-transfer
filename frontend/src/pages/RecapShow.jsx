@@ -59,8 +59,12 @@ function buildBeatSequence(episode) {
   // Cold open — Reggie then Marc.
   beats.push({ kind: "host", speaker: "reggie", text: episode.cold_open.reggie, label: "Cold Open" });
   beats.push({ kind: "host", speaker: "marc",   text: episode.cold_open.marc,   label: "Cold Open" });
-  // Per-game segments.
-  episode.segments.forEach((seg, i) => {
+  // Per-game segments. We want the MOST RECENTLY FINISHED game to run
+  // first — "highlights of the night" is a live drip, not a scheduled
+  // morning show. The upstream data is roughly chronological (earliest
+  // game first), so we reverse the segments for playback.
+  const orderedSegs = [...episode.segments].reverse();
+  orderedSegs.forEach((seg, i) => {
     beats.push({ kind: "host", speaker: "reggie", text: seg.reggie_hook, segment: seg, label: `Game ${i + 1}` });
     beats.push({ kind: "clip", segment: seg,                                             label: `Game ${i + 1}` });
     beats.push({ kind: "host", speaker: "marc",   text: seg.marc_outro, segment: seg,   label: `Game ${i + 1}` });
@@ -79,6 +83,12 @@ export default function RecapShow() {
   const audioRef = useRef(null);
 
   const beats = useMemo(() => buildBeatSequence(episode), [episode]);
+  // Reversed segment order for the rail — matches the "highlights of the
+  // night" playback order (most recent game first).
+  const railSegments = useMemo(
+    () => (episode?.segments ? [...episode.segments].reverse() : []),
+    [episode]
+  );
   const currentBeat = beats[beatIdx];
   // Which segment (game) is currently on-air? The post-game stats panel
   // follows this — swap boxes as we move between games.
@@ -162,14 +172,14 @@ export default function RecapShow() {
   const next = () => setBeatIdx((i) => Math.min(i + 1, beats.length));
 
   if (!episode) {
-    return <div className="text-white/60 text-sm">Loading morning show…</div>;
+    return <div className="text-white/60 text-sm">Loading highlights…</div>;
   }
   if (!episode.ready) {
     return (
       <div className="card-surface p-8 text-center">
         <Film className="w-8 h-8 text-white/30 mx-auto mb-3" />
-        <div className="font-headline text-white text-lg">No episode available for {DEMO_DATE}.</div>
-        <div className="text-white/50 text-sm mt-1">{episode.reason || "Try another date."}</div>
+        <div className="font-headline text-white text-lg">Highlights aren't in yet.</div>
+        <div className="text-white/50 text-sm mt-1">{episode.reason || "As soon as we have the tape, we'll roll it."}</div>
       </div>
     );
   }
@@ -190,7 +200,7 @@ export default function RecapShow() {
         <div className="inline-flex items-center gap-2 rounded-full bg-[#1E5BFF]/15 border border-[#1E5BFF]/50 px-3 py-1">
           <span className="tick-dot bg-[#1E5BFF] live-pulse" />
           <span className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1E5BFF]">
-            Last Night's Games · {formatDate(episode.date)}
+            Highlights of the Night · {formatDate(episode.date)}
           </span>
         </div>
         <div className="font-accent text-[10px] uppercase tracking-widest text-white/40">
@@ -223,21 +233,21 @@ export default function RecapShow() {
 
       {/* Segment progress rail */}
       <SegmentRail
-        episode={episode}
+        segments={railSegments}
         beats={beats}
         beatIdx={beatIdx}
-        onJumpToSegment={(segIdx) => {
+        onJumpToSegment={(segOrder) => {
           const target = beats.findIndex(
-            (b, i) => b.segment && b.segment.order === segIdx + 1 && b.kind === "host" && b.speaker === "reggie"
+            (b) => b.segment && b.segment.order === segOrder && b.kind === "host" && b.speaker === "reggie"
           );
           if (target >= 0) {
             setBeatIdx(target);
             setPlaying(true);
           }
         }}
-        onJumpToClip={(segIdx) => {
+        onJumpToClip={(segOrder) => {
           const target = beats.findIndex(
-            (b) => b.segment && b.segment.order === segIdx + 1 && b.kind === "clip"
+            (b) => b.segment && b.segment.order === segOrder && b.kind === "clip"
           );
           if (target >= 0) {
             setBeatIdx(target);
@@ -415,10 +425,10 @@ function ShowFrame({ beat, beatIdx, playing, finished, muted, onStart, onPause, 
 }
 
 // ---- Segment rail — logo vs logo ----
-function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip }) {
+function SegmentRail({ segments, beats, beatIdx, onJumpToSegment, onJumpToClip }) {
   return (
     <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 landscape:grid landscape:grid-flow-col landscape:auto-cols-fr landscape:overflow-visible">
-      {episode.segments.map((s, i) => {
+      {segments.map((s, i) => {
         const firstBeatIdx = beats.findIndex(
           (b) => b.segment && b.segment.order === s.order && b.kind === "host" && b.speaker === "reggie"
         );
@@ -439,7 +449,7 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip })
           >
             {/* TOP BANNER — logos + score + status (tappable = jump to segment) */}
             <button
-              onClick={() => onJumpToSegment(i)}
+              onClick={() => onJumpToSegment(s.order)}
               className="w-full px-3 landscape:px-2 py-2 text-left"
               data-testid={`recap-segment-logos-${s.match_id}`}
             >
@@ -473,7 +483,7 @@ function SegmentRail({ episode, beats, beatIdx, onJumpToSegment, onJumpToClip })
              * button so the game card doesn't look broken. */}
             {s.clip && (
               <button
-                onClick={() => onJumpToClip(i)}
+                onClick={() => onJumpToClip(s.order)}
                 data-testid={`recap-segment-clip-${s.match_id}`}
                 aria-label={`Play highlights for ${s.away.code} at ${s.home.code}`}
                 className="w-full relative block group border-t border-white/10 aspect-video overflow-hidden"

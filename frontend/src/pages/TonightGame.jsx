@@ -51,13 +51,23 @@ export default function TonightGame() {
   const myPickSide = myPreds.find(p => p.game_id === gameId)?.pick || null;
 
   async function submitPick(gid, side) {
-    if (myPickSide) return;
-    setMyPreds(prev => [...prev, { game_id: gid, pick: side, user_name: userName }]);
-    emitSignal({ kind: "game_pick", league: "NHL", target: gid, weight: 2 });
+    // Allow pick changes until game start; backend upserts on user+game.
+    if (myPickSide === side) return;
+    const prev = myPickSide;
+    setMyPreds(prevList => {
+      const others = prevList.filter(p => p.game_id !== gid);
+      return [...others, { game_id: gid, pick: side, user_name: userName }];
+    });
+    emitSignal({ kind: prev ? "game_pick_change" : "game_pick", league: "NHL", target: gid, weight: 2 });
     try {
       await api.post("/predictions", { user_name: userName, game_id: gid, pick: side, reasoning: "" });
       refresh();
-    } catch { setMyPreds(prev => prev.filter(p => p.game_id !== gid)); }
+    } catch {
+      setMyPreds(prevList => {
+        const others = prevList.filter(p => p.game_id !== gid);
+        return prev ? [...others, { game_id: gid, pick: prev, user_name: userName }] : others;
+      });
+    }
   }
 
   if (!games.length) {

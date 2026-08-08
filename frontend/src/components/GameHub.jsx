@@ -8,12 +8,10 @@
 //   2. Head-to-head + recent form snapshot so the user can read while they
 //      listen.
 //   3. Reggie's pick, Marc's pick, the Ticker Model probability, community %.
-//   4. YOUR PICK — logo-vs-logo cards.
-//   5. After the pick, an auto-advance to the next game (or a "Done" state
-//      when the last game is picked).
 //
-// This is the new IA that replaces the old ambient-loop Morning Skate. One
-// segment per game, on demand, no background chatter.
+// The matchup logos at the top ARE the vote buttons when the tile is
+// expanded — no separate "Your call" row underneath. Tap a logo to lock
+// your call; tap the other one to switch it (until the puck drops).
 
 import { useState, useEffect, useRef } from "react";
 import { ChevronDown, Play, Pause, Radio, ArrowRight, Check, Mic, ExternalLink } from "lucide-react";
@@ -33,51 +31,73 @@ function Stat({ label, home, away, homeAccent, awayAccent }) {
   );
 }
 
-// Logo-vs-logo pick button (the one we tuned earlier — home left, away right).
-function PickCard({ side, code, accent, chosen, disabled, onClick, testid }) {
+// Team side inside the header — doubles as a vote button when expanded &
+// not locked. Kept in one place so the collapsed and expanded views share
+// the exact same logo treatment (just with vote affordance added when it
+// makes sense).
+function TeamSide({
+  side, code, accent, myPickSide, resolved, votable, onVote, align, testid,
+}) {
+  const chosen = myPickSide === side;
+  const otherChosen = myPickSide && myPickSide !== side;
+  const clickable = votable && !resolved;
+  const Wrapper = clickable ? "button" : "div";
+  const wrapperProps = clickable
+    ? {
+        type: "button",
+        onClick: (e) => { e.stopPropagation(); onVote?.(side); },
+        "aria-label": `Pick ${code} (${side})`,
+        "aria-pressed": chosen,
+        "data-testid": testid,
+      }
+    : { "data-testid": testid };
+
   return (
-    <button
-      data-testid={testid}
-      disabled={disabled}
-      onClick={onClick}
-      className={`text-left rounded-lg border-2 p-4 transition-all disabled:cursor-not-allowed relative overflow-hidden ${
-        chosen ? "scale-[1.01]" : "hover:border-white/25"
+    <Wrapper
+      {...wrapperProps}
+      className={`flex items-center gap-3 min-w-0 flex-1 rounded-lg transition-all ${
+        align === "right" ? "justify-end text-right" : "text-left"
+      } ${clickable ? "cursor-pointer p-1.5 -m-1.5 hover:bg-white/[0.03]" : ""} ${
+        otherChosen ? "opacity-45" : "opacity-100"
       }`}
-      style={{
-        borderColor: chosen ? accent : "#2d2d35",
-        background: chosen
-          ? `linear-gradient(135deg, ${accent}33 0%, ${accent}11 60%, transparent 100%)`
-          : "transparent",
-        boxShadow: chosen ? `0 0 0 1px ${accent}55, 0 8px 30px -8px ${accent}77` : "none",
-      }}
     >
-      <div className="flex items-center gap-4">
-        <div
-          className="h-16 w-16 md:h-20 md:w-20 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform"
-          style={{
-            background: `${accent}${chosen ? "44" : "22"}`,
-            border: `1px solid ${accent}${chosen ? "aa" : "55"}`,
-            transform: chosen ? "scale(1.03)" : "scale(1)",
-          }}
-        >
-          <TeamLogo code={code} size={60} monogramClass="!bg-transparent" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
-            {side === "home" ? "Home" : "Away"}
+      {align === "right" && (
+        <div className="min-w-0">
+          <div className="text-[9px] font-accent uppercase tracking-widest" style={{ color: chosen ? accent : "rgba(255,255,255,0.4)" }}>
+            {chosen ? "Your pick" : side === "home" ? "Home" : "Away"}
           </div>
-          <div className="font-headline text-3xl md:text-4xl text-white leading-none mt-0.5">{code}</div>
-          {chosen && (
-            <div className="mt-2 inline-flex items-center gap-1 font-accent text-[10px] uppercase tracking-[0.25em]" style={{ color: accent }}>
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full" style={{ background: accent, color: "#0b0b10" }}>
-                <Check className="w-2.5 h-2.5" strokeWidth={4} />
-              </span>
-              Your pick
-            </div>
-          )}
+          <div className="font-headline text-lg text-white leading-none">{code}</div>
         </div>
+      )}
+      <div
+        className="h-12 w-12 rounded-md flex items-center justify-center flex-shrink-0 relative transition-all"
+        style={{
+          background: `${accent}${chosen ? "44" : "22"}`,
+          border: `1px solid ${accent}${chosen ? "cc" : "55"}`,
+          boxShadow: chosen ? `0 0 0 2px ${accent}bb, 0 6px 20px -6px ${accent}77` : "none",
+          transform: chosen ? "scale(1.06)" : "scale(1)",
+        }}
+      >
+        <TeamLogo code={code} size={36} monogramClass="!bg-transparent" />
+        {chosen && (
+          <span
+            className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full flex items-center justify-center"
+            style={{ background: accent, color: "#0b0b10", boxShadow: `0 0 0 2px #0b0b10` }}
+            aria-hidden="true"
+          >
+            <Check className="w-2.5 h-2.5" strokeWidth={4} />
+          </span>
+        )}
       </div>
-    </button>
+      {align !== "right" && (
+        <div className="min-w-0">
+          <div className="text-[9px] font-accent uppercase tracking-widest" style={{ color: chosen ? accent : "rgba(255,255,255,0.4)" }}>
+            {chosen ? "Your pick" : side === "home" ? "Home" : "Away"}
+          </div>
+          <div className="font-headline text-lg text-white leading-none">{code}</div>
+        </div>
+      )}
+    </Wrapper>
   );
 }
 
@@ -97,6 +117,7 @@ export function GameHub({
   const [segmentPlaying, setSegmentPlaying] = useState(false);
   const advanceTimerRef = useRef(null);
   const autoStartedRef = useRef(false);
+  const firstPickRef = useRef(!!myPickSide); // tracks if pick already existed on mount
 
   // Deep-link entry → auto-play the segment once. Prevents re-firing on
   // re-renders. Signal fires just like a manual play.
@@ -113,6 +134,15 @@ export function GameHub({
   const homeAccent = teamStats[homeCode]?.primary || "#1e5dff";
   const awayAccent = teamStats[awayCode]?.primary || "#F58220";
 
+  // Pick lock: after puck drops or the game is graded, votes are frozen.
+  // start_iso is the canonical field from /api/predictions/games; we
+  // tolerate the legacy starts_at name too.
+  const startIso = game.start_iso || game.starts_at || null;
+  const gameStarted = !!(startIso && new Date(startIso).getTime() <= Date.now());
+  const resolved = !!game.winner;
+  const lockedIn = resolved || gameStarted;
+  const votable = expanded && !lockedIn;
+
   // Emit expansion signal — the fact that a user opens this game hub is a
   // very strong "I care about this matchup" signal for the ranker.
   useEffect(() => {
@@ -126,9 +156,12 @@ export function GameHub({
     }
   }, [expanded, game.id]);
 
-  // Auto-advance after a pick — brief delay so the "Your pick" glow can land.
+  // Auto-advance after the FIRST pick — brief delay so the "Your pick"
+  // glow can land. Once the user changes their mind we don't keep
+  // advancing (feels like a shove).
   useEffect(() => {
-    if (myPickSide && expanded && !isLast) {
+    if (myPickSide && !firstPickRef.current && expanded && !isLast) {
+      firstPickRef.current = true;
       advanceTimerRef.current = setTimeout(() => {
         onAdvance?.();
       }, 1400);
@@ -136,13 +169,14 @@ export function GameHub({
     return () => clearTimeout(advanceTimerRef.current);
   }, [myPickSide, expanded, isLast, onAdvance]);
 
-  const handleSubmit = (side) => {
-    if (myPickSide) return;
+  const handleVote = (side) => {
+    if (lockedIn) return;
+    if (myPickSide === side) return; // same pick — no-op
     onSubmitPick?.(game.id, side);
   };
 
-  const kickoff = game.starts_at
-    ? new Date(game.starts_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  const kickoff = startIso
+    ? new Date(startIso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
     : "TBD";
 
   return (
@@ -156,92 +190,114 @@ export function GameHub({
           : "border-white/10 bg-black/30 hover:border-white/20"
       }`}
     >
-      {/* Header — always visible. Tap to expand/collapse. */}
-      <button
-        onClick={onToggle}
+      {/* Header — always visible.
+       * COLLAPSED: whole header is a toggle-button that expands the tile.
+       * EXPANDED : header logos become vote buttons; only the small chevron
+       *           on the right collapses the tile. */}
+      <div
+        className="w-full p-4 flex items-center justify-between gap-3"
+        onClick={!expanded ? onToggle : undefined}
         data-testid={`game-hub-header-${game.id}`}
-        className="w-full p-4 flex items-center justify-between gap-3 text-left"
+        style={{ cursor: !expanded ? "pointer" : "default" }}
       >
-        {/* Home team */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="h-12 w-12 rounded-md flex items-center justify-center flex-shrink-0"
-               style={{ background: `${homeAccent}22`, border: `1px solid ${homeAccent}55` }}>
-            <TeamLogo code={homeCode} size={36} monogramClass="!bg-transparent" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Home</div>
-            <div className="font-headline text-lg text-white leading-none">{homeCode}</div>
-          </div>
-        </div>
+        {/* Home team — left, vote button when expanded */}
+        <TeamSide
+          side="home"
+          code={homeCode}
+          accent={homeAccent}
+          myPickSide={myPickSide}
+          resolved={resolved}
+          votable={votable}
+          onVote={handleVote}
+          align="left"
+          testid={`game-hub-pick-home-${game.id}`}
+        />
 
         {/* VS + time */}
-        <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
+        <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2 select-none">
           <div className="font-headline text-white/35 text-sm tracking-widest">vs</div>
           <div className="text-[9px] font-accent uppercase tracking-widest text-white/55">
             {kickoff}
           </div>
         </div>
 
-        {/* Away team */}
-        <div className="flex items-center gap-3 min-w-0 flex-1 justify-end">
-          <div className="text-right min-w-0">
-            <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Away</div>
-            <div className="font-headline text-lg text-white leading-none">{awayCode}</div>
-          </div>
-          <div className="h-12 w-12 rounded-md flex items-center justify-center flex-shrink-0"
-               style={{ background: `${awayAccent}22`, border: `1px solid ${awayAccent}55` }}>
-            <TeamLogo code={awayCode} size={36} monogramClass="!bg-transparent" />
-          </div>
-        </div>
+        {/* Away team — right, vote button when expanded */}
+        <TeamSide
+          side="away"
+          code={awayCode}
+          accent={awayAccent}
+          myPickSide={myPickSide}
+          resolved={resolved}
+          votable={votable}
+          onVote={handleVote}
+          align="right"
+          testid={`game-hub-pick-away-${game.id}`}
+        />
 
-        {/* Right rail — pick badge + chevron */}
-        <div className="flex items-center gap-3 flex-shrink-0 pl-2 border-l border-white/8">
-          {myPickSide && game.winner ? (
-            // Resolved: show right/wrong grade badge (green ✓ / red ✗)
+        {/* Right rail — resolved grade badge (post-game) or the small
+         * expand/collapse chevron. Kept as a dedicated tap zone so the
+         * logos above stay focused on voting. */}
+        <div className="flex items-center gap-2 flex-shrink-0 pl-2 border-l border-white/8">
+          {myPickSide && resolved ? (
             (() => {
               const correct = myPickSide === game.winner;
               const bg = correct ? "#22c55e" : "#ef4444";
               return (
-                <div className="flex items-center gap-2" data-testid={`game-hub-grade-${game.id}`}>
-                  <div className="text-right">
-                    <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">
-                      Your pick
-                    </div>
-                    <div className="font-headline text-sm" style={{ color: myPickSide === "home" ? homeAccent : awayAccent }}>
-                      {myPickSide === "home" ? homeCode : awayCode}
-                    </div>
-                  </div>
-                  <span
-                    className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
-                    style={{ background: bg, color: "#0b0b10" }}
-                    title={correct ? "Correct call" : "Missed this one"}
-                  >
-                    {correct ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : "×"}
-                  </span>
-                </div>
+                <span
+                  className="inline-flex items-center justify-center w-6 h-6 rounded-full font-bold"
+                  style={{ background: bg, color: "#0b0b10" }}
+                  title={correct ? "Correct call" : "Missed this one"}
+                  data-testid={`game-hub-grade-${game.id}`}
+                >
+                  {correct ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : "×"}
+                </span>
               );
             })()
-          ) : myPickSide ? (
-            <div className="text-right">
-              <div className="text-[9px] font-accent uppercase tracking-widest text-white/40">Your pick</div>
-              <div className="font-headline text-sm" style={{ color: myPickSide === "home" ? homeAccent : awayAccent }}>
-                {myPickSide === "home" ? homeCode : awayCode}
-              </div>
-            </div>
-          ) : (
-            <span className="hidden sm:inline text-[9px] font-accent uppercase tracking-widest text-white/40">
-              Tap to preview
-            </span>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 text-white/50 transition-transform ${expanded ? "rotate-180" : ""}`}
-          />
+          ) : null}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onToggle?.(); }}
+            data-testid={`game-hub-toggle-${game.id}`}
+            aria-label={expanded ? "Collapse" : "Expand"}
+            aria-expanded={expanded}
+            className="h-8 w-8 rounded-md flex items-center justify-center hover:bg-white/5 text-white/60 hover:text-white transition-colors"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Body — only rendered when expanded. */}
       {expanded && (
         <div className="border-t border-white/8 px-4 pb-4 pt-3 space-y-4" data-testid={`game-hub-body-${game.id}`}>
+          {/* Vote hint / status — subtle line so users know the top logos
+           * are how you make your pick. Once locked, we swap in a status. */}
+          <div className="flex items-center justify-between gap-3">
+            <span
+              className="inline-flex items-center gap-1.5"
+              style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em" }}
+            >
+              {lockedIn ? (
+                <span className="text-white/50">
+                  {resolved ? "Final · picks graded" : "Puck's dropped · picks locked"}
+                </span>
+              ) : myPickSide ? (
+                <span style={{ color: "#F58220" }}>
+                  Locked in · tap the other logo to switch
+                </span>
+              ) : (
+                <span style={{ color: "#F58220" }}>
+                  Your call · tap a logo above to pick
+                </span>
+              )}
+            </span>
+            {myPickSide && !resolved && (
+              <span className="text-white/40" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "12px" }}>
+                {myPickSide === "home" ? homeCode : awayCode}
+              </span>
+            )}
+          </div>
+
           {/* Reggie & Marc segment player — placeholder for now.
            * When TTS scripts are ready this becomes an audio player that
            * fires per-game banter. Signal fires either way. */}
@@ -355,32 +411,8 @@ export function GameHub({
             </div>
           </div>
 
-          {/* Your pick — logo-vs-logo. Home left, VS, Away right. */}
-          <div>
-            <div className="mb-2" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
-              Your call
-            </div>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 md:gap-3">
-              <PickCard
-                testid={`game-hub-pick-home-${game.id}`}
-                side="home" code={homeCode} accent={homeAccent}
-                chosen={myPickSide === "home"} disabled={!!myPickSide}
-                onClick={() => handleSubmit("home")}
-              />
-              <div className="flex items-center justify-center px-1 md:px-2 select-none">
-                <span className="font-headline text-white/35 text-xl md:text-2xl tracking-widest" aria-hidden="true">vs</span>
-              </div>
-              <PickCard
-                testid={`game-hub-pick-away-${game.id}`}
-                side="away" code={awayCode} accent={awayAccent}
-                chosen={myPickSide === "away"} disabled={!!myPickSide}
-                onClick={() => handleSubmit("away")}
-              />
-            </div>
-          </div>
-
           {/* Post-pick footer */}
-          {myPickSide && !isLast && (
+          {myPickSide && !isLast && !lockedIn && (
             <div className="pt-2 flex items-center justify-between text-white/50">
               <span style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "9px", letterSpacing: "0.28em" }}>
                 Locked in — next game coming up
@@ -395,7 +427,7 @@ export function GameHub({
               </button>
             </div>
           )}
-          {myPickSide && isLast && (
+          {myPickSide && isLast && !lockedIn && (
             <div className="pt-2 text-center text-white/60" style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em" }}>
               Every game picked · See you at puck-drop
             </div>
