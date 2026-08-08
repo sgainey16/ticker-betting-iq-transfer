@@ -17,6 +17,7 @@ const STORAGE_KEY = "ticker.userProfile.v1";
 const EMPTY = {
   nickname: "",
   nhl_team: null,           // "BOS"
+  language: "en",           // "en" | "fr" | future codes (fr, sv, fi, ru, de, ...)
   chl_teams: [],            // ["KAM", "VIC"]
   ncaa_teams: [],           // ["BU"]
   prospects: [],            // ["oliver-kaid"]

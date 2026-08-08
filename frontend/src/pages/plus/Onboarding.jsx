@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowLeft, Check, Sparkles, SkipForward, Volume2, Loader2, Trophy, MapPin, GraduationCap, Compass } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Sparkles, SkipForward, Volume2, Loader2, Trophy, MapPin, GraduationCap, Compass, Globe } from "lucide-react";
 import {
   NHL_TEAMS, CHL_DIVISIONS, NCAA_CONFERENCES,
   suggestJuniorTeamsForNhl, suggestNcaaTeamsForNhl,
@@ -63,6 +63,7 @@ export default function Onboarding() {
   const [draft, setDraft] = useState({
     nickname: profile.nickname || "",
     nhl_team: profile.nhl_team || null,
+    language: profile.language || "en",
     chl_teams: profile.chl_teams || [],
     ncaa_teams: profile.ncaa_teams || [],
     prospects: profile.prospects || [],
