@@ -5,6 +5,8 @@ import { TEST_IDS } from "@/lib/config";
 import { getDeviceId } from "@/lib/device";
 import ReggieAssistant from "@/components/ReggieAssistant";
 import { TeamLogo } from "@/lib/teamLogos";
+import { useVoiceSettings } from "@/lib/voiceSettings";
+import { isWakeWordSupported } from "@/lib/useWakeWord";
 import {
   Target,
   Zap,
@@ -508,6 +510,110 @@ function ProfileStat({ label, value }) {
 
 /* -------- Tab: Preferences -------- */
 
+
+// Voice Settings card — sits inside Preferences. Wake word is opt-in.
+// Fans in public/quiet spaces can leave everything off and use text.
+function VoiceSettingsCard() {
+  const { settings, update } = useVoiceSettings();
+  const supported = isWakeWordSupported();
+
+  return (
+    <div className="card-surface p-5" data-testid="prefs-voice-settings">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="font-accent text-[11px] uppercase tracking-widest text-white/70">
+            Reggie · Voice
+          </div>
+          <div className="text-white/50 text-xs mt-1">
+            Turn on any of these to talk to Reggie hands-free. Leave off if you'd rather text — that's a first-class experience too.
+          </div>
+        </div>
+      </div>
+
+      {/* Wake word */}
+      <div className="mt-4 flex items-start justify-between gap-3 py-3 border-t border-white/8">
+        <div className="min-w-0">
+          <div className="text-white font-headline text-sm" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>
+            "Hey Reggie" wake word
+          </div>
+          <div className="text-white/50 text-[12px] mt-0.5 leading-snug">
+            {supported
+              ? "Reggie listens for the phrase while the app is open. Uses your microphone. Sleeps after 15 seconds of quiet."
+              : "Your browser doesn't support voice recognition. Try Chrome, Edge, or Safari to enable this."}
+          </div>
+        </div>
+        <Toggle
+          disabled={!supported}
+          on={!!settings.wake_word_enabled}
+          onChange={(v) => update({ wake_word_enabled: v })}
+          testid="voice-wake-toggle"
+        />
+      </div>
+
+      {/* Show visible FAB */}
+      <div className="flex items-start justify-between gap-3 py-3 border-t border-white/8">
+        <div className="min-w-0">
+          <div className="text-white font-headline text-sm" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>
+            Show the visible mic button
+          </div>
+          <div className="text-white/50 text-[12px] mt-0.5 leading-snug">
+            The floating Reggie avatar in the bottom-right. Auto-hides after you use "Hey Reggie" three times, unless you pin it here.
+          </div>
+        </div>
+        <Toggle
+          on={settings.mic_button_override !== false}
+          onChange={(v) => update({ mic_button_override: v ? true : false })}
+          testid="voice-fab-toggle"
+        />
+      </div>
+
+      {/* Mute voice replies */}
+      <div className="flex items-start justify-between gap-3 py-3 border-t border-white/8">
+        <div className="min-w-0">
+          <div className="text-white font-headline text-sm" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>
+            Silent mode
+          </div>
+          <div className="text-white/50 text-[12px] mt-0.5 leading-snug">
+            Reggie replies in text only — no voice playback. Perfect for quiet rooms or public places.
+          </div>
+        </div>
+        <Toggle
+          on={!!settings.voice_replies_muted}
+          onChange={(v) => update({ voice_replies_muted: v })}
+          testid="voice-mute-toggle"
+        />
+      </div>
+    </div>
+  );
+}
+
+// Small reusable toggle switch matching the rest of the Back Office style.
+function Toggle({ on, onChange, disabled, testid }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!on)}
+      data-testid={testid}
+      className={`relative flex-shrink-0 h-6 w-11 rounded-full transition-colors ${
+        disabled
+          ? "bg-white/5 cursor-not-allowed"
+          : on
+            ? "bg-[#1e5dff]"
+            : "bg-white/15 hover:bg-white/20"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+          on ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
 function PreferencesTab() {
   const teams = ["EDM", "COL", "TOR", "TBL", "MIN", "NJD", "WPG", "NYR"];
   const [favTeams, setFavTeams] = useState([]);
@@ -527,6 +633,11 @@ function PreferencesTab() {
   return (
     <div className="space-y-5">
       <SectionHeader kicker="Personalization" title="Preferences" />
+
+      {/* Voice settings — every voice feature is opt-in. Fans in public
+       * or quiet spaces (or who just don't like voice UIs) can leave
+       * everything off and use text. This is a first-class choice. */}
+      <VoiceSettingsCard />
 
       {/* Favorite teams */}
       <div className="card-surface p-5" data-testid={TEST_IDS.backOffice.prefsFavTeams}>

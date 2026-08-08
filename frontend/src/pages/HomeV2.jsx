@@ -24,6 +24,7 @@ import { TenTen } from "@/components/plus/TenTen";
 import { UnifiedTopPlays } from "@/components/plus/UnifiedTopPlays";
 import { useUserProfile } from "@/lib/userProfile";
 import { FavoritesRail } from "@/components/FavoritesRail";
+import { api } from "@/lib/api";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -844,18 +845,65 @@ export default function HomeV2() {
   //   1. URL param (?team=EDM) — for switching / deep-links
   //   2. Onboarded user's picked NHL team — the returning-fan experience
   //   3. MTL as demo fallback
+  // Prefer the fan's onboarded team over any leftover URL param — the app
+  // is theirs first, deep-links second. Only fall back to "MTL" if we
+  // literally have nothing to go on.
   const [teamCode, setTeamCode] = useState(() =>
-    params.get("team")?.toUpperCase() || profile?.nhl_team || "MTL"
+    profile?.nhl_team || params.get("team")?.toUpperCase() || "MTL"
   );
-  // Full dashboard data currently only exists for MTL & BOS. When an
-  // onboarded fan picks another team we still respect their choice but
-  // gracefully fall back to MTL's shell + a small banner explaining.
+  // Full dashboard data currently only exists for MTL & BOS. When the fan
+  // picks another team we generate a lightweight shell using the code —
+  // real name/division/record land via /api/stats/teams later — so the
+  // fan's TEAM is the star of the page. Sections that need seeded data
+  // (Cup Score breakdown, Story-at-a-Glance, pillar tables) hide when
+  // we're on a shell instead of substituting MTL's numbers.
   const teamHasFullData = Boolean(TEAMS[teamCode]);
-  const team = TEAMS[teamCode] || TEAMS.MTL;
+  const team = TEAMS[teamCode] || {
+    code: teamCode,
+    name: teamCode,           // hydrated below
+    division: "NHL",
+    primary: "#1e5dff",
+    accent: "#F58220",
+    record: null,
+    cupScore: null,
+    story: null,
+    reggieQuote: null,
+    pillars: null,
+    shell: true,
+  };
 
-  // If profile picks up a new NHL team (post-onboarding), reflect it here.
+  // Hydrate the shell with real team meta from /api/stats/teams. Runs once
+  // per teamCode; safe to no-op if the fetch fails.
+  const [teamMeta, setTeamMeta] = useState(null);
   useEffect(() => {
-    if (!params.get("team") && profile?.nhl_team && profile.nhl_team !== teamCode) {
+    if (teamHasFullData) return; // seeded — no need
+    let alive = true;
+    api.get("/stats/teams")
+      .then(r => {
+        if (!alive) return;
+        const t = (r.data?.teams || []).find(x => (x.code || "").toUpperCase() === teamCode);
+        if (t) setTeamMeta(t);
+      })
+      .catch(() => { /* silent */ });
+    return () => { alive = false; };
+  }, [teamCode, teamHasFullData]);
+  if (teamMeta && team.shell) {
+    team.name = teamMeta.name || team.name;
+    team.division = teamMeta.div ? `${teamMeta.div} Division` : team.division;
+    team.record = {
+      w: teamMeta.w || 0,
+      l: teamMeta.l || 0,
+      ot: teamMeta.otl || 0,
+      gd: (teamMeta.gf || 0) - (teamMeta.ga || 0),
+      points: teamMeta.pts || 0,
+    };
+  }
+
+  // When the profile's NHL team changes (post-onboarding or via Back Office),
+  // reflect it as the primary team unless the user has explicitly navigated
+  // to a specific team via URL that DIFFERS from profile.
+  useEffect(() => {
+    if (profile?.nhl_team && profile.nhl_team !== teamCode) {
       setTeamCode(profile.nhl_team);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -941,20 +989,62 @@ export default function HomeV2() {
           </Link>
         )}
 
-        {/* Preview-mode banner — only appears when an onboarded fan picks a
-         * team we don't yet have a full dashboard for. Honest about the
-         * roadmap rather than silently substituting MTL. */}
+        {/* Shell-mode hero — when the fan's onboarded team doesn't yet have
+         * a hand-authored dashboard we show a big, proud team card instead
+         * of apologizing. Logo, name, record land straight from /api/stats.
+         * Full desk build lands in the follow-up data pass. */}
         {isOnboarded && !teamHasFullData && (
           <div
-            data-testid="home-preview-banner"
-            className="rounded-lg border border-white/10 bg-black/40 px-4 py-3 flex items-center justify-between"
+            data-testid="home-shell-hero"
+            className="rounded-2xl border-2 overflow-hidden relative"
+            style={{
+              background: `linear-gradient(135deg, ${team.primary}33 0%, transparent 55%), #0b0b10`,
+              borderColor: `${team.primary}88`,
+            }}
           >
-            <div>
-              <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
-                Preview mode
+            <div className="p-6 sm:p-8 flex items-center gap-5 flex-wrap">
+              <div
+                className="h-28 w-28 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: `${team.primary}22`, border: `1px solid ${team.primary}77` }}
+              >
+                <TeamLogo code={team.code} size={92} monogramClass="!bg-transparent" />
               </div>
-              <div className="mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "14px", color: "#e5e5e7", lineHeight: 1.3 }}>
-                Your team ({profile?.nhl_team}) — full dashboard is on the way. For now you're seeing the {team.code} shell so you can feel the layout.
+              <div className="min-w-0 flex-1">
+                <div className="font-accent text-[11px] uppercase tracking-[0.32em]" style={{ color: team.primary }}>
+                  {team.division}
+                </div>
+                <h1 className="font-headline text-4xl sm:text-5xl text-white leading-none mt-1">
+                  {team.name}
+                </h1>
+                {team.record && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest bg-white/5 border border-white/10 text-white/80">
+                      {team.record.w}-{team.record.l}-{team.record.ot}
+                    </span>
+                    <span className="px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest bg-white/5 border border-white/10 text-white/80">
+                      {team.record.points} PTS
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-accent uppercase tracking-widest border ${
+                      team.record.gd > 0 ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                        : team.record.gd < 0 ? "border-rose-400/40 bg-rose-400/10 text-rose-300"
+                          : "border-white/10 bg-white/5 text-white/60"
+                    }`}>
+                      {team.record.gd > 0 ? `+${team.record.gd}` : String(team.record.gd)} DIFF
+                    </span>
+                  </div>
+                )}
+                <div className="mt-3 text-white/50 text-xs">
+                  Full desk view for {team.name} lands with the next data pass — deeper stats, pillars, and Reggie & Marc segments.
+                </div>
+                <div className="mt-3">
+                  <Link
+                    to={`/team/${team.code}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/20 hover:border-[#F58220] px-4 py-1.5 text-white/80 hover:text-white transition-colors"
+                    style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em" }}
+                  >
+                    See full team page →
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -966,25 +1056,31 @@ export default function HomeV2() {
          * dashboard rows so it's the first thing they see. */}
         <FavoritesRail />
 
-        {/* Row 1 — Cup Score + Next Game */}
-        <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
-          <CupScoreCard team={team} />
-          <NextGameCard team={team} />
-        </div>
+        {/* Row 1 — Cup Score + Next Game. Guarded so shell teams don't try
+         * to render breakdown/opponent data they don't have. */}
+        {(team.cupScore || team.record) && (
+          <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
+            {team.cupScore && <CupScoreCard team={team} />}
+            {team.nextGame && <NextGameCard team={team} />}
+          </div>
+        )}
 
-        {/* Row 2 — Story at a glance (full width) */}
-        <StoryAtAGlance team={team} />
+        {/* Row 2 — Story at a glance (full width). Only renders when the
+         * team has seeded story data. Shell teams (any NHL club we haven't
+         * yet hand-authored) skip this until real /api hydration lands. */}
+        {team.story && <StoryAtAGlance team={team} />}
 
-        {/* Row 3 — Four Performance Pillars */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <PillarCard title="OFFENSE"       icon={Target} color={team.pillars.offense.color}      pillar={team.pillars.offense} />
-          <PillarCard title="DEFENSE"       icon={Shield} color={team.pillars.defense.color}      pillar={team.pillars.defense} />
-          <PillarCard title="GOALTENDING"   icon={Shield} color={team.pillars.goaltending.color}  pillar={team.pillars.goaltending} />
-          <PillarCard title="SPECIAL TEAMS" icon={Zap}    color={team.pillars.specialTeams.color} pillar={team.pillars.specialTeams} />
-        </div>
-
-        {/* Row 4 — Team Leaders (accuracy) */}
-        <TeamLeadersAccuracy team={team} />
+        {/* Row 3 — Four Performance Pillars. Same guard as above. */}
+        {team.pillars && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <PillarCard title="OFFENSE"       icon={Target} color={team.pillars.offense.color}      pillar={team.pillars.offense} />
+            <PillarCard title="DEFENSE"       icon={Shield} color={team.pillars.defense.color}      pillar={team.pillars.defense} />
+            <PillarCard title="GOALTENDING"   icon={Shield} color={team.pillars.goaltending.color}  pillar={team.pillars.goaltending} />
+            <PillarCard title="SPECIAL TEAMS" icon={Zap}    color={team.pillars.specialTeams.color} pillar={team.pillars.specialTeams} />
+          </div>
+        )}
+        {/* Row 4 — Team Leaders (accuracy). Skip on shells. */}
+        {team.leaders && <TeamLeadersAccuracy team={team} />}
 
         {/* Row 5 — Top Plays (unified rail — NHL + exceptional junior/NCAA
          * blend in when the moment earns it). Replaces the NHL-only

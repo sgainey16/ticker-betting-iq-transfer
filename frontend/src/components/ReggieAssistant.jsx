@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import { TEST_IDS } from "@/lib/config";
-import { Mic2, X, Send, Check, RotateCcw, Sparkles, Loader2, ChevronDown, MessageCircle } from "lucide-react";
+import { Mic, Mic2, X, Send, Check, RotateCcw, Sparkles, Loader2, ChevronDown, MessageCircle } from "lucide-react";
+import { useVoiceSettings } from "@/lib/voiceSettings";
+import { useWakeWord } from "@/lib/useWakeWord";
 
 // FAB + chat panel for the Back Office. Reggie greets users, answers app
 // questions, and PROPOSES actions (set favorites, load roster, log bet)
@@ -128,6 +130,27 @@ export default function ReggieAssistant() {
   const [state, setState] = useState(null);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+
+  // Voice — opt-in from Back Office. When enabled, "Hey Reggie" opens the
+  // chat and (if the utterance included a follow-up) sends it as the first
+  // message. Uses of the wake word are counted so the visible FAB can hide
+  // itself for power users (progressive disclosure).
+  const { settings: voice, incrementUses, showFab } = useVoiceSettings();
+  const sendRef = useRef(null); // populated below with the current send()
+  const handleWake = useCallback(({ followUp }) => {
+    setOpen(true);
+    setMinimized(false);
+    incrementUses();
+    if (followUp && followUp.length > 1 && sendRef.current) {
+      // Auto-send the follow-up utterance as the first message
+      setTimeout(() => sendRef.current(followUp), 100);
+    }
+  }, [incrementUses]);
+  useWakeWord({
+    enabled: !!voice.wake_word_enabled,
+    dormancySeconds: voice.dormancy_seconds || 15,
+    onWake: handleWake,
+  });
   const listRef = useRef(null);
   const deviceId = getDeviceId();
 
@@ -189,6 +212,12 @@ export default function ReggieAssistant() {
     }
   };
 
+  // Keep the sendRef pointed at the current send() so voice-triggered
+  // follow-ups always hit the latest closure (send is re-created every
+  // render, so a plain ref assignment inside useEffect stays fresh).
+  useEffect(() => { sendRef.current = send; });
+
+
   const confirmProposal = async (proposal) => {
     setConfirming(true);
     try {
@@ -243,39 +272,51 @@ export default function ReggieAssistant() {
 
   return (
     <>
-      {/* Floating action button — full-character Reggie avatar with a
-       * "Talk to me!" tooltip. The avatar itself IS the button; the label
-       * hovers to its left so it doesn't shove the tap zone off-screen on
-       * mobile. Larger tap target (h-16 w-16) since the illustrated
-       * character reads at a different size than a plain icon. */}
-      {!open && (
-        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 group">
-          {/* Speech-bubble label — visible on desktop hover and always on
-           * larger screens; hidden on very narrow phones so the avatar
-           * doesn't crowd the frame. */}
-          <span
-            className="hidden sm:inline-flex items-center rounded-full bg-black/85 backdrop-blur border border-[#1e5dff]/50 px-3 py-1.5 shadow-lg pointer-events-none"
-            style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: "#fff", letterSpacing: "0.02em" }}
+      {/* Floating action button — realistic handheld mic + two-line label
+       * ("Talk to me / 'Reggie'"). The character face was too dominant; the
+       * mic + text pattern reads as an action prompt, not a mascot.
+       *
+       * Progressive disclosure: once the fan has used "Hey Reggie" 3+
+       * times (and hasn't manually pinned the FAB in Back Office), we
+       * hide this — they've graduated to voice. */}
+      {!open && showFab && (
+        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 group">
+          {/* Two-line label on the left — reads left-to-right as the CTA */}
+          <div
+            className="hidden sm:flex flex-col items-end rounded-xl bg-black/85 backdrop-blur border border-[#1e5dff]/50 px-3 py-1.5 shadow-lg pointer-events-none"
+            aria-hidden="true"
           >
-            Talk to me!
-          </span>
+            <span
+              style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.28em", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}
+            >
+              Talk to me
+            </span>
+            <span
+              style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "15px", color: "#fff", letterSpacing: "0.02em", lineHeight: 1 }}
+            >
+              “Reggie”
+            </span>
+          </div>
           <button
             onClick={() => setOpen(true)}
             data-testid={TEST_IDS.assistant.fab}
-            className="relative h-16 w-16 rounded-full overflow-hidden bg-[#1e5dff] shadow-[0_10px_40px_rgba(30,93,255,0.5)] transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#F58220]"
+            className="relative h-14 w-14 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] shadow-[0_10px_40px_rgba(30,93,255,0.4)] flex items-center justify-center text-white transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#F58220]"
             aria-label="Talk to Reggie"
-            style={{ border: "3px solid #1e5dff" }}
           >
-            <img
-              src="/reggie-avatar.png"
-              alt="Reggie"
-              className="h-full w-full object-cover"
-              draggable={false}
-            />
+            <Mic className="w-6 h-6" strokeWidth={2.2} />
             {showBadge && (
               <span
                 data-testid={TEST_IDS.assistant.fabBadge}
                 className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#ff8f3b] border-2 border-[#0f0f14] animate-pulse"
+              />
+            )}
+            {/* Live dot appears only when the "Hey Reggie" wake word is
+             * armed and actively listening — signals the mic is hot. */}
+            {voice.wake_word_enabled && (
+              <span
+                className="absolute -bottom-0.5 -left-0.5 h-3 w-3 rounded-full bg-red-500 border-2 border-[#0b0b10] animate-pulse"
+                title="Listening for “Hey Reggie”"
+                aria-label="Listening for Hey Reggie"
               />
             )}
           </button>
