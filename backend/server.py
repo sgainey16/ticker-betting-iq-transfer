@@ -882,6 +882,22 @@ async def audition_play_by_play(match_id: int):
         if c.get("category") in ("goal", "power-play-goal", "shorthanded-goal", "overtime-shootout-goal")
         and c.get("embed_url")
     ]
+    # Post-game interviews — presser + player/coach post-match content.
+    # Everything Highlightly has, embed-only. Displayed at the tail of the
+    # individual-highlights list (broadcast wrap feel).
+    interview_clips = [
+        {
+            "id": c.get("id"),
+            "title": c.get("title"),
+            "category": c.get("category"),
+            "channel": c.get("channel"),
+            "embed_url": c.get("embed_url"),
+            "source_url": c.get("source_url"),
+        }
+        for c in clips
+        if c.get("category") in ("post-match-content", "press-conference")
+        and c.get("embed_url")
+    ]
 
     # 3) NHL play-by-play
     nhl_goals: list[dict] = []
@@ -918,6 +934,7 @@ async def audition_play_by_play(match_id: int):
         "home_team": home_code, "away_team": away_code,
         "home_logo": home.get("logo"), "away_logo": away.get("logo"),
         "plays": plays,
+        "interviews": interview_clips,
     }
 
 

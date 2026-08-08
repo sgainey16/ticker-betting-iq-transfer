@@ -30,6 +30,8 @@ const CATEGORY_LABEL = {
   "fight": "SCRAP",
   "assist-play": "SET-UP",
   "viral-moment": "VIRAL",
+  "post-match-content": "POST-GAME",
+  "press-conference": "PRESSER",
 };
 
 function buildLabels(clips) {

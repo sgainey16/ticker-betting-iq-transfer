@@ -50,11 +50,31 @@ export default function PlayByPlayPanel({ segment }) {
   if (!data?.ready) return null;
 
   const plays = data.plays || [];
-  const clipsForModal = plays.filter((p) => p.clip).map((p) => ({
-    id: p.clip.id, embed_url: p.clip.embed_url, source_url: p.clip.source_url,
-    category: p.situation === "PP" ? "power-play-goal" : p.situation === "SH" ? "shorthanded-goal" : "goal",
-    home_team: data.home_team, away_team: data.away_team,
-  }));
+  const interviews = data.interviews || [];
+  // Include interviews in the modal's clip pool so the "Next" transport
+  // rolls naturally from the last goal into the presser.
+  const clipsForModal = [
+    ...plays.filter((p) => p.clip).map((p) => ({
+      id: p.clip.id, embed_url: p.clip.embed_url, source_url: p.clip.source_url,
+      category: p.situation === "PP" ? "power-play-goal" : p.situation === "SH" ? "shorthanded-goal" : "goal",
+      home_team: data.home_team, away_team: data.away_team,
+    })),
+    ...interviews.map((iv) => ({
+      id: iv.id, embed_url: iv.embed_url, source_url: iv.source_url,
+      category: iv.category,
+      home_team: data.home_team, away_team: data.away_team,
+    })),
+  ];
+  const interviewsPoolOffset = plays.filter((p) => p.clip).length;
+
+  // Human label for presser vs post-match content — displayed on each row.
+  const interviewLabel = (cat) =>
+    cat === "press-conference" ? "PRESSER" : "POST-GAME";
+  const interviewSubLabel = (title, cat) => {
+    const t = (title || "").trim();
+    if (t) return t;
+    return cat === "press-conference" ? "Coach & players at the podium" : "Locker-room reactions";
+  };
 
   return (
     <div className="rounded-lg border border-white/10 bg-[#0d0d13] p-4">
@@ -65,11 +85,11 @@ export default function PlayByPlayPanel({ segment }) {
           INDIVIDUAL HIGHLIGHTS
         </div>
         <div style={{ fontFamily: "Oswald", fontWeight: 600, fontSize: "11px", letterSpacing: "0.25em", color: C.blue }}>
-          {plays.length} GOALS
+          {plays.length} GOALS{interviews.length > 0 ? ` · ${interviews.length} INTERVIEW${interviews.length === 1 ? "" : "S"}` : ""}
         </div>
       </div>
 
-      {plays.length === 0 && (
+      {plays.length === 0 && interviews.length === 0 && (
         <div className="text-sm text-white/40 py-4 text-center">No play-by-play available</div>
       )}
 
