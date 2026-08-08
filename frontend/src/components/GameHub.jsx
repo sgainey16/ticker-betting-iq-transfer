@@ -19,6 +19,9 @@ import { Link } from "react-router-dom";
 import { TeamLogo } from "@/lib/teamLogos";
 import { emitSignal } from "@/lib/signals";
 import { StatCallouts } from "@/components/StatCallouts";
+import { api } from "@/lib/api";
+
+const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
 // Small stat block used inside the expanded body.
 function Stat({ label, home, away, homeAccent, awayAccent }) {
@@ -115,9 +118,66 @@ export function GameHub({
   autoStartSegment,   // true = play the R&M segment on first mount (deep-link)
 }) {
   const [segmentPlaying, setSegmentPlaying] = useState(false);
+  const [segment, setSegment] = useState(null); // { reggie_hook, marc_read, reggie_audio_url, marc_audio_url }
+  const [segmentLoading, setSegmentLoading] = useState(false);
+  const [audioBeat, setAudioBeat] = useState(null); // "reggie" | "marc" | null
+  const audioRef = useRef(null);
   const advanceTimerRef = useRef(null);
   const autoStartedRef = useRef(false);
   const firstPickRef = useRef(!!myPickSide); // tracks if pick already existed on mount
+
+  // Fetch the per-game pregame script the first time the tile expands.
+  // Cached backend-side, so re-opens are instant. `voice=true` pre-renders
+  // ElevenLabs audio so tap-to-play is a single audio element swap.
+  useEffect(() => {
+    if (!expanded || segment || segmentLoading) return;
+    setSegmentLoading(true);
+    api.get(`/tonight/segment?game_id=${encodeURIComponent(game.id)}&voice=true`)
+      .then((r) => setSegment(r.data))
+      .catch(() => setSegment({ reggie_hook: "", marc_read: "", source: "error" }))
+      .finally(() => setSegmentLoading(false));
+  }, [expanded, game.id, segment, segmentLoading]);
+
+  // Play/pause the pregame segment audio. Plays Reggie first, then Marc.
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    if (!segmentPlaying) {
+      el.pause();
+      setAudioBeat(null);
+      return;
+    }
+    if (!segment) return;
+    const reggieUrl = segment.reggie_audio_url ? `${BACKEND}${segment.reggie_audio_url}` : null;
+    const marcUrl = segment.marc_audio_url ? `${BACKEND}${segment.marc_audio_url}` : null;
+    const beats = [
+      { speaker: "reggie", url: reggieUrl },
+      { speaker: "marc", url: marcUrl },
+    ].filter(b => b.url);
+    if (beats.length === 0) return;
+
+    let idx = 0;
+    const playNext = () => {
+      if (idx >= beats.length) {
+        setSegmentPlaying(false);
+        setAudioBeat(null);
+        return;
+      }
+      const b = beats[idx];
+      setAudioBeat(b.speaker);
+      el.src = b.url;
+      el.onended = () => { idx += 1; playNext(); };
+      el.onerror = () => { idx += 1; playNext(); };
+      el.play().catch(() => { idx += 1; playNext(); });
+    };
+    playNext();
+
+    return () => {
+      el.onended = null;
+      el.onerror = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [segmentPlaying, segment]);
 
   // Deep-link entry → auto-play the segment once. Prevents re-firing on
   // re-renders. Signal fires just like a manual play.
@@ -298,9 +358,10 @@ export function GameHub({
             )}
           </div>
 
-          {/* Reggie & Marc segment player — placeholder for now.
-           * When TTS scripts are ready this becomes an audio player that
-           * fires per-game banter. Signal fires either way. */}
+          {/* Reggie & Marc per-game segment player — real script pulled from
+           * /api/tonight/segment (Claude via Emergent LLM key), TTS via
+           * ElevenLabs. Cached backend-side per (game, panel picks) so
+           * subsequent opens are instant. */}
           <div className="rounded-lg border border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent p-3 space-y-3">
             <div className="flex items-center gap-3">
               <button
@@ -309,7 +370,8 @@ export function GameHub({
                   emitSignal({ kind: "game_segment_play", league: "NHL", target: game.id, weight: 1.4 });
                 }}
                 data-testid={`game-hub-segment-play-${game.id}`}
-                className="h-10 w-10 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] flex items-center justify-center transition-colors flex-shrink-0"
+                disabled={segmentLoading}
+                className="h-10 w-10 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] disabled:opacity-40 flex items-center justify-center transition-colors flex-shrink-0"
               >
                 {segmentPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
               </button>
@@ -317,18 +379,67 @@ export function GameHub({
                 <div className="flex items-center gap-2">
                   <Radio className={`w-3 h-3 ${segmentPlaying ? "text-red-400 live-pulse" : "text-white/40"}`} />
                   <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em", color: segmentPlaying ? "#ef4444" : "#a0a0a5" }}>
-                    {segmentPlaying ? "ON AIR · REGGIE & MARC" : "REGGIE & MARC · PREGAME"}
+                    {segmentLoading
+                      ? "LOADING SEGMENT…"
+                      : segmentPlaying
+                        ? `ON AIR · ${audioBeat === "marc" ? "MARC" : "REGGIE"} SPEAKING`
+                        : "REGGIE & MARC · PREGAME"}
                   </span>
                 </div>
                 <div className="mt-0.5" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "14px", color: "#fff", lineHeight: 1.25 }}>
-                  {homeCode} vs {awayCode} — read the room while they set the table.
+                  {homeCode} vs {awayCode} — the desk on tonight's matchup.
                 </div>
               </div>
             </div>
+
+            {/* Reggie & Marc lines — visible as captions so users can read
+             * along and get the point even with sound off. */}
+            {segment?.reggie_hook && (
+              <div
+                className={`rounded-md border p-2.5 transition-colors ${
+                  audioBeat === "reggie"
+                    ? "border-[#F58220] bg-[#F58220]/10"
+                    : "border-white/8 bg-black/30"
+                }`}
+                data-testid={`game-hub-reggie-line-${game.id}`}
+              >
+                <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "9px", letterSpacing: "0.28em", color: "#F58220" }}>
+                  Reggie{game.reggie_pick ? ` · ${game.reggie_pick === "home" ? homeCode : awayCode}` : ""}
+                </div>
+                <div className="mt-1 text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 500, fontSize: "14px", lineHeight: 1.4 }}>
+                  {segment.reggie_hook}
+                </div>
+              </div>
+            )}
+            {segment?.marc_read && (
+              <div
+                className={`rounded-md border p-2.5 transition-colors ${
+                  audioBeat === "marc"
+                    ? "border-[#1e5dff] bg-[#1e5dff]/10"
+                    : "border-white/8 bg-black/30"
+                }`}
+                data-testid={`game-hub-marc-line-${game.id}`}
+              >
+                <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "9px", letterSpacing: "0.28em", color: "#1e5dff" }}>
+                  Marc{game.marc_pick ? ` · ${game.marc_pick === "home" ? homeCode : awayCode}` : ""}
+                </div>
+                <div className="mt-1 text-white/90" style={{ fontFamily: "Rajdhani", fontWeight: 500, fontSize: "14px", lineHeight: 1.4 }}>
+                  {segment.marc_read}
+                </div>
+              </div>
+            )}
+            {segment?.stat_line && (
+              <div className="text-center text-white/50 text-[10px] font-accent uppercase tracking-[0.28em] pt-1">
+                {segment.stat_line}
+              </div>
+            )}
+
+            {/* Hidden audio element — plays reggie then marc back-to-back. */}
+            <audio ref={audioRef} playsInline preload="none" />
+
             {/* Stat callouts — pulse in a rotating loop while the segment
              * is playing so users can "follow along while looking at
-             * content" (real broadcast-graphics feel). Real timed sync
-             * lands with proper ElevenLabs script timestamps later. */}
+             * content" (real broadcast-graphics feel). */}
             <StatCallouts
               active={segmentPlaying}
               callouts={[

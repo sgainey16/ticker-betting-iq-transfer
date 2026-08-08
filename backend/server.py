@@ -39,6 +39,7 @@ import sportradar_client as sr
 import reggie_assistant as reggie
 from highlightly_client import highlightly, TAB_GROUPS
 from recap_show import generate_episode as generate_recap_episode
+from pregame_show import generate_segment as generate_pregame_segment
 from live import live_engine
 from radio_stations import lookup as radio_lookup, list_all as radio_list_all
 import nhl_pbp as pbp_client
@@ -718,6 +719,51 @@ async def recap_show_line_audio(speaker: str, text: str):
     except Exception as e:  # noqa: BLE001
         logger.warning("recap line audio failed: %s", e)
         return {"audio_url": None, "error": str(e)[:200]}
+
+
+def _team_stat_row(code: str) -> dict:
+    """Enrich the flat TEAMS row with derived per-game fields the LLM prompt
+    wants. Falls back to zeros if the code isn't in the mock table."""
+    row = next((t for t in TEAMS if t["code"] == code), None)
+    if not row:
+        return {}
+    gp = max(1, row.get("gp") or 1)
+    return {
+        **row,
+        "gf_per_game": (row.get("gf") or 0) / gp,
+        "ga_per_game": (row.get("ga") or 0) / gp,
+        # Not present in TEAMS — leave undefined; LLM prompt handles missing.
+    }
+
+
+@api.get("/tonight/segment")
+async def tonight_segment(game_id: str, voice: bool = True):
+    """Per-game pregame banter. Returns Reggie + Marc lines specifically
+    about THIS matchup so the deep-link at /tonight/:gameId feels like a
+    real broadcast segment, not a generic loop.
+
+    Cached in-process (see pregame_show._CACHE) so repeated loads and
+    pick-changes don't burn LLM calls. If `voice=true`, we also pre-fetch
+    ElevenLabs audio for both lines so the frontend can play them without
+    an extra round-trip.
+    """
+    game = next((g for g in GAMES if g["id"] == game_id), None)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    home_stats = _team_stat_row(game["home"])
+    away_stats = _team_stat_row(game["away"])
+    segment = await generate_pregame_segment(game, home_stats, away_stats)
+
+    audio = {"reggie_audio_url": None, "marc_audio_url": None}
+    if voice:
+        try:
+            audio["reggie_audio_url"] = ensure_audio("reggie", segment["reggie_hook"])
+            audio["marc_audio_url"] = ensure_audio("marc", segment["marc_read"])
+        except Exception as e:  # noqa: BLE001
+            logger.warning("pregame audio synth failed: %s", e)
+
+    return {**segment, **audio}
 
 
 # ---- Post-game stats ----
