@@ -165,6 +165,62 @@ export default function PlayByPlayPanel({ segment }) {
             </button>
           );
         })}
+
+        {/* Post-game interviews — the broadcast wrap. Everything Highlightly
+         * has under press-conference / post-match-content categories lands
+         * here as a tail block. Same tile shape as a goal row so the eye
+         * treats them as "another highlight" rather than a separate section. */}
+        {interviews.length > 0 && (
+          <div className="pt-3 mt-2 border-t border-white/10">
+            <div className="flex items-center gap-2 pb-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#F58220]" />
+              <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+                Post-Game Interviews
+              </span>
+            </div>
+            {interviews.map((iv, i) => (
+              <button
+                key={iv.id || i}
+                onClick={() => setModalIdx(interviewsPoolOffset + i)}
+                className="w-full flex items-center gap-3 p-3 rounded-md border border-white/10 hover:border-[#F58220] hover:bg-white/5 cursor-pointer transition-all mt-2"
+                data-testid={`pbp-interview-${i}`}
+              >
+                <div className="relative flex-shrink-0 flex items-center justify-center rounded-lg border border-white/15 bg-black/40 tile-highlight">
+                  <div className="h-[62px] w-[62px] flex items-center justify-center">
+                    <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.24em", color: "#F58220" }}>
+                      {iv.category === "press-conference" ? "MIC" : "POST"}
+                    </span>
+                  </div>
+                  <span className="absolute -bottom-1.5 -right-1.5 rounded-full bg-red-600 flex items-center justify-center border-2 border-[#0d0d13]"
+                        style={{ width: 26, height: 26, boxShadow: "0 0 14px -2px rgba(239,68,68,0.9)" }}>
+                    <Play className="w-3.5 h-3.5 text-white translate-x-[0.5px]" fill="currentColor" />
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded-sm font-accent text-[10px] uppercase tracking-widest flex-shrink-0"
+                          style={{ background: "#F5822033", color: "#F58220", border: "1px solid #F5822055", fontFamily: "Oswald", fontWeight: 600 }}>
+                      {interviewLabel(iv.category)}
+                    </span>
+                    {iv.channel && (
+                      <span className="text-[11px] text-white/50 truncate" style={{ fontFamily: "Oswald", fontWeight: 500, letterSpacing: "0.15em" }}>
+                        · {iv.channel}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[14px] text-white/85 truncate mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 600 }}>
+                    {interviewSubLabel(iv.title, iv.category)}
+                  </div>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  <div style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.24em", color: "#a0a0a5" }}>
+                    Tap to play
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {clipsForModal.length > 0 && modalIdx !== null && (
