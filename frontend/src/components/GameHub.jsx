@@ -91,9 +91,21 @@ export function GameHub({
   onAdvance,          // called after pick + delay
   isLast,             // hide "Next game →" on the last one
   autoScrollRef,      // ref so parent can scroll expanded tile into view
+  autoStartSegment,   // true = play the R&M segment on first mount (deep-link)
 }) {
   const [segmentPlaying, setSegmentPlaying] = useState(false);
   const advanceTimerRef = useRef(null);
+  const autoStartedRef = useRef(false);
+
+  // Deep-link entry → auto-play the segment once. Prevents re-firing on
+  // re-renders. Signal fires just like a manual play.
+  useEffect(() => {
+    if (autoStartSegment && expanded && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      setSegmentPlaying(true);
+      emitSignal({ kind: "game_segment_play", league: "NHL", target: game.id, weight: 1.4 });
+    }
+  }, [autoStartSegment, expanded, game.id]);
 
   const homeCode = game.home;
   const awayCode = game.away;

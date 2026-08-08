@@ -105,6 +105,7 @@ export default function TonightGame() {
         onToggle={() => navigate("/show")}
         onAdvance={() => navigate("/show")}
         isLast={true}
+        autoStartSegment={true}
       />
     </div>
   );
