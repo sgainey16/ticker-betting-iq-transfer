@@ -323,9 +323,6 @@ export default function Stats() {
       {/* Leaders grid — scroll-down leaders in every category, NHL.com-style */}
       <LeadersGrid players={filteredPlayers} />
 
-      {/* Founder value tease — subtle, on-brand, one row */}
-      <FounderTease />
-
       <div className="text-[10px] font-accent uppercase tracking-widest text-white/35 text-center pt-2">
         For entertainment &amp; decision insights — never a wager
       </div>
@@ -620,43 +617,7 @@ function LeaderModal({ cat, pool, group, onClose }) {
   );
 }
 
-function FounderTease() {  return (
-    <div
-      className="rounded-2xl p-5 border border-[#1e5dff]/40 relative overflow-hidden"
-      style={{ background: "linear-gradient(120deg, rgba(30,93,255,0.14) 0%, transparent 55%), #0d0d13" }}
-      data-testid="stats-founder-tease"
-    >
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0 flex-1">
-          <div className="font-accent text-[10px] uppercase tracking-[0.35em] text-[#1e5dff] mb-1">
-            Founders Club · The story behind the sheet
-          </div>
-          <div className="font-headline text-xl sm:text-2xl text-white leading-tight">
-            The sheet says <em className="not-italic text-white/60">what</em>. The Presser tells you <em className="not-italic text-[#1e5dff]">why</em>.
-          </div>
-          <p className="text-white/60 text-sm mt-2 max-w-xl">
-            Every stat here has a deeper read in Presser — Momentum, Fatigue, Line Chemistry, Matchup Edge,
-            Fantasy Opportunity, xG differential. Explained by Reggie &amp; Marc, in one glance.
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Link
-            to="/press-conference"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 hover:border-white/40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
-          >
-            <Mic className="w-3.5 h-3.5" /> Ask the Panel
-          </Link>
-          <Link
-            to="/soon/matchup-sheet"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
-          >
-            <Crown className="w-3.5 h-3.5" /> See a Deep Dive
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-}
+function FounderTease() { return null; }
 
 
 
