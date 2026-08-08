@@ -285,7 +285,7 @@ export default function CanucksUncut() {
       <div className="max-w-5xl mx-auto px-6 py-10">
         {/* Two-host desk */}
         <div className="grid grid-cols-2 gap-6 mb-10">
-          <HostCard name="Reggie Harlow" role="Color · Anchor" initials="RH" active={isReggie && playing} />
+          <HostCard name="Reggie Banks" role="Color · Anchor" initials="RB" active={isReggie && playing} />
           <HostCard name="Marc Collins" role="Analytics · Co-Host" initials="MC" active={!isReggie && playing && currentLine} />
         </div>
 
@@ -320,7 +320,7 @@ export default function CanucksUncut() {
                   </span>
                 </div>
                 <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: isReggie ? "#1E5BFF" : "#c9d4ff" }}>
-                  {isReggie ? "REGGIE HARLOW" : "MARC COLLINS"}
+                  {isReggie ? "REGGIE BANKS" : "MARC COLLINS"}
                 </div>
                 {prefetching && (
                   <div className="text-[11px] text-white/40" style={{ fontFamily: "Oswald", letterSpacing: "0.2em" }}>

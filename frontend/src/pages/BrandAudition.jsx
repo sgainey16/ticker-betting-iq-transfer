@@ -219,7 +219,7 @@ function FeatureMark({ title, subtitle, tone = "blue", size = 180 }) {
 // ---------------------------------------------------------------------------
 // LOWER-THIRD PILL — what the "REGGIE" nametag becomes on the broadcast frame
 // ---------------------------------------------------------------------------
-function LowerThird({ speaker = "REGGIE HARLOW", role = "COLOR • LIVE" }) {
+function LowerThird({ speaker = "REGGIE BANKS", role = "COLOR • LIVE" }) {
   return (
     <div className="inline-flex items-stretch overflow-hidden border border-white/15" style={{ background: C.black }}>
       {/* Blue leading tab with T mark */}
@@ -505,7 +505,7 @@ export default function BrandAudition() {
               A. RECAP/SHOW · LOWER-THIRD NAMETAG PILL
             </div>
             <div className="flex flex-wrap items-center gap-4 p-6 rounded-md" style={{ background: "#111116" }}>
-              <LowerThird speaker="REGGIE HARLOW" role="COLOR · LIVE" />
+              <LowerThird speaker="REGGIE BANKS" role="COLOR · LIVE" />
               <LowerThird speaker="MARC COLLINS" role="ANALYST · LIVE" />
               <div style={{ fontFamily: "Inter", fontSize: "11px", color: C.gray, maxWidth: 240 }}>
                 Replaces the current amber pill — sits bottom-left on the broadcast frame, ties every host mention back to the T mark.

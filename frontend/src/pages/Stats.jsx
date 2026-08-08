@@ -185,14 +185,14 @@ export default function Stats() {
             rows={sortRows(skaters, "pts").map((p, i) => ({ ...p, rank: i + 1 }))}
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
-              { key: "name", label: "Player", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
-              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
+              { key: "team", label: "Team", w: "w-20 text-center", sort: null,
                 render: (v) => (
                   <span className="inline-flex items-center gap-1.5 justify-center">
-                    <TeamLogo code={v} size={18} />
-                    <span className="text-[11px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                    <TeamLogo code={v} size={20} />
+                    <span className="text-[12px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
                   </span>
                 ) },
+              { key: "name", label: "Player", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
               { key: "pos",  label: "Pos",  w: "w-14 text-center", sort: null },
               { key: "gp",   label: "GP",   w: "w-14 text-right",  sort: true },
               { key: "g",    label: "G",    w: "w-14 text-right",  sort: true },
@@ -215,14 +215,14 @@ export default function Stats() {
             rows={sortRows(goalies, "sv_pct").map((p, i) => ({ ...p, rank: i + 1 }))}
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
-              { key: "name", label: "Goaltender", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
-              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
+              { key: "team", label: "Team", w: "w-20 text-center", sort: null,
                 render: (v) => (
                   <span className="inline-flex items-center gap-1.5 justify-center">
-                    <TeamLogo code={v} size={18} />
-                    <span className="text-[11px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                    <TeamLogo code={v} size={20} />
+                    <span className="text-[12px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
                   </span>
                 ) },
+              { key: "name", label: "Goaltender", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
               { key: "gp",   label: "GP",   w: "w-14 text-right", sort: true },
               { key: "w",    label: "W",    w: "w-14 text-right", sort: true },
               { key: "l",    label: "L",    w: "w-14 text-right", sort: true },
@@ -484,35 +484,36 @@ function LeaderCard({ players, cat, onOpen }) {
     <button
       onClick={onOpen}
       data-testid={`leader-card-${cat.key}`}
-      className="text-left rounded-xl border border-slate-200 bg-white hover:border-[#1e5dff] hover:shadow-[0_8px_24px_-8px_rgba(30,93,255,0.35)] transition-all p-3 group"
+      className="text-left rounded-xl border border-slate-200 bg-white hover:border-[#1e5dff] hover:shadow-[0_8px_24px_-8px_rgba(30,93,255,0.35)] transition-all p-3.5 group"
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-accent text-[10px] uppercase tracking-[0.22em] text-slate-500">
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="font-accent text-[11px] uppercase tracking-[0.22em] text-slate-500">
           {cat.title}
         </div>
-        <span className="text-[10px] font-accent uppercase tracking-widest text-slate-300 group-hover:text-[#1e5dff] transition-colors">
+        <span className="text-[11px] font-accent uppercase tracking-widest text-slate-300 group-hover:text-[#1e5dff] transition-colors">
           Full list →
         </span>
       </div>
       {sorted.length === 0 ? (
-        <div className="text-slate-400 text-xs">No data</div>
+        <div className="text-slate-400 text-sm">No data</div>
       ) : (
-        <ol className="space-y-1.5">
+        <ol className="space-y-2">
           {sorted.map((p, i) => (
             <li key={p.id} className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className={`font-accent text-[10px] w-4 ${i === 0 ? "text-[#1e5dff]" : "text-slate-400"}`}>
+                <span className={`font-accent text-[12px] w-4 flex-shrink-0 ${i === 0 ? "text-[#1e5dff]" : "text-slate-400"}`}>
                   {i + 1}
                 </span>
-                <span className={`truncate text-sm ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>
+                {/* Logo BEFORE name — easier team recognition at a glance */}
+                <span className="flex items-center gap-1 flex-shrink-0">
+                  <TeamLogo code={p.team} size={18} />
+                  <span className="text-[11px] font-accent uppercase tracking-widest text-slate-500">{p.team}</span>
+                </span>
+                <span className={`truncate text-[15px] ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>
                   {p.name}
                 </span>
-                <span className="flex items-center gap-1 flex-shrink-0">
-                  <TeamLogo code={p.team} size={14} />
-                  <span className="text-[10px] font-accent text-slate-400">{p.team}</span>
-                </span>
               </div>
-              <span className={`font-headline flex-shrink-0 ${i === 0 ? "text-slate-900 text-base" : "text-slate-600 text-sm"}`}>
+              <span className={`font-headline flex-shrink-0 ${i === 0 ? "text-slate-900 text-lg" : "text-slate-700 text-base"}`}>
                 {fmt(p[cat.key])}{cat.unit || ""}
               </span>
             </li>
@@ -568,14 +569,14 @@ function LeaderModal({ cat, pool, group, onClose }) {
           </button>
         </div>
         <div className="overflow-y-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[15px]">
             <thead className="sticky top-0 bg-white border-b border-slate-200">
               <tr>
-                <th className="w-10 px-3 py-2 text-left font-accent text-[10px] uppercase tracking-widest text-slate-500">#</th>
-                <th className="px-3 py-2 text-left font-accent text-[10px] uppercase tracking-widest text-slate-500">Player</th>
-                <th className="w-14 px-3 py-2 text-center font-accent text-[10px] uppercase tracking-widest text-slate-500">Team</th>
-                <th className="w-14 px-3 py-2 text-center font-accent text-[10px] uppercase tracking-widest text-slate-500">Pos</th>
-                <th className="w-20 px-3 py-2 text-right font-accent text-[10px] uppercase tracking-widest text-slate-500">{cat.title}</th>
+                <th className="w-10 px-3 py-2.5 text-left font-accent text-[11px] uppercase tracking-widest text-slate-500">#</th>
+                <th className="w-16 px-3 py-2.5 text-center font-accent text-[11px] uppercase tracking-widest text-slate-500">Team</th>
+                <th className="px-3 py-2.5 text-left font-accent text-[11px] uppercase tracking-widest text-slate-500">Player</th>
+                <th className="w-14 px-3 py-2.5 text-center font-accent text-[11px] uppercase tracking-widest text-slate-500">Pos</th>
+                <th className="w-20 px-3 py-2.5 text-right font-accent text-[11px] uppercase tracking-widest text-slate-500">{cat.title}</th>
               </tr>
             </thead>
             <tbody>
@@ -585,16 +586,16 @@ function LeaderModal({ cat, pool, group, onClose }) {
                   className={`border-b border-slate-100 hover:bg-blue-50/60 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}
                   data-testid={`leader-modal-row-${i}`}
                 >
-                  <td className={`px-3 py-2 font-accent ${i === 0 ? "text-[#1e5dff] font-bold" : "text-slate-400"}`}>{i + 1}</td>
-                  <td className={`px-3 py-2 ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>{p.name}</td>
-                  <td className="px-3 py-2 text-center text-slate-600 text-[11px] font-accent uppercase tracking-widest">
+                  <td className={`px-3 py-2.5 font-accent ${i === 0 ? "text-[#1e5dff] font-bold" : "text-slate-400"}`}>{i + 1}</td>
+                  <td className="px-3 py-2.5 text-center text-slate-600 text-[12px] font-accent uppercase tracking-widest">
                     <span className="inline-flex items-center gap-1.5 justify-center">
-                      <TeamLogo code={p.team} size={16} />
+                      <TeamLogo code={p.team} size={20} />
                       {p.team}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-center text-slate-500 text-[11px] font-accent uppercase tracking-widest">{p.pos || "—"}</td>
-                  <td className={`px-3 py-2 text-right font-headline ${i === 0 ? "text-slate-900 text-lg" : "text-slate-700"}`}>
+                  <td className={`px-3 py-2.5 ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>{p.name}</td>
+                  <td className="px-3 py-2.5 text-center text-slate-500 text-[12px] font-accent uppercase tracking-widest">{p.pos || "—"}</td>
+                  <td className={`px-3 py-2.5 text-right font-headline ${i === 0 ? "text-slate-900 text-lg" : "text-slate-700"}`}>
                     {fmt(p[cat.key])}{cat.unit || ""}
                   </td>
                 </tr>

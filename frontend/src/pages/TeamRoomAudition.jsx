@@ -287,7 +287,7 @@ function TeamBanter({ team }) {
           </div>
           <div>
             <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.28em", color: t.primary }}>
-              REGGIE HARLOW
+              REGGIE BANKS
             </div>
             <div className="mt-1.5 text-[18px] text-white/95" style={{ fontFamily: "Rajdhani", fontWeight: 600, lineHeight: 1.35 }}>
               "{t.reggieQuote}"

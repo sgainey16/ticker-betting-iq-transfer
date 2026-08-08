@@ -511,7 +511,7 @@ function StoryAtAGlance({ team }) {
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <span style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "12px", letterSpacing: "0.3em", color: "#1E5BFF" }}>
-              REGGIE HARLOW
+              REGGIE BANKS
             </span>
             <span className="text-[10px] text-white/45" style={{ fontFamily: "Oswald", fontWeight: 700, letterSpacing: "0.25em" }}>
               · YOUR HOST
