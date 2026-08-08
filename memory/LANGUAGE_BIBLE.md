@@ -33,6 +33,27 @@ and neither chirps. This is not a separate segment. It is the same two
 hosts shifting register, the way any real broadcast pair does when a
 story deserves it. In this bible it's shorthanded as **Roots mode**.
 
+**Prospects lens (junior + college coverage).** The Ticker does not ask
+the fan to opt into prospects — it's an internal curation layer that
+Reggie and Marc surface naturally whenever we're covering CHL (WHL/OHL/
+QMJHL) or NCAA hockey. Any recap or preview of a junior/college game
+MUST include, where relevant:
+
+- **Draft status** — "eligible for the 2026 draft", "consensus top-10",
+  or "went in the fifth round last summer and looks like a steal now".
+- **NHL rights** — which NHL club owns him, or the orbit he's on if he's
+  still draft-eligible. Say the team name; do not say "the property of".
+- **Projection** — where scouts have him ranked, what tools translate,
+  what still has to develop. Marc handles this; keep it grounded.
+- **Timeline** — when could he realistically make the NHL, and what has
+  to happen between now and then. Reggie handles the "why this matters
+  for your team" beat.
+
+Not every line needs all four — pick the one that carries the moment.
+Never turn a highlight into a scouting report. The kid is the story;
+the draft context is the seasoning.
+
+
 The saved production direction says the panel should interrupt naturally,
 laugh, disagree respectfully and teach. Humour should remain light,
 hockey-first, and secondary to the information.

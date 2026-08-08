@@ -182,11 +182,10 @@ export default function Stats() {
             rows={sortRows(skaters, "pts").map((p, i) => ({ ...p, rank: i + 1 }))}
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
-              { key: "team", label: "Team", w: "w-20 text-center", sort: null,
+              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
                 render: (v) => (
-                  <span className="inline-flex items-center gap-1.5 justify-center">
-                    <TeamLogo code={v} size={20} />
-                    <span className="text-[12px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                  <span className="inline-flex items-center justify-center">
+                    <TeamLogo code={v} size={30} />
                   </span>
                 ) },
               { key: "name", label: "Player", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
@@ -212,11 +211,10 @@ export default function Stats() {
             rows={sortRows(goalies, "sv_pct").map((p, i) => ({ ...p, rank: i + 1 }))}
             columns={[
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
-              { key: "team", label: "Team", w: "w-20 text-center", sort: null,
+              { key: "team", label: "Team", w: "w-16 text-center", sort: null,
                 render: (v) => (
-                  <span className="inline-flex items-center gap-1.5 justify-center">
-                    <TeamLogo code={v} size={20} />
-                    <span className="text-[12px] font-accent uppercase tracking-widest text-slate-600">{v}</span>
+                  <span className="inline-flex items-center justify-center">
+                    <TeamLogo code={v} size={30} />
                   </span>
                 ) },
               { key: "name", label: "Goaltender", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null },
@@ -245,8 +243,8 @@ export default function Stats() {
               { key: "rank", label: "#", w: "w-10 text-slate-400", sort: null },
               { key: "name", label: "Team", w: "min-w-[160px] text-slate-900 font-semibold sticky-name", sort: null,
                 render: (v, row) => (
-                  <span className="inline-flex items-center gap-2">
-                    <TeamLogo code={row.code} size={22} />
+                  <span className="inline-flex items-center gap-2.5">
+                    <TeamLogo code={row.code} size={28} />
                     <span>{v}</span>
                   </span>
                 ) },
@@ -493,15 +491,13 @@ function LeaderCard({ players, cat, onOpen }) {
         <ol className="space-y-2">
           {sorted.map((p, i) => (
             <li key={p.id} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <span className={`font-accent text-[12px] w-4 flex-shrink-0 ${i === 0 ? "text-[#1e5dff]" : "text-slate-400"}`}>
                   {i + 1}
                 </span>
-                {/* Logo BEFORE name — easier team recognition at a glance */}
-                <span className="flex items-center gap-1 flex-shrink-0">
-                  <TeamLogo code={p.team} size={18} />
-                  <span className="text-[11px] font-accent uppercase tracking-widest text-slate-500">{p.team}</span>
-                </span>
+                {/* Big team logo — the team is the visual anchor, no code
+                 * needed alongside it. Fans read logos faster than acronyms. */}
+                <TeamLogo code={p.team} size={30} className="flex-shrink-0" />
                 <span className={`truncate text-[15px] ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>
                   {p.name}
                 </span>
@@ -580,11 +576,8 @@ function LeaderModal({ cat, pool, group, onClose }) {
                   data-testid={`leader-modal-row-${i}`}
                 >
                   <td className={`px-3 py-2.5 font-accent ${i === 0 ? "text-[#1e5dff] font-bold" : "text-slate-400"}`}>{i + 1}</td>
-                  <td className="px-3 py-2.5 text-center text-slate-600 text-[12px] font-accent uppercase tracking-widest">
-                    <span className="inline-flex items-center gap-1.5 justify-center">
-                      <TeamLogo code={p.team} size={20} />
-                      {p.team}
-                    </span>
+                  <td className="px-3 py-2.5 text-center">
+                    <TeamLogo code={p.team} size={30} className="inline-block" />
                   </td>
                   <td className={`px-3 py-2.5 ${i === 0 ? "text-slate-900 font-semibold" : "text-slate-700"}`}>{p.name}</td>
                   <td className="px-3 py-2.5 text-center text-slate-500 text-[12px] font-accent uppercase tracking-widest">{p.pos || "—"}</td>

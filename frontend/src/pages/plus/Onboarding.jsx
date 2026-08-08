@@ -1,32 +1,35 @@
 // Onboarding — Ticker+ identity capture flow.
 // -----------------------------------------------------------------------------
-// Six lightweight steps. Nothing gate-keeps except NHL team. Every other step
-// is skippable — skipped steps get gentle re-nags later inside the app.
+// Short, fan-first. Prospects are deliberately NOT asked about here — they're
+// an internal curation layer that Reggie & Marc lean into when covering the
+// junior/college game, not something we ask fans to opt into up front.
 //
 //   0  Welcome + brand cold-open (Reggie/Marc TTS)
 //   1  Nickname (used by Reggie/Marc when addressing user later)
 //   2  NHL team (the anchor — every fan has one)
 //   3  Local junior teams (WHL / OHL — suggested by NHL affinity)
 //   4  NCAA teams (suggested by NHL affinity)
-//   5  Prospects to follow (suggested by teams already picked)
-//   6  Interests (analytics / betting IQ / prospects / highlights)
-//   7  Reveal: personalized "Your Ticker" with Reggie/Marc calling their name
+//   5  Interests (analytics / betting IQ / highlights)
+//   6  Reveal: personalized "Your Ticker" with Reggie/Marc calling their name
 //
 // Everything writes to the localStorage-backed UserProfile. When the user hits
 // "Complete", `onboarded_at` is stamped and they're routed to `/plus`.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ArrowLeft, Check, Sparkles, SkipForward, Volume2, Loader2, Trophy, MapPin, GraduationCap, Star, Compass } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Sparkles, SkipForward, Volume2, Loader2, Trophy, MapPin, GraduationCap, Compass } from "lucide-react";
 import {
-  NHL_TEAMS, CHL_DIVISIONS, NCAA_CONFERENCES, PROSPECTS,
-  suggestJuniorTeamsForNhl, suggestNcaaTeamsForNhl, suggestProspectsForProfile,
+  NHL_TEAMS, CHL_DIVISIONS, NCAA_CONFERENCES,
+  suggestJuniorTeamsForNhl, suggestNcaaTeamsForNhl,
 } from "@/data/tickerCatalog";
 import { useUserProfile } from "@/lib/userProfile";
 import { api } from "@/lib/api";
 import { TeamLogo } from "@/components/plus/TeamLogo";
+// Shared NHL logo component — pulls from NHL's official asset CDN. Used for
+// the NHL team-picker so onboarding matches what the fan sees on Home.
+import { TeamLogo as NhlLogo } from "@/lib/teamLogos";
 
-const STEPS = ["welcome", "nickname", "nhl", "chl", "ncaa", "prospects", "interests", "reveal"];
+const STEPS = ["welcome", "nickname", "nhl", "chl", "ncaa", "interests", "reveal"];
 const KAM = "#F58220";
 
 // One shared audio unlock — needed for Safari to allow programmatic play() later
@@ -93,7 +96,6 @@ export default function Onboarding() {
       case "nhl":        return Boolean(draft.nhl_team);
       case "chl":        return true; // skippable
       case "ncaa":       return true; // skippable
-      case "prospects":  return true; // skippable
       case "interests":  return true; // skippable
       case "reveal":     return true;
       default:           return true;
@@ -189,14 +191,6 @@ export default function Onboarding() {
               }));
             }} />
           )}
-          {STEPS[step] === "prospects" && (
-            <StepProspects draft={draft} onToggle={(id) => {
-              setDraft(d => ({
-                ...d,
-                prospects: d.prospects.includes(id) ? d.prospects.filter(x => x !== id) : [...d.prospects, id],
-              }));
-            }} />
-          )}
           {STEPS[step] === "interests" && (
             <StepInterests draft={draft} onToggle={(id) => {
               setDraft(d => ({
@@ -223,7 +217,7 @@ export default function Onboarding() {
         </button>
 
         {/* Skip on optional steps */}
-        {["chl", "ncaa", "prospects", "interests"].includes(STEPS[step]) && (
+        {["chl", "ncaa", "interests"].includes(STEPS[step]) && (
           <button
             data-testid="ob-skip"
             onClick={() => go(1)}
@@ -272,7 +266,7 @@ function StepWelcome({ onSpeak, onNext }) {
         Let's build your desk.
       </div>
       <div className="font-accent text-sm uppercase tracking-[0.24em] text-white/55 mt-5 max-w-md mx-auto">
-        Six quick taps. Reggie and Marc will know your team, your prospects, and your name by the end.
+        Five quick taps. Reggie and Marc will know your team, your leagues, and your name by the end.
       </div>
       <button
         data-testid="ob-welcome-start"
@@ -325,10 +319,11 @@ function StepNhl({ selected, onSelect }) {
             key={t.code}
             data-testid={`ob-nhl-${t.code}`}
             onClick={() => onSelect(t.code)}
-            className={`group relative rounded-lg border-2 transition-all p-3 min-h-[72px] flex flex-col items-center justify-center text-center ${selected === t.code ? "border-[#F58220] bg-[#F58220]/10 scale-[1.02]" : "border-white/10 bg-black/40 hover:border-white/25"}`}
+            className={`group relative rounded-lg border-2 transition-all p-3 min-h-[86px] flex flex-col items-center justify-center text-center ${selected === t.code ? "border-[#F58220] bg-[#F58220]/10 scale-[1.02]" : "border-white/10 bg-black/40 hover:border-white/25"}`}
           >
-            <div className="w-8 h-8 rounded-full mb-1.5 flex items-center justify-center font-headline text-xs text-white shadow-lg" style={{ background: t.primary }}>
-              {t.code}
+            <div className="w-11 h-11 rounded-full mb-2 flex items-center justify-center overflow-hidden"
+                 style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${t.primary || "#F58220"}55` }}>
+              <NhlLogo code={t.code} size={34} monogramClass="!bg-transparent" />
             </div>
             <div className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/70 leading-tight">
               {t.name.split(" ").pop()}
@@ -341,30 +336,80 @@ function StepNhl({ selected, onSelect }) {
 }
 
 function StepChl({ draft, onToggle }) {
-  const suggested = draft.nhl_team ? suggestJuniorTeamsForNhl(draft.nhl_team) : [];
-  const suggestedCodes = new Set(suggested.map(t => t.code));
-  const allChl = CHL_DIVISIONS.flatMap(d => d.teams.map(t => ({ ...t, league: d.league, division: d.name })));
-  const other = allChl.filter(t => !suggestedCodes.has(t.code));
+  // Group by league — Western, Ontario, Quebec — so fans navigate by the
+  // three CHL leagues they actually know (W / O / Q) instead of one long
+  // flat list. If a fan's NHL team has a natural affinity to a junior team
+  // we surface those first inside each league.
+  const byLeague = useMemo(() => {
+    const groups = { WHL: [], OHL: [], QMJHL: [] };
+    CHL_DIVISIONS.forEach(div => {
+      const teams = div.teams.map(t => ({ ...t, league: div.league, division: div.name }));
+      if (groups[div.league]) groups[div.league].push(...teams);
+    });
+    return groups;
+  }, []);
+  const affinityCodes = useMemo(() => new Set(
+    (draft.nhl_team ? suggestJuniorTeamsForNhl(draft.nhl_team) : []).map(t => t.code)
+  ), [draft.nhl_team]);
+
+  const [activeLeague, setActiveLeague] = useState("WHL");
+  const leagues = [
+    { code: "WHL",   label: "WHL",   sub: "Western"  },
+    { code: "OHL",   label: "OHL",   sub: "Ontario"  },
+    { code: "QMJHL", label: "QMJHL", sub: "Quebec"   },
+  ];
+  const activeTeams = byLeague[activeLeague] || [];
+  const affinity = activeTeams.filter(t => affinityCodes.has(t.code));
+  const rest = activeTeams.filter(t => !affinityCodes.has(t.code));
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 03" title="A junior team you're curious about?" subtitle="Might be your town's team. Might be a league you've never watched. Fans who follow junior hockey see their NHL team's future two years earlier — this is where those kids are playing right now." icon={MapPin} />
-      {suggested.length > 0 && (
+      <StepHeader eyebrow="Step 03" title="Any junior teams you follow?" subtitle="The three CHL leagues — Western, Ontario, Quebec. Pick as many as you want. Fans who follow junior see their NHL team's future two years earlier." icon={MapPin} />
+
+      {/* League tab strip — W / O / Q */}
+      <div className="mt-6 flex justify-center gap-2 max-w-2xl mx-auto" role="tablist">
+        {leagues.map(l => (
+          <button
+            key={l.code}
+            role="tab"
+            aria-selected={activeLeague === l.code}
+            data-testid={`ob-chl-league-${l.code}`}
+            onClick={() => setActiveLeague(l.code)}
+            className={`px-4 py-2 rounded-lg border transition-all ${
+              activeLeague === l.code
+                ? "border-[#F58220] bg-[#F58220]/10 text-white"
+                : "border-white/10 bg-black/40 text-white/60 hover:border-white/30"
+            }`}
+          >
+            <div className="font-headline text-lg leading-none" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>{l.label}</div>
+            <div className="font-accent text-[9px] uppercase tracking-[0.24em] text-white/50 mt-0.5">{l.sub}</div>
+          </button>
+        ))}
+      </div>
+
+      {affinity.length > 0 && (
         <>
           <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-[#F58220] max-w-2xl mx-auto">
-            Near your NHL orbit
+            Feeds {draft.nhl_team}
           </div>
           <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
-            {suggested.map(t => <ChlTile key={t.code} t={t} selected={draft.chl_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
+            {affinity.map(t => <ChlTile key={t.code} t={t} selected={draft.chl_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
           </div>
         </>
       )}
+
       <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-white/40 max-w-2xl mx-auto">
-        Everyone else
+        {affinity.length > 0 ? `Everyone else in the ${activeLeague}` : `${activeLeague} teams`}
       </div>
-      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
-        {other.map(t => <ChlTile key={t.code} t={t} selected={draft.chl_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
-      </div>
+      {rest.length === 0 ? (
+        <div className="mt-2 max-w-2xl mx-auto rounded-md border border-dashed border-white/10 bg-white/[0.02] p-4 text-center text-white/40 text-xs">
+          No teams seeded for the {activeLeague} yet. Full league lands with the Elite Prospects roster sync.
+        </div>
+      ) : (
+        <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
+          {rest.map(t => <ChlTile key={t.code} t={t} selected={draft.chl_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -390,29 +435,64 @@ function ChlTile({ t, selected, onClick }) {
 }
 
 function StepNcaa({ draft, onToggle }) {
-  const suggested = draft.nhl_team ? suggestNcaaTeamsForNhl(draft.nhl_team) : [];
-  const suggestedCodes = new Set(suggested.map(t => t.code));
-  const allNcaa = NCAA_CONFERENCES.flatMap(c => c.teams.map(t => ({ ...t, conference: c.name })));
-  const other = allNcaa.filter(t => !suggestedCodes.has(t.code));
+  // Group by conference — same tabbed pattern as CHL. Users navigate by
+  // conference (Big Ten, Hockey East, NCHC, ECAC, CCHA, Atlantic) instead
+  // of one long list.
+  const conferences = NCAA_CONFERENCES.map(c => ({ code: c.code, name: c.name }));
+  const [activeConf, setActiveConf] = useState(conferences[0]?.code || "B1G");
+  const activeTeams = useMemo(() => {
+    const c = NCAA_CONFERENCES.find(x => x.code === activeConf);
+    return (c?.teams || []).map(t => ({ ...t, conference: c?.name }));
+  }, [activeConf]);
+  const affinityCodes = useMemo(() => new Set(
+    (draft.nhl_team ? suggestNcaaTeamsForNhl(draft.nhl_team) : []).map(t => t.code)
+  ), [draft.nhl_team]);
+  const affinity = activeTeams.filter(t => affinityCodes.has(t.code));
+  const rest = activeTeams.filter(t => !affinityCodes.has(t.code));
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 04" title="A college program to watch?" subtitle="Alma mater, hometown school, or just curious. Most Canadian fans don't watch the NCAA — but that's where 30%+ of American NHL players came from, and probably a couple of your team's prospects are there right now." icon={GraduationCap} />
-      {suggested.length > 0 && (
+      <StepHeader eyebrow="Step 04" title="Any college programs you follow?" subtitle="30%+ of American NHL players come through the NCAA. Pick by conference — your NHL team's kids are probably on one of these rosters." icon={GraduationCap} />
+
+      {/* Conference tabs — scrollable on narrow screens */}
+      <div className="mt-6 max-w-3xl mx-auto overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 pb-1 min-w-max px-1" role="tablist">
+          {conferences.map(c => (
+            <button
+              key={c.code}
+              role="tab"
+              aria-selected={activeConf === c.code}
+              data-testid={`ob-ncaa-conf-${c.code}`}
+              onClick={() => setActiveConf(c.code)}
+              className={`px-3 py-2 rounded-lg border transition-all whitespace-nowrap ${
+                activeConf === c.code
+                  ? "border-[#F58220] bg-[#F58220]/10 text-white"
+                  : "border-white/10 bg-black/40 text-white/60 hover:border-white/30"
+              }`}
+            >
+              <div className="font-headline text-sm leading-none" style={{ fontFamily: "Rajdhani", fontWeight: 700 }}>{c.code}</div>
+              <div className="font-accent text-[8px] uppercase tracking-[0.22em] text-white/50 mt-0.5">{c.name}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {affinity.length > 0 && (
         <>
           <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-[#F58220] max-w-2xl mx-auto">
-            Feeds your NHL team
+            Feeds {draft.nhl_team}
           </div>
           <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
-            {suggested.map(t => <NcaaTile key={t.code} t={t} selected={draft.ncaa_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
+            {affinity.map(t => <NcaaTile key={t.code} t={t} selected={draft.ncaa_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
           </div>
         </>
       )}
+
       <div className="mt-6 font-accent text-[10px] uppercase tracking-[0.28em] text-white/40 max-w-2xl mx-auto">
-        Full board
+        {affinity.length > 0 ? `Everyone else in the ${activeConf}` : `${activeConf} teams`}
       </div>
       <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
-        {other.map(t => <NcaaTile key={t.code} t={t} selected={draft.ncaa_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
+        {rest.map(t => <NcaaTile key={t.code} t={t} selected={draft.ncaa_teams.includes(t.code)} onClick={() => onToggle(t.code)} />)}
       </div>
     </div>
   );
@@ -438,42 +518,8 @@ function NcaaTile({ t, selected, onClick }) {
   );
 }
 
-function StepProspects({ draft, onToggle }) {
-  const ranked = suggestProspectsForProfile(draft).slice(0, 10);
-  return (
-    <div className="py-6">
-      <StepHeader eyebrow="Step 05" title="Prospects to follow." subtitle="The kids you want Reggie and Marc to keep an eye on. Pick as many as you like." icon={Star} />
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl mx-auto">
-        {ranked.map(p => {
-          const selected = draft.prospects.includes(p.id);
-          return (
-            <button
-              key={p.id}
-              data-testid={`ob-prospect-${p.id}`}
-              onClick={() => onToggle(p.id)}
-              className={`text-left rounded-lg border-2 transition-all p-3.5 ${selected ? "border-[#F58220] bg-[#F58220]/10" : "border-white/10 bg-black/40 hover:border-white/25"}`}
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <div className="font-headline text-white text-base leading-tight">{p.first} {p.last}</div>
-                <span className="font-accent text-[9px] uppercase tracking-[0.22em] text-white/45 whitespace-nowrap">
-                  {p.pos} · {p.age}
-                </span>
-              </div>
-              <div className="font-accent text-[10px] uppercase tracking-[0.22em] text-white/50 mb-1.5">
-                {p.juniorTeam ? `WHL · ${p.juniorTeam}` : `NCAA · ${p.ncaaTeam}`} · {p.draftYear} · #{p.draftRank}
-              </div>
-              <div className="text-white/75 text-[13px] leading-snug">{p.tagline}</div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 const INTEREST_OPTIONS = [
   { id: "highlights",  label: "Highlight reels",         detail: "Goals, big saves, moments" },
-  { id: "prospects",   label: "Prospect development",    detail: "Draft-eligible kids on the rise" },
   { id: "analytics",   label: "Analytics + tape",        detail: "Game Control Score, xG, coverage" },
   { id: "betting_iq",  label: "Coach's Betting IQ",      detail: "Coach, not casino — hard truth on lines" },
   { id: "recaps",      label: "Long-form recaps",        detail: "Full-game desk shows, not clips" },
@@ -483,7 +529,7 @@ const INTEREST_OPTIONS = [
 function StepInterests({ draft, onToggle }) {
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 06" title="What do you actually want to see?" subtitle="Pick anything that sounds like you. The desk builds around your answers." icon={Compass} />
+      <StepHeader eyebrow="Step 05" title="What do you actually want to see?" subtitle="Pick anything that sounds like you. The desk builds around your answers." icon={Compass} />
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl mx-auto">
         {INTEREST_OPTIONS.map(o => {
           const selected = draft.interests.includes(o.id);
@@ -526,7 +572,6 @@ function StepReveal({ draft, onSpeak, onComplete }) {
   const nhl = NHL_TEAMS.find(x => x.code === draft.nhl_team);
   const chlCount = draft.chl_teams.length;
   const ncaaCount = draft.ncaa_teams.length;
-  const prospectCount = draft.prospects.length;
 
   return (
     <div className="py-10 text-center">
@@ -541,11 +586,10 @@ function StepReveal({ draft, onSpeak, onComplete }) {
         Reggie and Marc are on the mic. Your desk is loaded.
       </div>
 
-      <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl mx-auto">
+      <div className="mt-10 grid grid-cols-3 gap-3 max-w-xl mx-auto">
         <RevealStat label="NHL" value={nhl?.code || "—"} accent={nhl?.primary} />
         <RevealStat label="Junior" value={chlCount || "—"} accent="#F58220" />
         <RevealStat label="College" value={ncaaCount || "—"} accent="#F58220" />
-        <RevealStat label="Prospects" value={prospectCount || "—"} accent="#F58220" />
       </div>
 
       <div className="mt-8 font-accent text-[10px] uppercase tracking-[0.28em] text-white/45">

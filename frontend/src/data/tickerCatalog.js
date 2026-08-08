@@ -145,6 +145,28 @@ export const CHL_DIVISIONS = [
       { code: "SAG", name: "Saginaw Spirit",    city: "Saginaw, MI", primary: "#0F2A5A", nhlAffinity: ["DET"],        logoUrl: `${WP}/Saginaw_Spirit_logo.svg` },
     ],
   },
+  // ----- QMJHL — Quebec Major Junior Hockey League -----
+  {
+    league: "QMJHL", code: "QMJHL-E", name: "QMJHL · Eastern",
+    teams: [
+      { code: "HFX", name: "Halifax Mooseheads",     city: "Halifax, NS",       primary: "#046A38", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Halifax_Mooseheads_logo.svg` },
+      { code: "MCT", name: "Moncton Wildcats",       city: "Moncton, NB",       primary: "#C8102E", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Moncton_Wildcats_logo.svg` },
+      { code: "CHI-Q", name: "Charlottetown Islanders", city: "Charlottetown, PEI", primary: "#1B3966", nhlAffinity: ["MTL"],     logoUrl: `${WP}/Charlottetown_Islanders_logo.svg` },
+      { code: "SNB", name: "Saint John Sea Dogs",    city: "Saint John, NB",    primary: "#004F9F", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Saint_John_Sea_Dogs_logo.svg` },
+      { code: "CBB", name: "Cape Breton Eagles",     city: "Sydney, NS",        primary: "#001F5C", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Cape_Breton_Eagles_logo.svg` },
+    ],
+  },
+  {
+    league: "QMJHL", code: "QMJHL-W", name: "QMJHL · Western",
+    teams: [
+      { code: "RIM", name: "Rimouski Océanic",        city: "Rimouski, QC",      primary: "#0060A9", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Rimouski_Oc%C3%A9anic_logo.svg` },
+      { code: "QUE", name: "Québec Remparts",         city: "Québec City, QC",   primary: "#C8102E", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Qu%C3%A9bec_Remparts_logo.svg` },
+      { code: "SHE", name: "Sherbrooke Phoenix",      city: "Sherbrooke, QC",    primary: "#231F20", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Sherbrooke_Phoenix_logo.svg` },
+      { code: "RN",  name: "Rouyn-Noranda Huskies",   city: "Rouyn-Noranda, QC", primary: "#231F20", nhlAffinity: ["MTL", "OTT"], logoUrl: `${WP}/Rouyn-Noranda_Huskies_logo.svg` },
+      { code: "DRU", name: "Drummondville Voltigeurs",city: "Drummondville, QC", primary: "#B02531", nhlAffinity: ["MTL"],        logoUrl: `${WP}/Drummondville_Voltigeurs_logo.svg` },
+      { code: "GAT", name: "Gatineau Olympiques",     city: "Gatineau, QC",      primary: "#C8102E", nhlAffinity: ["OTT", "MTL"], logoUrl: `${WP}/Gatineau_Olympiques_logo.svg` },
+    ],
+  },
 ];
 
 // ----------------------------- NCAA conferences -----------------------------
@@ -196,6 +218,66 @@ export const NCAA_CONFERENCES = [
       { code: "BC",   name: "Boston College Eagles",      city: "Chestnut Hill, MA", primary: "#8B0A1B", nhlAffinity: ["BOS"] },
       { code: "PROV", name: "Providence Friars",          city: "Providence, RI",primary: "#000000", nhlAffinity: ["BOS"] },
       { code: "UML",  name: "UMass Lowell River Hawks",   city: "Lowell, MA",   primary: "#003DA5", nhlAffinity: ["BOS"] },
+      { code: "UNH",  name: "New Hampshire Wildcats",     city: "Durham, NH",   primary: "#002855", nhlAffinity: ["BOS"] },
+      { code: "UVM",  name: "Vermont Catamounts",         city: "Burlington, VT",primary: "#154734", nhlAffinity: ["BOS", "MTL"] },
+      { code: "UMASS",name: "UMass Minutemen",            city: "Amherst, MA",  primary: "#881C1C", nhlAffinity: ["BOS"] },
+      { code: "NU",   name: "Northeastern Huskies",       city: "Boston, MA",   primary: "#000000", nhlAffinity: ["BOS"] },
+    ],
+  },
+  // ----- NCHC — National Collegiate Hockey Conference -----
+  {
+    code: "NCHC",
+    name: "NCHC",
+    teams: [
+      { code: "DEN",  name: "Denver Pioneers",             city: "Denver, CO",       primary: "#8B2131", nhlAffinity: ["COL"] },
+      { code: "UND",  name: "North Dakota Fighting Hawks", city: "Grand Forks, ND",  primary: "#009A44", nhlAffinity: ["MIN", "WPG"] },
+      { code: "SCS",  name: "St. Cloud State Huskies",     city: "St. Cloud, MN",    primary: "#8B0A1B", nhlAffinity: ["MIN"] },
+      { code: "UMD",  name: "Minnesota Duluth Bulldogs",   city: "Duluth, MN",       primary: "#7A0019", nhlAffinity: ["MIN"] },
+      { code: "OMHA", name: "Omaha Mavericks",             city: "Omaha, NE",        primary: "#000000", nhlAffinity: ["STL"] },
+      { code: "WMU",  name: "Western Michigan Broncos",    city: "Kalamazoo, MI",    primary: "#6C4023", nhlAffinity: ["DET"] },
+      { code: "MIA",  name: "Miami RedHawks",              city: "Oxford, OH",       primary: "#B61E2E", nhlAffinity: ["CBJ"] },
+      { code: "CC",   name: "Colorado College Tigers",     city: "Colorado Springs, CO", primary: "#000000", nhlAffinity: ["COL"] },
+    ],
+  },
+  // ----- ECAC Hockey -----
+  {
+    code: "ECAC",
+    name: "ECAC",
+    teams: [
+      { code: "CORN", name: "Cornell Big Red",             city: "Ithaca, NY",       primary: "#B31B1B", nhlAffinity: ["NYR", "BUF"] },
+      { code: "HARV", name: "Harvard Crimson",             city: "Cambridge, MA",    primary: "#A51C30", nhlAffinity: ["BOS"] },
+      { code: "QU",   name: "Quinnipiac Bobcats",          city: "Hamden, CT",       primary: "#00205B", nhlAffinity: ["NYR"] },
+      { code: "YALE", name: "Yale Bulldogs",               city: "New Haven, CT",    primary: "#0F4D92", nhlAffinity: ["NYR"] },
+      { code: "CLK",  name: "Clarkson Golden Knights",     city: "Potsdam, NY",      primary: "#046A38", nhlAffinity: ["MTL", "OTT"] },
+      { code: "SLU",  name: "St. Lawrence Saints",         city: "Canton, NY",       primary: "#8B2131", nhlAffinity: ["OTT"] },
+      { code: "DART", name: "Dartmouth Big Green",         city: "Hanover, NH",      primary: "#00693E", nhlAffinity: ["BOS"] },
+      { code: "COLG", name: "Colgate Raiders",             city: "Hamilton, NY",     primary: "#8B0A1B", nhlAffinity: ["NYR"] },
+    ],
+  },
+  // ----- CCHA — Central Collegiate Hockey Association -----
+  {
+    code: "CCHA",
+    name: "CCHA",
+    teams: [
+      { code: "MTU",  name: "Michigan Tech Huskies",       city: "Houghton, MI",     primary: "#000000", nhlAffinity: ["DET"] },
+      { code: "BGSU", name: "Bowling Green Falcons",       city: "Bowling Green, OH",primary: "#4F2C1D", nhlAffinity: ["CBJ", "DET"] },
+      { code: "FSU",  name: "Ferris State Bulldogs",       city: "Big Rapids, MI",   primary: "#C8102E", nhlAffinity: ["DET"] },
+      { code: "LSSU", name: "Lake Superior State Lakers",  city: "Sault Ste. Marie, MI", primary: "#00539F", nhlAffinity: ["DET"] },
+      { code: "MSUM", name: "Minnesota State Mavericks",   city: "Mankato, MN",      primary: "#6D2077", nhlAffinity: ["MIN"] },
+      { code: "NMU",  name: "Northern Michigan Wildcats",  city: "Marquette, MI",    primary: "#046A38", nhlAffinity: ["DET"] },
+    ],
+  },
+  // ----- Atlantic Hockey America -----
+  {
+    code: "AHA",
+    name: "Atlantic Hockey",
+    teams: [
+      { code: "RIT",  name: "RIT Tigers",                  city: "Rochester, NY",    primary: "#F76902", nhlAffinity: ["BUF"] },
+      { code: "AIC",  name: "American International Yellow Jackets", city: "Springfield, MA", primary: "#B31B1B", nhlAffinity: ["BOS"] },
+      { code: "BENT", name: "Bentley Falcons",             city: "Waltham, MA",      primary: "#003058", nhlAffinity: ["BOS"] },
+      { code: "HC",   name: "Holy Cross Crusaders",        city: "Worcester, MA",    primary: "#5F0F40", nhlAffinity: ["BOS"] },
+      { code: "AFA",  name: "Air Force Falcons",           city: "Colorado Springs, CO", primary: "#1B365D", nhlAffinity: ["COL"] },
+      { code: "MERC", name: "Mercyhurst Lakers",           city: "Erie, PA",         primary: "#0057B7", nhlAffinity: ["PIT"] },
     ],
   },
 ];
