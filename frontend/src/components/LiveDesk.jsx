@@ -68,7 +68,9 @@ export default function LiveDesk({ autoFlow = true }) {
   // Presser (/press-conference) and Back Office are 1-on-1/settings flows.
   // Audition (/audition/*) plays raw broadcast clips — hosts must be silent
   // so the user can actually hear the clip audio.
-  const QUIET_ROUTES = ["/press-conference", "/back-office", "/audition", "/uncut", "/"];
+  // `/show` (Tonight) is now silent too — each game hub owns its own
+  // per-game segment on demand, no ambient loop.
+  const QUIET_ROUTES = ["/press-conference", "/back-office", "/audition", "/uncut", "/", "/show"];
   const isQuietRoute =
     location.pathname === "/" ||
     QUIET_ROUTES.filter((r) => r !== "/").some((r) => location.pathname.startsWith(r));
@@ -442,12 +444,14 @@ export default function LiveDesk({ autoFlow = true }) {
   );
 
   // Portal the full frame into Home's slot when available; otherwise render
-  // the mini bar in Layout's flow — unless we're on a "quiet" route (Presser,
-  // Back Office) where the show would compete with the current experience.
+  // nothing in the global flow. The persistent mini-bar was removed in Feb
+  // 2026 — "Wildcard Night" is a seasonal frame, not a year-round concept.
+  // Pages that want the broadcast slot host `#broadcast-slot` explicitly
+  // (Recap Show, HomeV2 broadcast tile, Scoreboard).
   return (
     <>
       {AudioTags}
-      {slotEl ? createPortal(fullFrame, slotEl) : (isQuietRoute ? null : miniBar)}
+      {slotEl ? createPortal(fullFrame, slotEl) : null}
     </>
   );
 }

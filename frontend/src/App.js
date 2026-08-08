@@ -23,6 +23,7 @@ import BrandAudition from "@/pages/BrandAudition";
 import TeamRoomAudition from "@/pages/TeamRoomAudition";
 import CanucksUncut from "@/pages/CanucksUncut";
 import HomeV2 from "@/pages/HomeV2";
+import TonightGame from "@/pages/TonightGame";
 import PlayerProfile from "@/pages/PlayerProfile";
 import Lineup from "@/pages/Lineup";
 import OhlHome from "@/pages/ohl/OhlHome";
@@ -45,6 +46,11 @@ function App() {
             {/* Landing = Recap Show. The old Panel/Predict Show lives at /show. */}
             <Route path="/" element={<RecapShow />} />
             <Route path="/show" element={<Home />} />
+            {/* Deep-link per-game route — same GameHub, always expanded. */}
+            <Route path="/tonight/:gameId" element={<TonightGame />} />
+            {/* Legacy Picks route — merged into Tonight. Preserves any share
+             * links or muscle-memory bookmarks users have from the old page. */}
+            <Route path="/predictions" element={<Navigate to="/show" replace />} />
             <Route path="/recap" element={<Navigate to="/" replace />} />
             <Route path="/press-conference" element={<Navigate to="/home-v2" replace />} />
             <Route path="/uncut/canucks" element={<CanucksUncut />} />
@@ -81,7 +87,6 @@ function App() {
             <Route path="/player/:playerId" element={<PlayerDetail />} />
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/predictions" element={<Predictions />} />
             <Route path="/recaps" element={<Recaps />} />
             <Route path="/recaps-archive" element={<Recaps />} />
             <Route path="/voice-lab" element={<VoiceLab />} />

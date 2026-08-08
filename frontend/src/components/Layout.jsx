@@ -23,7 +23,6 @@ const NAV = [
   { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
   { to: "/home-v2", label: "Home", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
-  { to: "/predictions", label: "Picks", testid: TEST_IDS.nav.predictions },
 ];
 
 export default function Layout({ children }) {
