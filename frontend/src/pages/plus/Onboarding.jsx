@@ -29,7 +29,7 @@ import { TeamLogo } from "@/components/plus/TeamLogo";
 // the NHL team-picker so onboarding matches what the fan sees on Home.
 import { TeamLogo as NhlLogo } from "@/lib/teamLogos";
 
-const STEPS = ["welcome", "nickname", "nhl", "chl", "ncaa", "interests", "reveal"];
+const STEPS = ["welcome", "nickname", "nhl", "language", "chl", "ncaa", "interests", "reveal"];
 const KAM = "#F58220";
 
 // One shared audio unlock — needed for Safari to allow programmatic play() later
@@ -176,6 +176,12 @@ export default function Onboarding() {
               if (t) speak("reggie", `${draft.nickname || "Alright"}. ${t.name} it is.`);
             }} />
           )}
+          {STEPS[step] === "language" && (
+            <StepLanguage
+              value={draft.language}
+              onSelect={(code) => setDraft(d => ({ ...d, language: code }))}
+            />
+          )}
           {STEPS[step] === "chl" && (
             <StepChl draft={draft} onToggle={(code) => {
               setDraft(d => ({
@@ -267,7 +273,7 @@ function StepWelcome({ onSpeak, onNext }) {
         Let's build your desk.
       </div>
       <div className="font-accent text-sm uppercase tracking-[0.24em] text-white/55 mt-5 max-w-md mx-auto">
-        Five quick taps. Reggie and Marc will know your team, your leagues, and your name by the end.
+        Six quick taps. Reggie and Marc will know your team, your leagues, and your name by the end.
       </div>
       <button
         data-testid="ob-welcome-start"
@@ -336,6 +342,95 @@ function StepNhl({ selected, onSelect }) {
   );
 }
 
+// Languages we plan to support. `ready: true` means the hosts speak this
+// language fluently (or will very soon). Everything else is "coming soon" —
+// planted as a vision beat during onboarding without a date attached, so
+// competitors can't time a launch to ours. When we lock a real French
+// character bible and the ElevenLabs French voices, we flip `ready` on `fr`.
+const LANGUAGE_OPTIONS = [
+  { code: "en",    label: "English",          native: "English",     flag: "🇨🇦", ready: true  },
+  { code: "fr",    label: "Français",         native: "Français (QC)", flag: "🇨🇦", ready: false },
+  { code: "sv",    label: "Swedish",          native: "Svenska",     flag: "🇸🇪", ready: false },
+  { code: "fi",    label: "Finnish",          native: "Suomi",       flag: "🇫🇮", ready: false },
+  { code: "cs",    label: "Czech",            native: "Čeština",     flag: "🇨🇿", ready: false },
+  { code: "sk",    label: "Slovak",           native: "Slovenčina",  flag: "🇸🇰", ready: false },
+  { code: "de",    label: "German",           native: "Deutsch",     flag: "🇩🇪", ready: false },
+  { code: "ru",    label: "Russian",          native: "Русский",     flag: "🇷🇺", ready: false },
+];
+
+function StepLanguage({ value, onSelect }) {
+  return (
+    <div className="py-6">
+      <StepHeader
+        eyebrow="Step 03"
+        title="What language do you want the desk in?"
+        subtitle="The Ticker is a Canadian hockey desk built for a global game. English on the mic today — French, Nordic and Central European next. Pick where you want us to meet you."
+        icon={Globe}
+      />
+
+      <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-w-2xl mx-auto">
+        {LANGUAGE_OPTIONS.map((lang) => {
+          const selected = value === lang.code;
+          const clickable = lang.ready;
+          return (
+            <button
+              key={lang.code}
+              data-testid={`ob-language-${lang.code}`}
+              onClick={() => clickable && onSelect(lang.code)}
+              disabled={!clickable}
+              className={`group relative rounded-lg border-2 transition-all p-3.5 min-h-[86px] text-left overflow-hidden ${
+                !clickable
+                  ? "border-white/8 bg-white/[0.015] cursor-not-allowed"
+                  : selected
+                    ? "border-[#F58220] bg-[#F58220]/10 scale-[1.02]"
+                    : "border-white/10 bg-black/40 hover:border-white/25"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1.5">
+                <span className="text-2xl leading-none">{lang.flag}</span>
+                {selected && lang.ready && (
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#F58220]">
+                    <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                  </span>
+                )}
+                {!lang.ready && (
+                  <span
+                    className="px-1.5 py-0.5 rounded-sm font-accent text-[8px] uppercase tracking-[0.22em]"
+                    style={{ background: "rgba(245,130,32,0.12)", color: "#F58220", border: "1px solid rgba(245,130,32,0.35)" }}
+                  >
+                    Coming soon
+                  </span>
+                )}
+              </div>
+              <div
+                className={`text-white font-headline text-lg leading-none ${!clickable ? "opacity-40" : ""}`}
+                style={{ fontFamily: "Rajdhani", fontWeight: 700 }}
+              >
+                {lang.native}
+              </div>
+              <div className={`font-accent text-[9px] uppercase tracking-[0.24em] mt-1 ${!clickable ? "text-white/25" : "text-white/50"}`}>
+                {lang.label}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Vision footer — the "why" behind the coming-soon chips. */}
+      <div className="mt-8 max-w-xl mx-auto text-center">
+        <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/40">
+          The vision
+        </div>
+        <div className="mt-2 text-white/60 text-sm leading-relaxed" style={{ fontFamily: "Rajdhani", fontWeight: 500 }}>
+          One desk, every hockey country. Real hosts written for each language —
+          no machine translation, no cardboard voices. Reggie & Marc for
+          English. New characters, real cultural fit, for every other market.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StepChl({ draft, onToggle }) {
   // Group by league — Western, Ontario, Quebec — so fans navigate by the
   // three CHL leagues they actually know (W / O / Q) instead of one long
@@ -365,7 +460,7 @@ function StepChl({ draft, onToggle }) {
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 03" title="Any junior teams you follow?" subtitle="The three CHL leagues — Western, Ontario, Quebec. Pick as many as you want. Fans who follow junior see their NHL team's future two years earlier." icon={MapPin} />
+      <StepHeader eyebrow="Step 04" title="Any junior teams you follow?" subtitle="The three CHL leagues — Western, Ontario, Quebec. Pick as many as you want. Fans who follow junior see their NHL team's future two years earlier." icon={MapPin} />
 
       {/* League tab strip — W / O / Q */}
       <div className="mt-6 flex justify-center gap-2 max-w-2xl mx-auto" role="tablist">
@@ -453,7 +548,7 @@ function StepNcaa({ draft, onToggle }) {
 
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 04" title="Any college programs you follow?" subtitle="30%+ of American NHL players come through the NCAA. Pick by conference — your NHL team's kids are probably on one of these rosters." icon={GraduationCap} />
+      <StepHeader eyebrow="Step 05" title="Any college programs you follow?" subtitle="30%+ of American NHL players come through the NCAA. Pick by conference — your NHL team's kids are probably on one of these rosters." icon={GraduationCap} />
 
       {/* Conference tabs — scrollable on narrow screens */}
       <div className="mt-6 max-w-3xl mx-auto overflow-x-auto no-scrollbar">
@@ -530,7 +625,7 @@ const INTEREST_OPTIONS = [
 function StepInterests({ draft, onToggle }) {
   return (
     <div className="py-6">
-      <StepHeader eyebrow="Step 05" title="What do you actually want to see?" subtitle="Pick anything that sounds like you. The desk builds around your answers." icon={Compass} />
+      <StepHeader eyebrow="Step 06" title="What do you actually want to see?" subtitle="Pick anything that sounds like you. The desk builds around your answers." icon={Compass} />
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl mx-auto">
         {INTEREST_OPTIONS.map(o => {
           const selected = draft.interests.includes(o.id);

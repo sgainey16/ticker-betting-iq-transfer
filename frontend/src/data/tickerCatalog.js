@@ -18,6 +18,10 @@
 // Naming: keep team codes 3-letter, prospect ids kebab-slug lastname-first.
 
 // ----------------------------- NHL teams ------------------------------------
+// Wikipedia's Special:FilePath endpoint — hotlink-friendly host for public
+// logo SVGs. Used across CHL/NCAA/AHL until we license better assets.
+const WP = "https://en.wikipedia.org/wiki/Special:FilePath";
+
 // Curated to a handful of anchor teams so the NHL step of onboarding doesn't
 // require asset work for all 32. In production this becomes a full list.
 export const NHL_TEAMS = [
@@ -108,7 +112,6 @@ export function ahlAffiliateFor(nhlCode) {
 // (b) a licensed data-provider CDN (Highlightly Pro / Sportradar). The
 // <TeamLogo> component gracefully falls back to a coloured initial badge
 // if any image fails to load.
-const WP = "https://en.wikipedia.org/wiki/Special:FilePath";
 export const CHL_DIVISIONS = [
   {
     league: "WHL",
