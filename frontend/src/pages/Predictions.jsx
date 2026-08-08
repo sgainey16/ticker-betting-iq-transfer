@@ -215,20 +215,9 @@ export default function Predictions() {
                 </div>
 
                 {/* Team pick buttons — tap = pick. No separate lock step.
-                 * The lit-up button IS the pick record. */}
-                <div className="grid grid-cols-2 gap-3">
-                  <PickButton
-                    testid={TEST_IDS.pred.pickAway(g.id)}
-                    side="away"
-                    label={awayName}
-                    code={g.away}
-                    accent={awayAccent}
-                    picked={picked}
-                    chosen={chosen === "away"}
-                    reggie={g.reggie_pick === "away"}
-                    marc={g.marc_pick === "away"}
-                    onClick={() => !picked && submitPick(g.id, "away")}
-                  />
+                 * The lit-up button IS the pick record. Home on the left
+                 * (protagonist), Away on the right, with a small VS between. */}
+                <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 md:gap-3">
                   <PickButton
                     testid={TEST_IDS.pred.pickHome(g.id)}
                     side="home"
@@ -240,6 +229,26 @@ export default function Predictions() {
                     reggie={g.reggie_pick === "home"}
                     marc={g.marc_pick === "home"}
                     onClick={() => !picked && submitPick(g.id, "home")}
+                  />
+                  <div className="flex items-center justify-center px-1 md:px-2 select-none">
+                    <span
+                      className="font-headline text-white/35 text-xl md:text-2xl tracking-widest"
+                      aria-hidden="true"
+                    >
+                      vs
+                    </span>
+                  </div>
+                  <PickButton
+                    testid={TEST_IDS.pred.pickAway(g.id)}
+                    side="away"
+                    label={awayName}
+                    code={g.away}
+                    accent={awayAccent}
+                    picked={picked}
+                    chosen={chosen === "away"}
+                    reggie={g.reggie_pick === "away"}
+                    marc={g.marc_pick === "away"}
+                    onClick={() => !picked && submitPick(g.id, "away")}
                   />
                 </div>
 
@@ -468,16 +477,13 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
           <TeamLogo code={code} size={72} monogramClass="!bg-transparent" />
         </div>
 
-        {/* Meta column — code chunky, full name supporting */}
+        {/* Meta column — code chunky, name removed (logo carries identity) */}
         <div className="min-w-0 flex-1">
           <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
             {side === "home" ? "Home" : "Away"}
           </div>
           <div className="font-headline text-3xl md:text-4xl text-white leading-none mt-0.5" style={{ letterSpacing: "0.02em" }}>
             {code}
-          </div>
-          <div className="mt-1 text-[12px] font-accent uppercase tracking-widest text-white/55 truncate">
-            {label}
           </div>
           {chosen && (
             <div
