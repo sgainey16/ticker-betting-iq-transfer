@@ -15,9 +15,10 @@
 // promotion explicit — no mystery why a Kamloops clip is next to Pastrnak.
 
 import { Link } from "react-router-dom";
-import { Play } from "lucide-react";
+import { Play, TrendingUp } from "lucide-react";
 import { PACKAGES, PROSPECTS } from "@/data/tickerCatalog";
 import { TeamLogo } from "@/lib/teamLogos";
+import { useSignals } from "@/lib/signals";
 
 // Only exceptional junior/NCAA content is allowed to climb into HomeV2.
 // baseScore 7.5 corresponds to a real "moment" package (goal-of-week,
@@ -52,6 +53,9 @@ function packageRoute(pkg) {
 
 export function UnifiedTopPlays({ team }) {
   const nhlCode = team?.code || null;
+  // Read the user's accrued signals — if they've been voting on WHL content
+  // this week the ranker will bump WHL packages closer to the top today.
+  const { affinity } = useSignals();
 
   // 1. Bake the NHL highlights into normalized "tile" shape. NHL always wins
   //    the top slot regardless of score — this is the flagship.
@@ -67,25 +71,27 @@ export function UnifiedTopPlays({ team }) {
     why: null,
   }));
 
-  // 2. Eligible junior/NCAA packages — quality-gated.
+  // 2. Eligible junior/NCAA packages — quality-gated + signal-boosted.
+  //    The affinity score (0-15ish) is scaled down to a modest +0-1.5 boost
+  //    so the moment still has to be genuinely good — signals nudge, they
+  //    don't override.
   const eligible = PACKAGES
     .filter(p => (p.baseScore || 0) >= EXCEPTIONAL_BAR)
     .filter(p => p.league !== "NHL")
     .filter(p => p.kind !== "matchup" || (p.storyline === "rivalry" && p.importance >= 5))
-    .map(p => ({
-      pkg: p,
-      // Small boost when the package touches the user's NHL orbit — that's
-      // exactly the "your team's future is on the ice" moment.
-      score: (p.baseScore || 0) + (
-        nhlCode && (p.prospects || []).some(pid => {
-          const pr = PROSPECTS.find(x => x.id === pid);
-          return pr && pr.nhlOrbit?.includes(nhlCode);
-        }) ? 0.9 : 0
-      ),
-    }))
+    .map(p => {
+      const orbitBoost = nhlCode && (p.prospects || []).some(pid => {
+        const pr = PROSPECTS.find(x => x.id === pid);
+        return pr && pr.nhlOrbit?.includes(nhlCode);
+      }) ? 0.9 : 0;
+      const rawSignal = affinity[p.league] || 0;
+      const signalBoost = Math.min(rawSignal * 0.15, 1.5); // cap at +1.5
+      const score = (p.baseScore || 0) + orbitBoost + signalBoost;
+      return { pkg: p, score, signalBoost, orbitBoost };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, 2)  // Cap junior/NCAA climb-ups at 2 — flagship stays flagship.
-    .map(({ pkg, score }) => ({
+    .map(({ pkg, score, signalBoost, orbitBoost }) => ({
       id: pkg.id,
       league: pkg.league,
       title: pkg.title,
@@ -94,7 +100,14 @@ export function UnifiedTopPlays({ team }) {
       color: LEAGUE_COLOR[pkg.league] || "#F58220",
       to: packageRoute(pkg),
       score,
-      why: whyPromoted(pkg, nhlCode),
+      // Prefer a signal-driven reason when the boost was meaningful — this
+      // is the "because you voted..." receipt that makes the personalization
+      // feel earned instead of random. Otherwise fall back to the standard
+      // orbit/marquee reason.
+      why: signalBoost >= 0.5
+        ? `You've been on ${pkg.league} lately`
+        : whyPromoted(pkg, nhlCode),
+      boostedBySignal: signalBoost >= 0.5,
     }));
 
   // 3. Interleave — always NHL first, then top junior tile, then remaining
@@ -160,14 +173,15 @@ export function UnifiedTopPlays({ team }) {
               </span>
               {t.why && (
                 <span
-                  className="hidden sm:inline-flex items-center rounded-full px-2 py-0.5"
+                  className="hidden sm:inline-flex items-center gap-1 rounded-full px-2 py-0.5"
                   style={{
                     background: "rgba(0,0,0,0.72)",
-                    border: "1px solid rgba(255,255,255,0.14)",
+                    border: `1px solid ${t.boostedBySignal ? t.color : "rgba(255,255,255,0.14)"}66`,
                     fontFamily: "Oswald", fontWeight: 600, fontSize: "9px", letterSpacing: "0.2em",
-                    color: "#e5e5e7",
+                    color: t.boostedBySignal ? t.color : "#e5e5e7",
                   }}
                 >
+                  {t.boostedBySignal && <TrendingUp className="w-2.5 h-2.5" />}
                   {t.why}
                 </span>
               )}

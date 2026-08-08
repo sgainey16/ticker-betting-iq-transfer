@@ -20,6 +20,7 @@
 
 import { useMemo, useState } from "react";
 import { Zap, Trophy, Target, TrendingUp, Users, Sparkles, ChevronRight, RotateCcw } from "lucide-react";
+import { emitSignal } from "@/lib/signals";
 
 // A stable day key so votes bucket per-day. When we swap to real time this
 // becomes a server-issued deck id.
@@ -190,6 +191,18 @@ export function TenTen() {
     const next = { ...store, [q.id]: answerId };
     writeStore(next);
     setStore(next);
+    // Emit an app-wide signal so the ranker can learn which leagues and
+    // targets this user actually cares about. Category becomes the weight
+    // hint — draft/prospect answers count harder than a hot-topic tap.
+    const chosen = q.options.find(o => o.id === answerId);
+    if (chosen) {
+      emitSignal({
+        kind: "tenten_vote",
+        league: chosen.league || null,
+        target: `${q.id}:${answerId}`,
+        weight: q.category === "draft" || q.category === "prospect" ? 1.5 : 1,
+      });
+    }
   };
 
   const reset = () => {

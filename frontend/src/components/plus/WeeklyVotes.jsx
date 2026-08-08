@@ -17,6 +17,7 @@
 
 import { useMemo, useState } from "react";
 import { Zap, Lock, Heart, Trophy } from "lucide-react";
+import { emitSignal } from "@/lib/signals";
 
 const WEEK_ID = "2026-w06";
 const STORAGE_KEY = `ticker.weeklyvotes.${WEEK_ID}`;
@@ -206,6 +207,18 @@ export function WeeklyVotes() {
     }};
     writeStore(next);
     setStore(next);
+    // Emit signal so ranker learns which leagues/entries this user backs.
+    // Star Power gets a heavier weight — voting for a specific player is a
+    // stronger affinity than picking a fight of the week.
+    const entry = cat.entries?.find(e => e.id === entryId);
+    if (entry) {
+      emitSignal({
+        kind: "weekly_vote",
+        league: entry.league || null,
+        target: entryId,
+        weight: cat.id === "starpower" ? 1.5 : 1,
+      });
+    }
   };
 
   return (
