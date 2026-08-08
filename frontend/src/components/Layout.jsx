@@ -56,6 +56,12 @@ function LayoutInner({ children }) {
   const isPlusRoute = location.pathname.startsWith("/plus");
   const needsMiniBarPadding = !isHome && !isQuietRoute && !isPlusRoute;
 
+  // The Back Office gear only surfaces from Home — everywhere else it
+  // clutters the header. Users who want settings tap Home first, then
+  // the gear. Free-ing the space also gives us room for future header
+  // features (nickname pill, notifications, etc.).
+  const showBackOffice = location.pathname.startsWith("/home-v2");
+
   return (
     <div className="min-h-screen">
       {/* LaunchZoneBanner ("no charge / free launch window") removed per
@@ -121,17 +127,6 @@ function LayoutInner({ children }) {
               <span className="font-headline text-sm leading-none">+</span>
               <span className="font-accent text-[9px] tracking-[0.28em] uppercase">Junior · NCAA</span>
             </NavLink>
-            {/* NHL bug — broadcast-style network shield, always visible.
-             * `whitespace-nowrap` + tight leading prevents the 3-line wrap
-             * we were seeing on narrow landscape iPhones. */}
-            <div className="hidden lg:flex items-center gap-2 pr-2 border-r border-white/10 mr-1 whitespace-nowrap"
-                 title="NHL on The Ticker">
-              <NHLShield size={20} className="flex-shrink-0" />
-              <div className="leading-none">
-                <div className="font-accent text-[11px] tracking-[0.2em] text-white font-bold">NHL</div>
-                <div className="font-accent text-[8px] tracking-[0.25em] text-white/50 mt-0.5">ON THE TICKER</div>
-              </div>
-            </div>
             <div className="hidden sm:flex items-center gap-1.5 text-xs font-accent uppercase tracking-widest">
               <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
               <span className="text-[#1e5dff]">Live</span>
@@ -141,6 +136,8 @@ function LayoutInner({ children }) {
               data-testid={TEST_IDS.nav.backOffice}
               className={({ isActive }) =>
                 `h-9 w-9 rounded-md flex items-center justify-center transition-colors flex-shrink-0 ${
+                  showBackOffice ? "" : "hidden"
+                } ${
                   isActive ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                 }`
               }
