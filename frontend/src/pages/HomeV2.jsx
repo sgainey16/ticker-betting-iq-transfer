@@ -23,6 +23,7 @@ import { WeeklyVotes } from "@/components/plus/WeeklyVotes";
 import { TenTen } from "@/components/plus/TenTen";
 import { UnifiedTopPlays } from "@/components/plus/UnifiedTopPlays";
 import { useUserProfile } from "@/lib/userProfile";
+import { FavoritesRail } from "@/components/FavoritesRail";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -958,6 +959,12 @@ export default function HomeV2() {
             </div>
           </div>
         )}
+
+        {/* Favorites rail — the fan's pinned NHL/CHL/NCAA teams. Auto-populates
+         * with their onboarded NHL team if no other favorites are set. Each
+         * logo taps into that team's stat/highlight page. Sits above the
+         * dashboard rows so it's the first thing they see. */}
+        <FavoritesRail />
 
         {/* Row 1 — Cup Score + Next Game */}
         <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">

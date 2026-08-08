@@ -646,29 +646,103 @@ async def recaps_latest_games():
     return {"ready": True, "cached": False, **result}
 
 
+# NHL's public asset CDN — official SVG logos, no auth, no rate limits, no
+# hotlink blocking. This is what the league itself serves to nhl.com. We use
+# these as the canonical logo source and fall back to Highlightly only for
+# team metadata (name, id). Highlightly's own logo URLs 403 when a browser
+# tries to fetch them directly, which is why the app was rendering monogram
+# fallbacks for many teams. Never again.
+#
+# Highlightly uses two-letter codes for some teams (TB/LA/SJ/NJ) while NHL's
+# CDN uses the three-letter abbreviations. Map both directions.
+_NHL_CDN_CODE = {
+    "TB": "TBL", "LA": "LAK", "SJ": "SJS", "NJ": "NJD",
+    # Everyone else — the Highlightly code IS the NHL abbreviation.
+}
+
+
+def _nhl_cdn_logo(code: str, variant: str = "light") -> str:
+    up = (code or "").upper()
+    cdn_code = _NHL_CDN_CODE.get(up, up)
+    return f"https://assets.nhle.com/logos/nhl/svg/{cdn_code}_{variant}.svg"
+
+
 @api.get("/images/team-logo/{code}")
 async def team_logo(code: str):
-    """Highlightly team logo URL — fills the Imagn gap for Phase 1."""
-    if not highlightly.is_ready():
-        return {"ready": False, "logo_url": None}
-    meta = await highlightly.get_team_logo(code.upper())
-    if not meta or not meta.get("logo_url"):
-        return {"ready": True, "logo_url": None, "code": code.upper()}
-    return {"ready": True, **meta}
+    """Canonical team logo URL. Prefers NHL's official CDN so logos always
+    render; falls back to Highlightly metadata for the display name only.
+    """
+    meta = {}
+    if highlightly.is_ready():
+        meta = (await highlightly.get_team_logo(code.upper())) or {}
+    up = code.upper()
+    return {
+        "ready": True,
+        "code": up,
+        "name": meta.get("name") or up,
+        "id": meta.get("id"),
+        "logo_url": _nhl_cdn_logo(up),
+        "logo_url_dark": _nhl_cdn_logo(up, "dark"),
+    }
 
 
 @api.get("/images/team-logos")
 async def team_logos_all():
-    """All 32 NHL team logos in one call — frontend caches on first load."""
-    if not highlightly.is_ready():
-        return {"ready": False, "teams": []}
-    cache_key = ("team-logos",)
+    """All NHL team logos in one call — frontend caches on first load. Uses
+    NHL's official CDN for the actual image URLs (no hotlink blocking) but
+    pulls the id/name roster from Highlightly so we cover every team the
+    rest of the app references.
+    """
+    cache_key = ("team-logos-v2",)
     cached = _cache_get(cache_key)
     if cached is not None:
         return {"ready": True, "cached": True, "teams": cached}
-    logos = await highlightly.all_team_logos()
-    _cache_set(cache_key, logos)
-    return {"ready": True, "cached": False, "teams": logos}
+
+    # Start from Highlightly's roster (gives us the real display names + ids)
+    highlightly_teams = []
+    if highlightly.is_ready():
+        try:
+            highlightly_teams = await highlightly.all_team_logos()
+        except Exception as e:  # noqa: BLE001
+            logger.warning("highlightly.all_team_logos failed: %s", e)
+            highlightly_teams = []
+
+    # Override every logo URL with NHL's own CDN. Skip pseudo-teams (division
+    # names, all-star groupings) — no CDN logo exists for those.
+    pseudo = {"PAC", "MET", "CEN", "ATL", "MCD", "MAC", "MAT", "HUG", "SWE", "CAN", "FIN", "USA"}
+    result = []
+    for t in highlightly_teams:
+        code = (t.get("code") or "").upper()
+        if not code:
+            continue
+        if code in pseudo:
+            # Keep pseudo entries but leave logo_url null — the frontend
+            # falls back to a monogram, which is fine for these.
+            result.append({**t, "logo_url": None})
+            continue
+        result.append({
+            **t,
+            "logo_url": _nhl_cdn_logo(code),
+            "logo_url_dark": _nhl_cdn_logo(code, "dark"),
+        })
+
+    # Belt-and-braces: if Highlightly is unavailable we still ship a
+    # canonical 32-team NHL CDN roster so the app never renders monogram
+    # boxes for real franchises.
+    if not result:
+        canonical = [
+            "ANA","BOS","BUF","CGY","CAR","CHI","COL","CBJ","DAL","DET","EDM",
+            "FLA","LAK","MIN","MTL","NSH","NJD","NYI","NYR","OTT","PHI","PIT",
+            "SEA","SJS","STL","TBL","TOR","UTA","VAN","VGK","WSH","WPG",
+        ]
+        result = [{
+            "code": c, "name": c, "id": None,
+            "logo_url": _nhl_cdn_logo(c),
+            "logo_url_dark": _nhl_cdn_logo(c, "dark"),
+        } for c in canonical]
+
+    _cache_set(cache_key, result)
+    return {"ready": True, "cached": False, "teams": result}
 
 
 @api.get("/recap-show/episode")
