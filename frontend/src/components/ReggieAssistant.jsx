@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
 import { TEST_IDS } from "@/lib/config";
-import { Mic2, X, Send, Check, RotateCcw, Sparkles, Loader2 } from "lucide-react";
+import { Mic2, X, Send, Check, RotateCcw, Sparkles, Loader2, ChevronDown, MessageCircle } from "lucide-react";
 
 // FAB + chat panel for the Back Office. Reggie greets users, answers app
 // questions, and PROPOSES actions (set favorites, load roster, log bet)
@@ -117,6 +117,11 @@ function MessageBubble({ msg }) {
 
 export default function ReggieAssistant() {
   const [open, setOpen] = useState(false);
+  // Companion mode: when the chat is open, users can COLLAPSE the panel to a
+  // small bottom-right pill so they can keep scrolling and browsing the app
+  // while Reggie stays with them. Tapping the pill re-expands the panel.
+  // Close (X) fully returns to the FAB state.
+  const [minimized, setMinimized] = useState(false);
   const [msgs, setMsgs] = useState([]); // {role, content, action_proposal?}
   const [input, setInput] = useState("");
   const [nudges, setNudges] = useState([]);
@@ -277,11 +282,14 @@ export default function ReggieAssistant() {
         </div>
       )}
 
-      {/* Chat panel */}
-      {open && (
+      {/* Chat panel — expanded companion. Sits at bottom-right, does NOT
+       * block the app underneath (fixed positioning + defined size). On
+       * mobile we cap height so users always see ~180px of the page above
+       * to preserve the "buddy along for the ride" feel. */}
+      {open && !minimized && (
         <div
           data-testid={TEST_IDS.assistant.panel}
-          className="fixed bottom-6 right-6 w-[380px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100vh-4rem)] rounded-2xl border border-[#2d2d35] bg-[#0f0f14] shadow-[0_20px_80px_rgba(0,0,0,0.6)] flex flex-col z-40 overflow-hidden"
+          className="fixed bottom-6 right-6 w-[360px] max-w-[calc(100vw-2rem)] h-[520px] max-h-[calc(100vh-180px)] rounded-2xl border border-[#2d2d35] bg-[#0f0f14] shadow-[0_20px_80px_rgba(0,0,0,0.6)] flex flex-col z-40 overflow-hidden"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d35] bg-gradient-to-r from-[#1e5dff]/20 to-transparent">
@@ -293,7 +301,7 @@ export default function ReggieAssistant() {
               <div>
                 <div className="font-headline text-white text-sm">Reggie Banks</div>
                 <div className="font-accent text-[9px] uppercase tracking-widest text-white/50">
-                  Off-air · settings help
+                  Along for the ride
                 </div>
               </div>
             </div>
@@ -306,9 +314,22 @@ export default function ReggieAssistant() {
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
+              {/* Minimize — keep the chat active but collapse into a pill
+               * so the user can scroll the app freely. */}
               <button
-                onClick={() => setOpen(false)}
+                onClick={() => setMinimized(true)}
+                data-testid="reggie-minimize"
+                title="Minimize"
+                aria-label="Minimize chat"
+                className="h-7 w-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => { setOpen(false); setMinimized(false); }}
                 data-testid={TEST_IDS.assistant.close}
+                title="Close"
+                aria-label="Close chat"
                 className="h-7 w-7 rounded-full flex items-center justify-center text-white/40 hover:text-white/80 hover:bg-white/5 transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -401,6 +422,56 @@ export default function ReggieAssistant() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Minimized companion pill — the "Reggie's along for the ride" state.
+       * Chat is still active (history + context preserved), user can browse
+       * the whole app underneath. Tap the pill to re-expand the full panel.
+       * Shows the last thing Reggie said so users know there's a message
+       * waiting even while collapsed. */}
+      {open && minimized && (
+        <button
+          onClick={() => setMinimized(false)}
+          data-testid="reggie-companion-pill"
+          className="fixed bottom-6 right-6 z-40 max-w-[calc(100vw-2rem)] w-[300px] rounded-full border border-[#1e5dff]/60 bg-[#0f0f14]/95 backdrop-blur shadow-[0_10px_40px_rgba(30,93,255,0.35)] pl-1 pr-3 py-1 flex items-center gap-2 hover:border-[#1e5dff] transition-colors group"
+        >
+          {/* Avatar with live dot — "he's still here" indicator */}
+          <div className="relative flex-shrink-0">
+            <div
+              className="h-10 w-10 rounded-full overflow-hidden"
+              style={{ border: "2px solid #1e5dff" }}
+            >
+              <img src="/reggie-avatar.png" alt="Reggie" className="h-full w-full object-cover" draggable={false} />
+            </div>
+            <span
+              className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 border-2 border-[#0f0f14]"
+              aria-label="Reggie is active"
+              title="Along for the ride"
+            />
+          </div>
+          {/* Preview line — last Reggie message truncated, or default hint */}
+          <div className="min-w-0 flex-1 text-left">
+            <div className="font-accent text-[8px] uppercase tracking-[0.28em] text-[#1e5dff]">
+              Reggie
+            </div>
+            <div className="text-white/85 text-[12px] leading-tight truncate" style={{ fontFamily: "Rajdhani", fontWeight: 500 }}>
+              {(() => {
+                const last = [...msgs].reverse().find(m => m.role === "assistant");
+                return last?.content?.slice(0, 60) || "Tap to keep chatting";
+              })()}
+            </div>
+          </div>
+          {/* Close (fully) — separate from the tap-to-expand action */}
+          <span
+            onClick={(e) => { e.stopPropagation(); setOpen(false); setMinimized(false); }}
+            role="button"
+            aria-label="Close chat"
+            data-testid="reggie-companion-close"
+            className="h-7 w-7 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/8 transition-colors flex-shrink-0"
+          >
+            <X className="w-3.5 h-3.5" />
+          </span>
+        </button>
       )}
     </>
   );
