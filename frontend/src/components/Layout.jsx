@@ -18,11 +18,11 @@ const inactive = "text-white/60 hover:text-white hover:bg-white/5";
 // SCORE is the new live scoreboard (Red Light ticker feed).
 const NAV = [
   { to: "/", end: true, label: "Recap", testid: TEST_IDS.nav.recaps },
-  { to: "/show", label: "Show", testid: TEST_IDS.nav.broadcast },
+  { to: "/show", label: "Tonight", testid: TEST_IDS.nav.broadcast },
   { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
   { to: "/home-v2", label: "Home", testid: TEST_IDS.nav.presser },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
-  { to: "/predictions", label: "Predict", testid: TEST_IDS.nav.predictions },
+  { to: "/predictions", label: "Picks", testid: TEST_IDS.nav.predictions },
 ];
 
 export default function Layout({ children }) {
