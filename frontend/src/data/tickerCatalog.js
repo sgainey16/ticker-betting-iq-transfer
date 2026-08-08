@@ -39,6 +39,58 @@ export const NHL_TEAMS = [
   { code: "LAK", name: "Los Angeles Kings",   primary: "#111111", region: "Pacific-US" },
 ];
 
+// ----------------------------- AHL affiliates -------------------------------
+// Every NHL franchise has an AHL farm team where their prospects actually
+// develop. The Ticker folds that into the parent-team fan experience: your
+// NHL team's AHL club shows up automatically in the favorites rail with an
+// "AHL" badge, and taps into a dedicated affiliate page.
+//
+// Data source: hand-seeded from public AHL affiliation records. Logo URLs
+// point at Wikipedia's Special:FilePath (same nominative-fair-use posture
+// as CHL/NCAA — swap to licensed assets before public launch).
+export const AHL_AFFILIATES = {
+  ANA: { code: "SD",   name: "San Diego Gulls",         city: "San Diego, CA",     primary: "#F47A38", logoUrl: `${WP}/San_Diego_Gulls_logo.svg` },
+  BOS: { code: "PROV_AHL", name: "Providence Bruins",   city: "Providence, RI",    primary: "#FFB81C", logoUrl: `${WP}/Providence_Bruins_logo.svg` },
+  BUF: { code: "ROC",  name: "Rochester Americans",     city: "Rochester, NY",     primary: "#C8102E", logoUrl: `${WP}/Rochester_Americans_logo.svg` },
+  CGY: { code: "CWF",  name: "Calgary Wranglers",       city: "Calgary, AB",       primary: "#C8102E", logoUrl: `${WP}/Calgary_Wranglers_logo.svg` },
+  CAR: { code: "CHI_AHL", name: "Chicago Wolves",       city: "Rosemont, IL",      primary: "#22282F", logoUrl: `${WP}/Chicago_Wolves_logo.svg` },
+  CHI: { code: "RFD",  name: "Rockford IceHogs",        city: "Rockford, IL",      primary: "#CF0A2C", logoUrl: `${WP}/Rockford_IceHogs_logo.svg` },
+  COL: { code: "COLE", name: "Colorado Eagles",         city: "Loveland, CO",      primary: "#183478", logoUrl: `${WP}/Colorado_Eagles_logo.svg` },
+  CBJ: { code: "CLE",  name: "Cleveland Monsters",      city: "Cleveland, OH",     primary: "#002F86", logoUrl: `${WP}/Cleveland_Monsters_logo.svg` },
+  DAL: { code: "TEX",  name: "Texas Stars",             city: "Cedar Park, TX",    primary: "#006847", logoUrl: `${WP}/Texas_Stars_logo.svg` },
+  DET: { code: "GR",   name: "Grand Rapids Griffins",   city: "Grand Rapids, MI",  primary: "#8B2131", logoUrl: `${WP}/Grand_Rapids_Griffins_logo.svg` },
+  EDM: { code: "BAK",  name: "Bakersfield Condors",     city: "Bakersfield, CA",   primary: "#000000", logoUrl: `${WP}/Bakersfield_Condors_logo.svg` },
+  FLA: { code: "CHA",  name: "Charlotte Checkers",      city: "Charlotte, NC",     primary: "#C8102E", logoUrl: `${WP}/Charlotte_Checkers_logo.svg` },
+  LAK: { code: "ONT",  name: "Ontario Reign",           city: "Ontario, CA",       primary: "#111111", logoUrl: `${WP}/Ontario_Reign_logo.svg` },
+  MIN: { code: "IA",   name: "Iowa Wild",               city: "Des Moines, IA",    primary: "#154734", logoUrl: `${WP}/Iowa_Wild_logo.svg` },
+  MTL: { code: "LAV",  name: "Laval Rocket",            city: "Laval, QC",         primary: "#0060A9", logoUrl: `${WP}/Laval_Rocket_logo.svg` },
+  NSH: { code: "MIL",  name: "Milwaukee Admirals",      city: "Milwaukee, WI",     primary: "#0033A0", logoUrl: `${WP}/Milwaukee_Admirals_logo.svg` },
+  NJD: { code: "UTC",  name: "Utica Comets",            city: "Utica, NY",         primary: "#B02531", logoUrl: `${WP}/Utica_Comets_logo.svg` },
+  NYI: { code: "BRI",  name: "Bridgeport Islanders",    city: "Bridgeport, CT",    primary: "#00539B", logoUrl: `${WP}/Bridgeport_Islanders_logo.svg` },
+  NYR: { code: "HFD",  name: "Hartford Wolf Pack",      city: "Hartford, CT",      primary: "#0038A8", logoUrl: `${WP}/Hartford_Wolf_Pack_logo.svg` },
+  OTT: { code: "BEL",  name: "Belleville Senators",     city: "Belleville, ON",    primary: "#C52032", logoUrl: `${WP}/Belleville_Senators_logo.svg` },
+  PHI: { code: "LV",   name: "Lehigh Valley Phantoms",  city: "Allentown, PA",     primary: "#F74902", logoUrl: `${WP}/Lehigh_Valley_Phantoms_logo.svg` },
+  PIT: { code: "WBS",  name: "Wilkes-Barre/Scranton Penguins", city: "Wilkes-Barre, PA", primary: "#FCB514", logoUrl: `${WP}/Wilkes-Barre_Scranton_Penguins_logo.svg` },
+  SEA: { code: "CBD",  name: "Coachella Valley Firebirds", city: "Palm Desert, CA",primary: "#E4622A", logoUrl: `${WP}/Coachella_Valley_Firebirds_logo.svg` },
+  SJS: { code: "SJ_AHL", name: "San Jose Barracuda",    city: "San Jose, CA",      primary: "#006D75", logoUrl: `${WP}/San_Jose_Barracuda_logo.svg` },
+  STL: { code: "SPR",  name: "Springfield Thunderbirds",city: "Springfield, MA",   primary: "#002F87", logoUrl: `${WP}/Springfield_Thunderbirds_logo.svg` },
+  TBL: { code: "SYR",  name: "Syracuse Crunch",         city: "Syracuse, NY",      primary: "#004587", logoUrl: `${WP}/Syracuse_Crunch_logo.svg` },
+  TOR: { code: "MRL",  name: "Toronto Marlies",         city: "Toronto, ON",       primary: "#00205B", logoUrl: `${WP}/Toronto_Marlies_logo.svg` },
+  UTA: { code: "TUC",  name: "Tucson Roadrunners",      city: "Tucson, AZ",        primary: "#71AFE5", logoUrl: `${WP}/Tucson_Roadrunners_logo.svg` },
+  VAN: { code: "ABB",  name: "Abbotsford Canucks",      city: "Abbotsford, BC",    primary: "#00205B", logoUrl: `${WP}/Abbotsford_Canucks_logo.svg` },
+  VGK: { code: "HEN",  name: "Henderson Silver Knights",city: "Henderson, NV",     primary: "#B4975A", logoUrl: `${WP}/Henderson_Silver_Knights_logo.svg` },
+  WSH: { code: "HER",  name: "Hershey Bears",           city: "Hershey, PA",       primary: "#8B2131", logoUrl: `${WP}/Hershey_Bears_logo.svg` },
+  WPG: { code: "MB",   name: "Manitoba Moose",          city: "Winnipeg, MB",      primary: "#041E42", logoUrl: `${WP}/Manitoba_Moose_logo.svg` },
+};
+
+// Convenience getter: NHL code → { code, name, city, primary, logoUrl, nhl_parent }.
+export function ahlAffiliateFor(nhlCode) {
+  if (!nhlCode) return null;
+  const affiliate = AHL_AFFILIATES[nhlCode.toUpperCase()];
+  return affiliate ? { ...affiliate, nhl_parent: nhlCode.toUpperCase() } : null;
+}
+
+
 // ----------------------------- CHL divisions --------------------------------
 // Focused on WHL for the first vertical. Each team carries the metadata the
 // team-page and cascade pages need. `nhlAffinity` powers the onboarding
