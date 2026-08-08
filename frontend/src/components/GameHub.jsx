@@ -20,6 +20,7 @@ import { ChevronDown, Play, Pause, Radio, ArrowRight, Check, Mic, ExternalLink }
 import { Link } from "react-router-dom";
 import { TeamLogo } from "@/lib/teamLogos";
 import { emitSignal } from "@/lib/signals";
+import { StatCallouts } from "@/components/StatCallouts";
 
 // Small stat block used inside the expanded body.
 function Stat({ label, home, away, homeAccent, awayAccent }) {
@@ -244,7 +245,7 @@ export function GameHub({
           {/* Reggie & Marc segment player — placeholder for now.
            * When TTS scripts are ready this becomes an audio player that
            * fires per-game banter. Signal fires either way. */}
-          <div className="rounded-lg border border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent p-3">
+          <div className="rounded-lg border border-white/10 bg-gradient-to-r from-white/[0.03] to-transparent p-3 space-y-3">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
@@ -268,6 +269,20 @@ export function GameHub({
                 </div>
               </div>
             </div>
+            {/* Stat callouts — pulse in a rotating loop while the segment
+             * is playing so users can "follow along while looking at
+             * content" (real broadcast-graphics feel). Real timed sync
+             * lands with proper ElevenLabs script timestamps later. */}
+            <StatCallouts
+              active={segmentPlaying}
+              callouts={[
+                { label: `${homeCode} · GF/GP`, value: teamStats[homeCode]?.gf_per_game?.toFixed(2) ?? "—" },
+                { label: `${awayCode} · GF/GP`, value: teamStats[awayCode]?.gf_per_game?.toFixed(2) ?? "—" },
+                { label: `${homeCode} · PP%`,   value: teamStats[homeCode]?.pp_pct?.toFixed(1) ?? "—", unit: "%" },
+                { label: `${awayCode} · PK%`,   value: teamStats[awayCode]?.pk_pct?.toFixed(1) ?? "—", unit: "%" },
+                { label: `${homeCode} · L10`,   value: teamStats[homeCode]?.last_10 ?? "—" },
+              ]}
+            />
           </div>
 
           {/* Head-to-head snapshot — medium depth. Extra stats compared to

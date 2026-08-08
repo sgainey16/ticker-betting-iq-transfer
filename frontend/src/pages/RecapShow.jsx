@@ -6,6 +6,7 @@ import PostGameStats from "@/components/PostGameStats";
 import GameStory from "@/components/GameStory";
 import PlayByPlayPanel from "@/components/PlayByPlayPanel";
 import { playStinger } from "@/lib/stinger";
+import { ShowOpener } from "@/components/ShowOpener";
 import {
   Play, Pause, SkipForward, Volume2, VolumeX, Film, Smartphone,
 } from "lucide-react";
@@ -177,6 +178,13 @@ export default function RecapShow() {
 
   return (
     <div data-testid="recap-show-page" className="space-y-2 landscape:space-y-1.5">
+      {/* Welcome opener — auto-plays once per session on arrival. Sets the
+       * room without demanding the full ambient show up-front. Users tap
+       * a game rail tile to hear per-game recap deep dives. */}
+      <div className="landscape:hidden">
+        <ShowOpener variant="recap" sessionKey="ticker.opener.recap" />
+      </div>
+
       {/* Slim date badge only — nothing above the frame competes with the hosts */}
       <div className="flex items-center justify-between landscape:hidden">
         <div className="inline-flex items-center gap-2 rounded-full bg-[#1E5BFF]/15 border border-[#1E5BFF]/50 px-3 py-1">

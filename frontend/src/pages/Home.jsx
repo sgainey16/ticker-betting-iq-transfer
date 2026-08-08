@@ -17,6 +17,7 @@ import { api } from "@/lib/api";
 import { BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
 import { TeamLogo } from "@/lib/teamLogos";
 import { PickRecordCard } from "@/components/PickRecordCard";
+import { ShowOpener } from "@/components/ShowOpener";
 import { emitSignal } from "@/lib/signals";
 import { Check } from "lucide-react";
 
@@ -112,6 +113,10 @@ export default function Home() {
        * inside the panel). Each game hub still owns its own per-game
        * segment when the user expands one. */}
       <div id={BROADCAST_SLOT_ID} className="mb-2" data-testid="tonight-broadcast-slot" />
+
+      {/* Welcome opener — auto-plays once per session on arrival. Feels
+       * alive without being a 20-minute ambient loop. */}
+      <ShowOpener variant="tonight" sessionKey="ticker.opener.tonight" />
 
       {/* Header — brief chyron. */}
       <div className="flex items-baseline justify-between">
