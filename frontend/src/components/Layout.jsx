@@ -5,6 +5,7 @@ import ReggieAssistant from "@/components/ReggieAssistant";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
 import NHLShield from "@/components/NHLShield";
+import IosInstallPrompt from "@/components/IosInstallPrompt";
 import { TMark } from "@/lib/brand";
 import { BroadcastProvider } from "@/lib/broadcastContext";
 import { LiveProvider, useLive } from "@/lib/liveContext";
@@ -173,6 +174,7 @@ function LayoutInner({ children }) {
       <LiveDesk autoFlow={true} />
 
       <ReggieAssistant />
+      <IosInstallPrompt />
     </div>
   );
 }
