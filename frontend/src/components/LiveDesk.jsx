@@ -5,6 +5,7 @@ import TwoHostDesk, { resolveShot } from "@/components/TwoHostDesk";
 import { ANALYSTS, TEST_IDS } from "@/lib/config";
 import { BACKEND_URL, api } from "@/lib/api";
 import { useBroadcast, BROADCAST_SLOT_ID } from "@/lib/broadcastContext";
+import { useLive } from "@/lib/liveContext";
 import { playTickerSting } from "@/lib/sting";
 import { LowerThird } from "@/lib/brand";
 import { Volume2, VolumeX, PlayCircle, PauseCircle, ExternalLink } from "lucide-react";
@@ -263,6 +264,11 @@ export default function LiveDesk({ autoFlow = true }) {
     </>
   );
 
+  // Global goal-horn mute — moved out of the header into the desk controls
+  // (right next to Pause) so it lives with the panel/broadcast UI instead of
+  // stealing tab-row space.
+  const { muted: hornMuted, setMuted: setHornMuted } = useLive();
+
   const controls = (
     <>
       <button
@@ -273,6 +279,18 @@ export default function LiveDesk({ autoFlow = true }) {
       >
         {paused ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
         {paused ? "Resume" : "Pause"}
+      </button>
+      <button
+        onClick={() => setHornMuted(!hornMuted)}
+        data-testid="goal-horn-toggle"
+        className={`inline-flex items-center justify-center w-9 h-9 rounded-full border transition-colors ${
+          hornMuted
+            ? "border-[#2d2d35] text-white/40 hover:text-white/70"
+            : "border-red-500/40 text-red-400 hover:text-red-300"
+        }`}
+        title={hornMuted ? "Goal horn is off — click to enable" : "Goal horn on — click to mute"}
+      >
+        {hornMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
       </button>
     </>
   );

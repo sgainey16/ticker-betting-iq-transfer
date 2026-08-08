@@ -1,6 +1,6 @@
 import { NavLink, Link, useLocation } from "react-router-dom";
 import { TEST_IDS } from "@/lib/config";
-import { Radio, Settings, Volume2, VolumeX } from "lucide-react";
+import { Radio, Settings } from "lucide-react";
 import ReggieAssistant from "@/components/ReggieAssistant";
 import LiveDesk from "@/components/LiveDesk";
 import GoalAlertBar from "@/components/GoalAlertBar";
@@ -8,7 +8,7 @@ import NHLShield from "@/components/NHLShield";
 import IosInstallPrompt from "@/components/IosInstallPrompt";
 import { TMark } from "@/lib/brand";
 import { BroadcastProvider } from "@/lib/broadcastContext";
-import { LiveProvider, useLive } from "@/lib/liveContext";
+import { LiveProvider } from "@/lib/liveContext";
 
 const linkBase =
   "px-3 py-2 rounded-md font-accent text-[12px] uppercase tracking-widest transition-colors";
@@ -76,20 +76,17 @@ function LayoutInner({ children }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 landscape:h-12 flex items-center justify-between gap-2 sm:gap-4">
           <Link
             to="/"
-            className="flex items-center gap-2 sm:gap-3 group flex-shrink-0 min-w-0"
+            className="flex items-center gap-2 group flex-shrink-0 min-w-0"
             data-testid="brand-link"
           >
+            {/* Compact wordmark — just T · THE TICKER on one line. Removed
+             * the NHL DESK sub-line and the small NHL shield so nav tabs
+             * get the breathing room. */}
             <div className="flex items-center justify-center flex-shrink-0" data-testid="brand-mark">
-              <TMark size={36} variant="light" />
+              <TMark size={28} variant="light" />
             </div>
-            <div className="leading-tight min-w-0">
-              <div className="font-headline text-base sm:text-lg text-white whitespace-nowrap">THE TICKER</div>
-              <div className="flex items-center gap-1.5 whitespace-nowrap">
-                <NHLShield size={11} className="opacity-80 flex-shrink-0" />
-                <div className="font-accent text-[10px] text-white/50 tracking-[0.28em]">
-                  NHL DESK
-                </div>
-              </div>
+            <div className="hidden sm:block font-headline text-sm md:text-base text-white whitespace-nowrap tracking-wide">
+              THE TICKER
             </div>
           </Link>
 
@@ -131,7 +128,6 @@ function LayoutInner({ children }) {
             >
               <Settings className="w-4 h-4" />
             </NavLink>
-            <GoalHornToggle />
           </div>
         </div>
       </header>
@@ -176,24 +172,5 @@ function LayoutInner({ children }) {
       <ReggieAssistant />
       <IosInstallPrompt />
     </div>
-  );
-}
-
-
-// Tiny header control — toggle the goal horn on/off. Kept next to Settings
-// so it's reachable from every route (any tab can hear the alert).
-function GoalHornToggle() {
-  const { muted, setMuted } = useLive();
-  return (
-    <button
-      data-testid="goal-horn-toggle"
-      onClick={() => setMuted(!muted)}
-      className={`h-9 w-9 rounded-md flex items-center justify-center transition-colors ${
-        muted ? "text-white/40 hover:text-white/70" : "text-red-400 hover:text-red-300"
-      } hover:bg-white/5`}
-      title={muted ? "Goal horn is off — click to enable" : "Goal horn on — click to mute"}
-    >
-      {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-    </button>
   );
 }
