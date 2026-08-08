@@ -109,25 +109,10 @@ function LayoutInner({ children }) {
           </nav>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-            {/* Junior + college sidecar entry — smart target: new users
-             * hit onboarding, returning users go straight to Your Ticker
-             * (via the /plus redirect + YourTicker's own onboarded check). */}
-            <NavLink
-              to="/plus"
-              data-testid="nav-plus"
-              className={({ isActive }) =>
-                `hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-full border transition-all whitespace-nowrap ${
-                  isActive
-                    ? "border-[#F58220] bg-[#F58220]/10 text-[#F58220]"
-                    : "border-white/15 text-white/60 hover:border-[#F58220]/60 hover:text-[#F58220]"
-                }`
-              }
-              title="Junior & college preview"
-            >
-              <span className="font-headline text-sm leading-none">+</span>
-              <span className="font-accent text-[9px] tracking-[0.28em] uppercase">Junior · NCAA</span>
-            </NavLink>
-            <div className="hidden sm:flex items-center gap-1.5 text-xs font-accent uppercase tracking-widest">
+            {/* Junior + college entry is now part of the app-wide
+             * onboarding — no separate header pill needed. HomeV2's
+             * "Beyond the NHL" section is the discovery surface for it. */}
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-accent uppercase tracking-widest">
               <Radio className="w-4 h-4 text-[#1e5dff] live-pulse" />
               <span className="text-[#1e5dff]">Live</span>
             </div>

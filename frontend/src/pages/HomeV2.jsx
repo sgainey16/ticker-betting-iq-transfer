@@ -22,6 +22,7 @@ import { MatchupTile } from "@/components/plus/MatchupTile";
 import { WeeklyVotes } from "@/components/plus/WeeklyVotes";
 import { TenTen } from "@/components/plus/TenTen";
 import { UnifiedTopPlays } from "@/components/plus/UnifiedTopPlays";
+import { useUserProfile } from "@/lib/userProfile";
 import {
   Info, Volume2, ArrowUp, ArrowDown, Minus, Target, Shield, Zap,
   ChevronRight, TrendingUp, AlertTriangle, Play, Crosshair,
@@ -837,8 +838,27 @@ function HighlightsRail({ team }) {
 
 export default function HomeV2() {
   const [params, setParams] = useSearchParams();
-  const [teamCode, setTeamCode] = useState(() => params.get("team")?.toUpperCase() || "MTL");
+  const { profile, isOnboarded } = useUserProfile();
+  // Default team resolution order:
+  //   1. URL param (?team=EDM) — for switching / deep-links
+  //   2. Onboarded user's picked NHL team — the returning-fan experience
+  //   3. MTL as demo fallback
+  const [teamCode, setTeamCode] = useState(() =>
+    params.get("team")?.toUpperCase() || profile?.nhl_team || "MTL"
+  );
+  // Full dashboard data currently only exists for MTL & BOS. When an
+  // onboarded fan picks another team we still respect their choice but
+  // gracefully fall back to MTL's shell + a small banner explaining.
+  const teamHasFullData = Boolean(TEAMS[teamCode]);
   const team = TEAMS[teamCode] || TEAMS.MTL;
+
+  // If profile picks up a new NHL team (post-onboarding), reflect it here.
+  useEffect(() => {
+    if (!params.get("team") && profile?.nhl_team && profile.nhl_team !== teamCode) {
+      setTeamCode(profile.nhl_team);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.nhl_team]);
 
   useEffect(() => {
     if (params.get("team")?.toUpperCase() !== teamCode) {
@@ -890,6 +910,55 @@ export default function HomeV2() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 space-y-5">
+        {/* Welcome banner — only appears for users who haven't onboarded.
+         * This is the app-wide entry into the onboarding flow. Once
+         * completed, HomeV2 defaults to the user's picked NHL team and
+         * this banner disappears. */}
+        {!isOnboarded && (
+          <Link
+            to="/plus/onboarding"
+            data-testid="home-welcome-banner"
+            className="group flex items-center justify-between gap-3 rounded-xl border border-[#F58220]/30 bg-gradient-to-r from-[#F58220]/[0.08] via-[#F58220]/[0.04] to-transparent p-4 hover:border-[#F58220]/60 transition-all"
+          >
+            <div className="min-w-0">
+              <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+                Welcome to The Ticker
+              </div>
+              <div className="mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "18px", color: "#fff", lineHeight: 1.2 }}>
+                Set up your Home — pick your team and Reggie & Marc will start speaking to you by name.
+              </div>
+              <div className="mt-1" style={{ fontFamily: "Oswald", fontWeight: 500, fontSize: "10px", letterSpacing: "0.2em", color: "#a0a0a5" }}>
+                Takes 60 seconds · CHL, NCAA and prospects optional
+              </div>
+            </div>
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-[#F58220] px-4 py-2 text-black group-hover:bg-[#ff9042] transition-all flex-shrink-0"
+              style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.28em" }}
+            >
+              Get started →
+            </span>
+          </Link>
+        )}
+
+        {/* Preview-mode banner — only appears when an onboarded fan picks a
+         * team we don't yet have a full dashboard for. Honest about the
+         * roadmap rather than silently substituting MTL. */}
+        {isOnboarded && !teamHasFullData && (
+          <div
+            data-testid="home-preview-banner"
+            className="rounded-lg border border-white/10 bg-black/40 px-4 py-3 flex items-center justify-between"
+          >
+            <div>
+              <div style={{ fontFamily: "Oswald", fontWeight: 700, fontSize: "10px", letterSpacing: "0.32em", color: "#F58220" }}>
+                Preview mode
+              </div>
+              <div className="mt-1" style={{ fontFamily: "Rajdhani", fontWeight: 600, fontSize: "14px", color: "#e5e5e7", lineHeight: 1.3 }}>
+                Your team ({profile?.nhl_team}) — full dashboard is on the way. For now you're seeing the {team.code} shell so you can feel the layout.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Row 1 — Cup Score + Next Game */}
         <div className="grid md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-5">
           <CupScoreCard team={team} />
