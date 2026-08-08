@@ -238,22 +238,43 @@ export default function ReggieAssistant() {
 
   return (
     <>
-      {/* Floating action button */}
+      {/* Floating action button — full-character Reggie avatar with a
+       * "Talk to me!" tooltip. The avatar itself IS the button; the label
+       * hovers to its left so it doesn't shove the tap zone off-screen on
+       * mobile. Larger tap target (h-16 w-16) since the illustrated
+       * character reads at a different size than a plain icon. */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          data-testid={TEST_IDS.assistant.fab}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#1e5dff] hover:bg-[#3a72ff] shadow-[0_10px_40px_rgba(30,93,255,0.4)] flex items-center justify-center text-white transition-transform hover:scale-105 z-40"
-          aria-label="Ask Reggie"
-        >
-          <Mic2 className="w-6 h-6" />
-          {showBadge && (
-            <span
-              data-testid={TEST_IDS.assistant.fabBadge}
-              className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#ff8f3b] border-2 border-[#0f0f14] animate-pulse"
+        <div className="fixed bottom-6 right-6 z-40 flex items-center gap-2 group">
+          {/* Speech-bubble label — visible on desktop hover and always on
+           * larger screens; hidden on very narrow phones so the avatar
+           * doesn't crowd the frame. */}
+          <span
+            className="hidden sm:inline-flex items-center rounded-full bg-black/85 backdrop-blur border border-[#1e5dff]/50 px-3 py-1.5 shadow-lg pointer-events-none"
+            style={{ fontFamily: "Rajdhani", fontWeight: 700, fontSize: "13px", color: "#fff", letterSpacing: "0.02em" }}
+          >
+            Talk to me!
+          </span>
+          <button
+            onClick={() => setOpen(true)}
+            data-testid={TEST_IDS.assistant.fab}
+            className="relative h-16 w-16 rounded-full overflow-hidden bg-[#1e5dff] shadow-[0_10px_40px_rgba(30,93,255,0.5)] transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#F58220]"
+            aria-label="Talk to Reggie"
+            style={{ border: "3px solid #1e5dff" }}
+          >
+            <img
+              src="/reggie-avatar.png"
+              alt="Reggie"
+              className="h-full w-full object-cover"
+              draggable={false}
             />
-          )}
-        </button>
+            {showBadge && (
+              <span
+                data-testid={TEST_IDS.assistant.fabBadge}
+                className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#ff8f3b] border-2 border-[#0f0f14] animate-pulse"
+              />
+            )}
+          </button>
+        </div>
       )}
 
       {/* Chat panel */}
@@ -265,8 +286,9 @@ export default function ReggieAssistant() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-[#2d2d35] bg-gradient-to-r from-[#1e5dff]/20 to-transparent">
             <div className="flex items-center gap-2.5">
-              <div className="h-9 w-9 rounded-full bg-[#1e5dff] flex items-center justify-center shadow-[0_0_20px_rgba(30,93,255,0.5)]">
-                <Mic2 className="w-4 h-4 text-white" />
+              <div className="h-9 w-9 rounded-full overflow-hidden shadow-[0_0_20px_rgba(30,93,255,0.5)]"
+                   style={{ border: "2px solid #1e5dff" }}>
+                <img src="/reggie-avatar.png" alt="Reggie" className="h-full w-full object-cover" draggable={false} />
               </div>
               <div>
                 <div className="font-headline text-white text-sm">Reggie Banks</div>
