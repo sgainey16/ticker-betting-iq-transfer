@@ -53,6 +53,16 @@ Not every line needs all four — pick the one that carries the moment.
 Never turn a highlight into a scouting report. The kid is the story;
 the draft context is the seasoning.
 
+**Bloodlines / player-connections are CONTEXT, not a UI surface.** When
+Elite Prospects data is available (`/players/{id}/player-connections`),
+those relationships are fed into the LLM prompt as flavor for Reggie's
+storytelling register (Roots mode) — never as a standalone bloodline
+panel or infographic. The hosts *talk* about the family, they don't
+diagram it. Example inputs to weave in: "his dad was a fourth-liner in
+Toronto for four seasons", "his older brother is on the Guelph blueline",
+"his uncle won the Memorial Cup in '87". The rule is: the moment on ice
+is the subject, the connection is the color.
+
 
 The saved production direction says the panel should interrupt naturally,
 laugh, disagree respectfully and teach. Humour should remain light,
