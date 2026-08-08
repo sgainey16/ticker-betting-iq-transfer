@@ -455,12 +455,30 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
           style={{ boxShadow: `inset 0 0 22px ${accent}44` }}
         />
       )}
-      <div className="flex items-center justify-between relative">
-        <div>
+      <div className="flex items-center gap-4 relative">
+        {/* Big team logo — the hero. Reads logo-vs-logo across the two cards. */}
+        <div
+          className="h-20 w-20 md:h-24 md:w-24 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden transition-transform"
+          style={{
+            background: `${accent}${chosen ? "44" : "22"}`,
+            border: `1px solid ${accent}${chosen ? "aa" : "55"}`,
+            transform: chosen ? "scale(1.03)" : "scale(1)",
+          }}
+        >
+          <TeamLogo code={code} size={72} monogramClass="!bg-transparent" />
+        </div>
+
+        {/* Meta column — code chunky, full name supporting */}
+        <div className="min-w-0 flex-1">
           <div className="text-[10px] font-accent uppercase tracking-widest text-white/40">
-            {side === "home" ? "Home" : "Away"} · {code}
+            {side === "home" ? "Home" : "Away"}
           </div>
-          <div className="font-headline text-xl text-white mt-1">{label}</div>
+          <div className="font-headline text-3xl md:text-4xl text-white leading-none mt-0.5" style={{ letterSpacing: "0.02em" }}>
+            {code}
+          </div>
+          <div className="mt-1 text-[12px] font-accent uppercase tracking-widest text-white/55 truncate">
+            {label}
+          </div>
           {chosen && (
             <div
               className="mt-2 inline-flex items-center gap-1 font-accent text-[10px] uppercase tracking-[0.25em]"
@@ -476,16 +494,6 @@ function PickButton({ testid, label, code, accent, picked, chosen, reggie, marc,
               Your pick
             </div>
           )}
-        </div>
-        <div
-          className="h-12 w-12 rounded flex items-center justify-center overflow-hidden transition-transform"
-          style={{
-            background: `${accent}${chosen ? "44" : "22"}`,
-            border: `1px solid ${accent}${chosen ? "aa" : "55"}`,
-            transform: chosen ? "scale(1.05)" : "scale(1)",
-          }}
-        >
-          <TeamLogo code={code} size={38} monogramClass="!bg-transparent" />
         </div>
       </div>
       {(reggie || marc) && (
