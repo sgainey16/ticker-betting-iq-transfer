@@ -197,7 +197,7 @@ function PlayerCell({ player }) {
     </div>
   );
   return player.slug ? (
-    <Link to={`/player/${player.slug}`} data-testid={`lineup-player-${player.slug}`}>
+    <Link to={`/player-profile/${player.slug}`} data-testid={`lineup-player-${player.slug}`}>
       {inner}
     </Link>
   ) : (

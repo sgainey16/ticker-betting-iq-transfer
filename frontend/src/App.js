@@ -36,6 +36,7 @@ import DivisionPage from "@/pages/plus/DivisionPage";
 import TeamPage from "@/pages/plus/TeamPage";
 import ProspectPage from "@/pages/plus/ProspectPage";
 import Upgrade from "@/pages/plus/Upgrade";
+import TeamStatPage from "@/pages/TeamStatPage";
 import { Toaster } from "sonner";
 
 function App() {
@@ -74,7 +75,13 @@ function App() {
             <Route path="/plus/team/:code" element={<TeamPage />} />
             <Route path="/plus/prospect/:id" element={<ProspectPage />} />
             <Route path="/plus/upgrade" element={<Upgrade />} />
-            <Route path="/player/:slug" element={<PlayerProfile />} />
+            {/* Team stat page — league-wide, opens from Stats > Standings.
+             * PlayerDetail (below) owns /player/:playerId. PlayerProfile is
+             * a legacy audition page kept at /player-profile/:slug so its
+             * hardcoded demo slugs don't intercept real player IDs. */}
+            <Route path="/team/:code" element={<TeamStatPage />} />
+            <Route path="/player/:playerId" element={<PlayerDetail />} />
+            <Route path="/player-profile/:slug" element={<PlayerProfile />} />
             <Route path="/lineup/:team" element={<Lineup />} />
             <Route path="/lineup" element={<Lineup />} />
             {/* Old presser (1-on-1 with Reggie) still reachable directly */}
@@ -86,7 +93,6 @@ function App() {
             <Route path="/fantasy" element={<Fantasy />} />
             <Route path="/back-office" element={<BackOffice />} />
             <Route path="/matchup/:matchupId" element={<MatchupDeepDive />} />
-            <Route path="/player/:playerId" element={<PlayerDetail />} />
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/recaps" element={<Recaps />} />
