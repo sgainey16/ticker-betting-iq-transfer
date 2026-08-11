@@ -136,21 +136,57 @@ export default function TwoHostDesk({ shot, speaker, speaking, fill = false }) {
 // ---- Solo camera cut: full-frame expression portrait ----
 function SoloFrame({ url, host, speaking }) {
   const a = ANALYSTS[host] || {};
+  // Medium-activity motion:
+  //  - Speaking: subtle head-bob (1.8s) + micro-zoom scale
+  //  - Idle: slow breathing (4.5s) + occasional blink (via inner blink layer)
+  const motionAnim = speaking
+    ? "hostHeadBob 1800ms ease-in-out infinite"
+    : "hostBreathe 4500ms ease-in-out infinite";
+  const zoomScale = speaking ? 1.03 : 1.0;
+  const blinkAnim = speaking
+    ? "hostBlink 5200ms ease-in-out infinite"
+    : "hostBlinkSlow 6800ms ease-in-out infinite";
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Outer scale wrapper — active-speaker micro-zoom */}
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: `url(${url})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center 28%",
-          backgroundRepeat: "no-repeat",
-          filter: speaking
-            ? "brightness(1.02) saturate(1.06)"
-            : "brightness(0.94)",
-          transition: "filter 400ms ease-out",
+          transform: `scale(${zoomScale})`,
+          transformOrigin: "center 40%",
+          transition: "transform 900ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
-      />
+      >
+        {/* Motion wrapper — breathing / head-bob */}
+        <div
+          className="absolute inset-0 host-motion-layer"
+          style={{
+            animation: motionAnim,
+            transformOrigin: "center 55%",
+            willChange: "transform",
+          }}
+        >
+          {/* Blink wrapper — brightness filter dip */}
+          <div
+            className="absolute inset-0 host-blink-layer"
+            style={{ animation: blinkAnim, willChange: "filter" }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${url})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center 28%",
+                backgroundRepeat: "no-repeat",
+                filter: speaking
+                  ? "brightness(1.02) saturate(1.06)"
+                  : "brightness(0.94)",
+                transition: "filter 400ms ease-out",
+              }}
+            />
+          </div>
+        </div>
+      </div>
       {/* subtle speaker pulse rim in the host accent */}
       {speaking && (
         <div
@@ -215,22 +251,46 @@ function HostPane({ host, focus, speaker, speaking, align }) {
   const isSpeaker = speaker === host && speaking;
   const isListening = speaker && speaker !== host;
 
+  // Medium-activity motion — offset per host so they don't breathe in unison
+  const motionAnim = isSpeaker
+    ? `hostHeadBob ${host === "reggie" ? 1750 : 1950}ms ease-in-out infinite`
+    : isListening
+    ? `hostListenNod ${host === "reggie" ? 9000 : 11000}ms ease-in-out infinite`
+    : `${host === "reggie" ? "hostBreathe" : "hostBreatheOffset"} ${host === "reggie" ? 4400 : 5100}ms ease-in-out infinite`;
+  const blinkAnim = isSpeaker
+    ? `hostBlink ${host === "reggie" ? 5200 : 6100}ms ease-in-out infinite`
+    : `hostBlinkSlow ${host === "reggie" ? 6800 : 7900}ms ease-in-out infinite`;
+
   return (
-    <div className="relative transition-all duration-700 ease-out"
+    <div className="relative transition-all duration-700 ease-out overflow-hidden"
       style={{ flexGrow: grow, flexBasis: 0, minWidth: 0 }}>
-      <div className="absolute inset-0"
+      <div
+        className="absolute inset-0 host-motion-layer"
         style={{
-          backgroundImage: src ? `url(${src})` : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center 30%",
-          backgroundRepeat: "no-repeat",
-          filter: isSpeaker
-            ? "brightness(1.05) saturate(1.08) contrast(1.02)"
-            : isListening
-            ? "brightness(0.55) saturate(0.75)"
-            : "brightness(0.88)",
-          transition: "filter 400ms ease-out, background-position 700ms ease-out",
-        }} />
+          animation: motionAnim,
+          transformOrigin: "center 55%",
+          willChange: "transform",
+        }}
+      >
+        <div
+          className="absolute inset-0 host-blink-layer"
+          style={{ animation: blinkAnim, willChange: "filter" }}
+        >
+          <div className="absolute inset-0"
+            style={{
+              backgroundImage: src ? `url(${src})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center 30%",
+              backgroundRepeat: "no-repeat",
+              filter: isSpeaker
+                ? "brightness(1.05) saturate(1.08) contrast(1.02)"
+                : isListening
+                ? "brightness(0.55) saturate(0.75)"
+                : "brightness(0.88)",
+              transition: "filter 400ms ease-out, background-position 700ms ease-out",
+            }} />
+        </div>
+      </div>
       {isSpeaker && (
         <div className="absolute inset-0 pointer-events-none"
           style={{
