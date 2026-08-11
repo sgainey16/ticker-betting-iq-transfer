@@ -269,42 +269,9 @@ body {
   50%      { opacity: 0.7; }
 }
 
-/* --- Animated host avatars (medium-activity idle loop) --- */
-@keyframes hostBreathe {
-  0%, 100% { transform: scale(1.000); }
-  50%      { transform: scale(1.008); }
-}
-@keyframes hostBreatheOffset {
-  0%, 100% { transform: scale(1.006); }
-  50%      { transform: scale(0.998); }
-}
-@keyframes hostHeadBob {
-  0%, 100% { transform: translateY(0px)   scale(1.000); }
-  25%      { transform: translateY(-2px)  scale(1.004); }
-  50%      { transform: translateY(0px)   scale(1.008); }
-  75%      { transform: translateY(-1px)  scale(1.004); }
-}
-@keyframes hostBlink {
-  0%, 92%, 100% { filter: brightness(1) saturate(1); }
-  94%, 97%      { filter: brightness(0.55) saturate(0.9); }
-}
-@keyframes hostBlinkSlow {
-  0%, 88%, 100% { filter: brightness(1) saturate(1); }
-  91%, 94%      { filter: brightness(0.5) saturate(0.85); }
-}
-@keyframes hostListenNod {
-  0%, 82%, 100% { transform: translateY(0px); }
-  88%           { transform: translateY(1.5px); }
-  94%           { transform: translateY(0px); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .live-pulse,
   .stream-caret::after {
     animation: none;
-  }
-  .host-motion-layer,
-  .host-blink-layer {
-    animation: none !important;
   }
 }

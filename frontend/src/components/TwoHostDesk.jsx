@@ -134,59 +134,87 @@ export default function TwoHostDesk({ shot, speaker, speaking, fill = false }) {
 }
 
 // ---- Solo camera cut: full-frame expression portrait ----
+// Animated avatar: while `speaking` is true we cycle through a short sequence
+// of the host's own sprite frames (mouth-open ↔ mouth-closed) every ~180ms
+// to create a stylized "talking head" illusion. When idle we just show the
+// script-picked expression, unmoving. This is deliberately anime/broadcast
+// pop-cut style, not smooth interpolation.
+const REGGIE_TALK_CYCLE = [
+  "reggie_chirping",    // open
+  "reggie_pointing",    // closed-ish
+  "reggie_yelling",     // wide open
+  "reggie_explaining",  // closed
+  "reggie_hot_take",    // open
+  "reggie_hands_open",  // closed
+];
+const MARC_TALK_CYCLE = [
+  "marc_explaining",    // open
+  "marc_pointing",      // closed
+  "marc_hands_open",    // open
+  "marc_smirking",      // closed
+  "marc_explaining",    // open
+  "marc_analyzing_stats", // closed
+];
+
+function spriteUrl(name) {
+  return `${BACKEND_URL}/api/sprites/${name}.png`;
+}
+
 function SoloFrame({ url, host, speaking }) {
   const a = ANALYSTS[host] || {};
-  // Medium-activity motion:
-  //  - Speaking: subtle head-bob (1.8s) + micro-zoom scale
-  //  - Idle: slow breathing (4.5s) + occasional blink (via inner blink layer)
-  const motionAnim = speaking
-    ? "hostHeadBob 1800ms ease-in-out infinite"
-    : "hostBreathe 4500ms ease-in-out infinite";
-  const zoomScale = speaking ? 1.03 : 1.0;
-  const blinkAnim = speaking
-    ? "hostBlink 5200ms ease-in-out infinite"
-    : "hostBlinkSlow 6800ms ease-in-out infinite";
+  const cycle = host === "reggie" ? REGGIE_TALK_CYCLE : host === "marc" ? MARC_TALK_CYCLE : [];
+  const [frame, setFrame] = useState(0);
+
+  // Preload the talking cycle once so the first talk frame doesn't flicker.
+  useEffect(() => {
+    cycle.forEach((slug) => {
+      const img = new Image();
+      img.src = spriteUrl(slug);
+    });
+  }, [host]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fake lip-sync: cycle sprites at 160-220ms while speaking.
+  useEffect(() => {
+    if (!speaking || !cycle.length) {
+      setFrame(0);
+      return;
+    }
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      setFrame((i) => (i + 1) % cycle.length);
+    };
+    // Randomize each interval slightly for a more organic feel.
+    let t = setInterval(tick, 160 + Math.random() * 60);
+    // Also reshuffle interval every 2s so it doesn't lock into a beat.
+    const shuffle = setInterval(() => {
+      clearInterval(t);
+      t = setInterval(tick, 160 + Math.random() * 60);
+    }, 2000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      clearInterval(shuffle);
+    };
+  }, [speaking, host]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeBg = speaking && cycle.length ? spriteUrl(cycle[frame]) : url;
+
   return (
     <div className="absolute inset-0 overflow-hidden">
-      {/* Outer scale wrapper — active-speaker micro-zoom */}
       <div
         className="absolute inset-0"
         style={{
-          transform: `scale(${zoomScale})`,
-          transformOrigin: "center 40%",
-          transition: "transform 900ms cubic-bezier(0.4, 0, 0.2, 1)",
+          backgroundImage: `url(${activeBg})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center 28%",
+          backgroundRepeat: "no-repeat",
+          filter: speaking
+            ? "brightness(1.02) saturate(1.06)"
+            : "brightness(0.94)",
+          transition: "filter 400ms ease-out",
         }}
-      >
-        {/* Motion wrapper — breathing / head-bob */}
-        <div
-          className="absolute inset-0 host-motion-layer"
-          style={{
-            animation: motionAnim,
-            transformOrigin: "center 55%",
-            willChange: "transform",
-          }}
-        >
-          {/* Blink wrapper — brightness filter dip */}
-          <div
-            className="absolute inset-0 host-blink-layer"
-            style={{ animation: blinkAnim, willChange: "filter" }}
-          >
-            <div
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${url})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center 28%",
-                backgroundRepeat: "no-repeat",
-                filter: speaking
-                  ? "brightness(1.02) saturate(1.06)"
-                  : "brightness(0.94)",
-                transition: "filter 400ms ease-out",
-              }}
-            />
-          </div>
-        </div>
-      </div>
+      />
       {/* subtle speaker pulse rim in the host accent */}
       {speaking && (
         <div
@@ -251,46 +279,57 @@ function HostPane({ host, focus, speaker, speaking, align }) {
   const isSpeaker = speaker === host && speaking;
   const isListening = speaker && speaker !== host;
 
-  // Medium-activity motion — offset per host so they don't breathe in unison
-  const motionAnim = isSpeaker
-    ? `hostHeadBob ${host === "reggie" ? 1750 : 1950}ms ease-in-out infinite`
-    : isListening
-    ? `hostListenNod ${host === "reggie" ? 9000 : 11000}ms ease-in-out infinite`
-    : `${host === "reggie" ? "hostBreathe" : "hostBreatheOffset"} ${host === "reggie" ? 4400 : 5100}ms ease-in-out infinite`;
-  const blinkAnim = isSpeaker
-    ? `hostBlink ${host === "reggie" ? 5200 : 6100}ms ease-in-out infinite`
-    : `hostBlinkSlow ${host === "reggie" ? 6800 : 7900}ms ease-in-out infinite`;
+  // Animated avatar sprite cycle — same anime/pop-cut style as SoloFrame.
+  const cycle = host === "reggie" ? REGGIE_TALK_CYCLE : host === "marc" ? MARC_TALK_CYCLE : [];
+  const [frame, setFrame] = useState(0);
+
+  useEffect(() => {
+    cycle.forEach((slug) => {
+      const img = new Image();
+      img.src = spriteUrl(slug);
+    });
+  }, [host]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!isSpeaker || !cycle.length) {
+      setFrame(0);
+      return;
+    }
+    let alive = true;
+    const tick = () => {
+      if (!alive) return;
+      setFrame((i) => (i + 1) % cycle.length);
+    };
+    let t = setInterval(tick, 160 + Math.random() * 60);
+    const shuffle = setInterval(() => {
+      clearInterval(t);
+      t = setInterval(tick, 160 + Math.random() * 60);
+    }, 2000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+      clearInterval(shuffle);
+    };
+  }, [isSpeaker, host]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeBg = isSpeaker && cycle.length ? spriteUrl(cycle[frame]) : src;
 
   return (
     <div className="relative transition-all duration-700 ease-out overflow-hidden"
       style={{ flexGrow: grow, flexBasis: 0, minWidth: 0 }}>
-      <div
-        className="absolute inset-0 host-motion-layer"
+      <div className="absolute inset-0"
         style={{
-          animation: motionAnim,
-          transformOrigin: "center 55%",
-          willChange: "transform",
-        }}
-      >
-        <div
-          className="absolute inset-0 host-blink-layer"
-          style={{ animation: blinkAnim, willChange: "filter" }}
-        >
-          <div className="absolute inset-0"
-            style={{
-              backgroundImage: src ? `url(${src})` : undefined,
-              backgroundSize: "cover",
-              backgroundPosition: "center 30%",
-              backgroundRepeat: "no-repeat",
-              filter: isSpeaker
-                ? "brightness(1.05) saturate(1.08) contrast(1.02)"
-                : isListening
-                ? "brightness(0.55) saturate(0.75)"
-                : "brightness(0.88)",
-              transition: "filter 400ms ease-out, background-position 700ms ease-out",
-            }} />
-        </div>
-      </div>
+          backgroundImage: activeBg ? `url(${activeBg})` : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center 30%",
+          backgroundRepeat: "no-repeat",
+          filter: isSpeaker
+            ? "brightness(1.05) saturate(1.08) contrast(1.02)"
+            : isListening
+            ? "brightness(0.55) saturate(0.75)"
+            : "brightness(0.88)",
+          transition: "filter 400ms ease-out",
+        }} />
       {isSpeaker && (
         <div className="absolute inset-0 pointer-events-none"
           style={{
