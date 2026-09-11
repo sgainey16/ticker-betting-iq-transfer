@@ -27,9 +27,9 @@ import {
 const TABS = [
   { id: "picks",      label: "Your Picks",  icon: Target,   kicker: "Track record" },
   { id: "edge",       label: "Edge Score",  icon: Zap,      kicker: "Reggie's rating of you" },
-  // Betting IQ + Fantasy Tracker hidden for Phase 1 (entertainment-first focus).
-  // Code preserved — flip these back on for Phase 2.
-  // { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "Your personal AI betting coach" },
+  // Betting IQ — DEV-ONLY vertical slice for the "Can we tell a bettor when
+  // NOT to bet?" question. Hidden from prod launch until validated.
+  { id: "betting-iq", label: "Betting IQ",  icon: Brain,    kicker: "DEV · Spot Check — Marc's coaching layer", dev: true },
   // { id: "fantasy",    label: "Fantasy Tracker",     icon: Trophy,   kicker: "Studies your roster · you" },
   { id: "social",     label: "Social",      icon: Users,    kicker: "Public profile · followers" },
   { id: "prefs",      label: "Preferences", icon: Settings, kicker: "Team · pace · voice" },
@@ -84,6 +84,11 @@ export default function BackOffice() {
                   <span className="font-accent text-[12px] uppercase tracking-widest whitespace-nowrap">
                     {t.label}
                   </span>
+                  {t.dev && (
+                    <span className="ml-auto rounded-sm bg-amber-500/20 text-amber-300 font-accent text-[8px] uppercase tracking-widest px-1.5 py-0.5">
+                      Dev
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -845,13 +850,223 @@ const BET_TYPES = [
   "player-prop", "first-goal", "shots", "saves", "other",
 ];
 
+// ---------------------------------------------------------------------
+// Spot Check — the vertical-slice "should I bet this spot?" panel.
+// Marc's coaching layer. No LLM — deterministic templates from backend.
+// The design principle: sometimes the right answer is "don't bet tonight."
+// ---------------------------------------------------------------------
+const SPOT_BET_TYPES = [
+  { value: "moneyline", label: "Moneyline" },
+  { value: "spread",    label: "Puck-line / spread" },
+  { value: "total",     label: "Total (over/under)" },
+  { value: "prop",      label: "Player prop" },
+];
+
+const SPOT_HOME_AWAY = [
+  { value: "",     label: "— any —" },
+  { value: "home", label: "Home" },
+  { value: "away", label: "Road" },
+];
+
+const SPOT_FAV_DOG_BY_TYPE = {
+  moneyline: [
+    { value: "",    label: "— any —" },
+    { value: "fav", label: "Favourite" },
+    { value: "dog", label: "Underdog" },
+  ],
+  spread: [
+    { value: "",    label: "— any —" },
+    { value: "fav", label: "Laying the puck line" },
+    { value: "dog", label: "Taking the puck line" },
+  ],
+  total: [
+    { value: "",      label: "— any —" },
+    { value: "over",  label: "Over" },
+    { value: "under", label: "Under" },
+  ],
+  prop: [
+    { value: "", label: "— any —" },
+  ],
+};
+
+const REC_COLORS = {
+  LEAN_IN: { bg: "bg-emerald-500/15", border: "border-emerald-500/50", text: "text-emerald-300", dot: "bg-emerald-400" },
+  NEUTRAL: { bg: "bg-white/5",        border: "border-white/25",       text: "text-white/70",    dot: "bg-white/40" },
+  SKIP:    { bg: "bg-rose-500/15",    border: "border-rose-500/50",    text: "text-rose-300",    dot: "bg-rose-400" },
+};
+
+function SpotCheckPanel({ deviceId, refreshSignal }) {
+  const [betType, setBetType] = useState("moneyline");
+  const [homeAway, setHomeAway] = useState("away");
+  const [favDog, setFavDog] = useState("fav");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const favDogOptions = SPOT_FAV_DOG_BY_TYPE[betType] || [{ value: "", label: "— any —" }];
+
+  useEffect(() => {
+    // When bet type changes, ensure favDog option is still valid
+    const valid = favDogOptions.some((o) => o.value === favDog);
+    if (!valid) setFavDog("");
+  }, [betType]); // eslint-disable-line
+
+  const runCheck = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await api.post("/betting/spot-check", {
+        device_id: deviceId,
+        bet_type: betType,
+        home_or_away: homeAway || null,
+        fav_or_dog: favDog || null,
+      });
+      setResult(r.data);
+    } finally {
+      setLoading(false);
+    }
+  }, [deviceId, betType, homeAway, favDog]);
+
+  // Auto-run whenever any input changes OR when parent bumps refreshSignal
+  // (e.g. after "Seed test data" replaces the bet log).
+  useEffect(() => { runCheck(); }, [runCheck, refreshSignal]);
+
+  const rec = result?.recommendation || "NEUTRAL";
+  const c = REC_COLORS[rec];
+  const ev = result?.evidence;
+
+  return (
+    <div
+      className="card-surface p-5 border-l-4 border-l-amber-500/60"
+      data-testid="spot-check-panel"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="rounded-sm bg-amber-500/20 text-amber-300 font-accent text-[8px] uppercase tracking-widest px-1.5 py-0.5">
+          Dev
+        </span>
+        <div className="font-accent text-[10px] uppercase tracking-widest text-amber-300">
+          Spot Check · Vertical Slice
+        </div>
+      </div>
+      <div className="text-white/60 text-xs mb-4">
+        Can we tell a bettor when NOT to bet? Pick a spot — Marc reads your history and tells you.
+      </div>
+
+      {/* Inputs */}
+      <div className="grid sm:grid-cols-3 gap-3 mb-4">
+        <SelectField
+          label="Bet type"
+          value={betType}
+          onChange={setBetType}
+          options={SPOT_BET_TYPES}
+          testId="spot-check-bet-type"
+        />
+        <SelectField
+          label="Home / Road"
+          value={homeAway}
+          onChange={setHomeAway}
+          options={SPOT_HOME_AWAY}
+          disabled={betType === "total" || betType === "prop"}
+          testId="spot-check-home-away"
+        />
+        <SelectField
+          label={betType === "total" ? "Over / Under" : "Fav / Dog"}
+          value={favDog}
+          onChange={setFavDog}
+          options={favDogOptions}
+          disabled={favDogOptions.length <= 1}
+          testId="spot-check-fav-dog"
+        />
+      </div>
+
+      {/* Recommendation panel */}
+      {loading ? (
+        <div className="text-white/40 text-sm py-8 text-center">Reading your history…</div>
+      ) : result ? (
+        <div className={`rounded-md border ${c.border} ${c.bg} p-5`} data-testid={`spot-check-result-${rec.toLowerCase()}`}>
+          <div className="flex items-center gap-3 mb-2">
+            <span className={`inline-flex h-2 w-2 rounded-full ${c.dot}`} />
+            <div className={`font-headline text-3xl ${c.text}`}>{result.headline}</div>
+          </div>
+          <div className="text-white/80 text-sm mb-4">{result.sub_headline}</div>
+
+          {/* Marc's coaching line */}
+          <div className="rounded-md bg-black/30 border border-white/10 p-3 mb-4">
+            <div className="font-accent text-[9px] uppercase tracking-widest text-white/40 mb-1">
+              Marc
+            </div>
+            <div className="text-white/90 text-sm leading-relaxed" data-testid="spot-check-marc-line">
+              {result.marc_line}
+            </div>
+          </div>
+
+          {/* Evidence */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <EvidenceCell label="Sample" value={ev?.n ?? 0} sub={result.bucket?.match_level === "exact" ? "exact match" : (result.bucket?.match_level === "none" ? "no bucket" : `widened: ${result.bucket?.match_level}`)} />
+            <EvidenceCell
+              label="Record"
+              value={ev?.resolved ? `${ev.wins}-${ev.losses}${ev.pushes ? `-${ev.pushes}` : ""}` : "—"}
+              sub={ev?.win_rate_pct != null ? `${ev.win_rate_pct}%` : "—"}
+            />
+            <EvidenceCell
+              label="ROI"
+              value={ev?.roi_pct != null ? `${ev.roi_pct > 0 ? "+" : ""}${ev.roi_pct}%` : "—"}
+              sub={ev?.money_bet_count ? `${ev.money_bet_count} money bets` : "prediction-only"}
+            />
+            <EvidenceCell
+              label="P/L"
+              value={ev?.profit_loss != null ? `${ev.profit_loss >= 0 ? "+" : ""}$${ev.profit_loss.toFixed(0)}` : "—"}
+              sub={ev?.stake_total ? `on $${ev.stake_total.toFixed(0)} risked` : "—"}
+            />
+          </div>
+
+          <div className="mt-4 font-accent text-[9px] uppercase tracking-widest text-white/35">
+            Spot · {result.bucket?.label}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options, disabled, testId }) {
+  return (
+    <label className="block">
+      <div className="font-accent text-[9px] uppercase tracking-widest text-white/45 mb-1">
+        {label}
+      </div>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        data-testid={testId}
+        className={`w-full rounded-md border border-white/15 bg-[#0b0b10] px-3 py-2 text-white text-sm ${
+          disabled ? "opacity-40 cursor-not-allowed" : ""
+        }`}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function EvidenceCell({ label, value, sub }) {
+  return (
+    <div className="rounded-md bg-black/25 border border-white/8 p-3">
+      <div className="font-accent text-[9px] uppercase tracking-widest text-white/40">{label}</div>
+      <div className="font-headline text-xl text-white mt-0.5">{value}</div>
+      <div className="text-[10px] text-white/45 mt-0.5">{sub}</div>
+    </div>
+  );
+}
+
 function BettingIQTab() {
   const deviceId = useMemo(() => getDeviceId(), []);
   const [bets, setBets] = useState([]);
   const [stats, setStats] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const refresh = useCallback(async () => {
     try {
       const [b, s] = await Promise.all([
@@ -881,13 +1096,28 @@ function BettingIQTab() {
         kicker="Your personal AI betting coach"
         title="Betting IQ"
         right={
-          <button
-            onClick={() => setFormOpen((v) => !v)}
-            data-testid="betting-iq-log-btn"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Log a bet
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                await api.post("/betting/seed-test-bettor", { device_id: deviceId, replace: true });
+                await new Promise((r) => setTimeout(r, 400)); // give Mongo a beat to settle
+                setRefreshSignal((n) => n + 1);
+                refresh();
+              }}
+              data-testid="betting-iq-seed-btn"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 font-accent text-[10px] uppercase tracking-widest transition-colors"
+              title="Dev-only: seeds 86 realistic historical bets"
+            >
+              Seed test data
+            </button>
+            <button
+              onClick={() => setFormOpen((v) => !v)}
+              data-testid="betting-iq-log-btn"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" /> Log a bet
+            </button>
+          </div>
         }
       />
 
@@ -901,6 +1131,9 @@ function BettingIQTab() {
           }}
         />
       )}
+
+      {/* Spot Check — the "can we tell you when NOT to bet" muscle. */}
+      <SpotCheckPanel deviceId={deviceId} refreshSignal={refreshSignal} />
 
       {/* Stat headline cards — prediction skill vs. betting profitability separated per spec §8 */}
       <div className="grid sm:grid-cols-2 gap-3">

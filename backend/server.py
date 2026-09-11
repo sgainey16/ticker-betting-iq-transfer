@@ -110,6 +110,10 @@ class BetLogCreate(BaseModel):
     result: str = "pending"                # 'win'|'loss'|'push'|'pending'
     profit_loss: float = 0.0
     notes: str = Field(default="", max_length=280)
+    # Optional dimensions used by Spot Check. Legacy bets left null → simply
+    # not counted in the corresponding spot bucket.
+    home_or_away: Optional[str] = None     # 'home' | 'away' | null
+    fav_or_dog: Optional[str] = None       # 'fav' | 'dog' | 'over' | 'under' | null
 
 
 class BetLog(BaseModel):
@@ -126,6 +130,8 @@ class BetLog(BaseModel):
     profit_loss: float
     notes: str
     created_at: str
+    home_or_away: Optional[str] = None
+    fav_or_dog: Optional[str] = None
 
 
 # ---------- Root / meta ----------
@@ -1615,6 +1621,8 @@ async def log_bet(payload: BetLogCreate):
         profit_loss=payload.profit_loss,
         notes=payload.notes,
         created_at=now,
+        home_or_away=payload.home_or_away,
+        fav_or_dog=payload.fav_or_dog,
     )
     await db.bet_log.insert_one(doc.model_dump())
     return doc
@@ -1716,6 +1724,55 @@ async def betting_stats(device_id: str):
         # Team splits parsed loosely from matchup string.
         "by_matchup": split(lambda b: b.get("matchup"), lambda k: str(k)),
     }
+
+
+# --------------------------------------------------------------------
+# Betting IQ — Spot Check (vertical slice).
+# See /app/backend/betting_coach.py for recommendation logic + Marc's
+# voice templates. This endpoint asks: "given my past, is THIS spot a
+# LEAN IN / NEUTRAL / SKIP?" It is the "sometimes the answer is: don't
+# bet tonight" muscle of Betting IQ.
+# --------------------------------------------------------------------
+import betting_coach as _bc  # noqa: E402
+
+
+class SpotCheckReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    bet_type: str = Field(min_length=1, max_length=40)
+    home_or_away: Optional[str] = None   # 'home' | 'away' | null
+    fav_or_dog: Optional[str] = None     # 'fav' | 'dog' | 'over' | 'under' | null
+
+
+@api.post("/betting/spot-check")
+async def betting_spot_check(payload: SpotCheckReq):
+    """Given a proposed spot, return LEAN IN / NEUTRAL / SKIP + evidence
+    + Marc's line. Uses only THIS device's bet history."""
+    cursor = db.bet_log.find({"device_id": payload.device_id})
+    bets = []
+    async for r in cursor:
+        r.pop("_id", None)
+        bets.append(r)
+    return _bc.spot_check(bets, payload.bet_type, payload.home_or_away, payload.fav_or_dog)
+
+
+class SeedTestBettorReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    replace: bool = True   # wipe existing bets for this device before seeding
+
+
+@api.post("/betting/seed-test-bettor")
+async def betting_seed_test_bettor(payload: SeedTestBettorReq):
+    """Dev-only: seed a realistic bet log for one test bettor so Spot Check
+    has meaningful signal. Not exposed in production UI. Idempotent when
+    replace=True."""
+    if payload.replace:
+        await db.bet_log.delete_many({"device_id": payload.device_id})
+    seeds = _bc.build_seed_bets(payload.device_id)
+    if seeds:
+        await db.bet_log.insert_many(seeds)
+    return {"seeded": len(seeds), "device_id": payload.device_id}
 
 
 
