@@ -23,6 +23,7 @@ const NAV = [
   { to: "/scoreboard", label: "Scores", testid: "nav-scoreboard" },
   { to: "/home-v2", label: "Home", testid: TEST_IDS.nav.presser },
   { to: "/reels", label: "Reels", testid: "nav-reels" },
+  { to: "/iq", label: "Hockey IQ", testid: "nav-hockey-iq" },
   { to: "/stats", label: "Stats", testid: TEST_IDS.nav.stats },
 ];
 
@@ -50,7 +51,8 @@ function LayoutInner({ children }) {
     location.pathname.startsWith("/scoreboard") ||
     location.pathname.startsWith("/press-conference") ||
     location.pathname.startsWith("/home-v2") ||
-    location.pathname.startsWith("/back-office");
+    location.pathname.startsWith("/back-office") ||
+    location.pathname.startsWith("/iq");
   // Ticker+ cascade lives outside the NHL broadcast frame entirely — hide
   // the live audio player so its stream doesn't fight the onboarding /
   // desk-show TTS.

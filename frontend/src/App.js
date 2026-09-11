@@ -11,6 +11,7 @@ import Voices from "@/pages/Voices";
 import Stats from "@/pages/Stats";
 import Scoreboard from "@/pages/Scoreboard";
 import Fantasy from "@/pages/Fantasy";
+import HockeyIQ from "@/pages/HockeyIQ";
 import Login from "@/pages/Login";
 import BackOffice from "@/pages/BackOffice";
 import MatchupDeepDive from "@/pages/MatchupDeepDive";
@@ -91,6 +92,7 @@ function App() {
             <Route path="/stats" element={<Stats />} />
             <Route path="/scoreboard" element={<Scoreboard />} />
             <Route path="/fantasy" element={<Fantasy />} />
+            <Route path="/iq" element={<HockeyIQ />} />
             <Route path="/back-office" element={<BackOffice />} />
             <Route path="/matchup/:matchupId" element={<MatchupDeepDive />} />
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />
