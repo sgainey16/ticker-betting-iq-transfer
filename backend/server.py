@@ -2268,16 +2268,90 @@ async def iq_attach_wager(call_id: str, payload: WagerReq):
 async def iq_user_brief(device_id: str):
     """Reggie's pre-loaded user brief. Personal history is DERIVED here,
     never read from Signal. Wager/spot-check data is stripped for
-    non-adult-eligible users."""
+    non-adult-eligible users.
+
+    Phase 3: also includes derived Personal IQ interpretation layer
+    (insights + coaching line). Both carry sample sizes and confidence
+    bands. Reggie/Marc consume this at session start."""
+    import iq_insights as _iqi  # local to avoid cold-start cost
     user = await _ensure_user_by_device(device_id)
-    calls_cur = db.iq_calls.find({"user_id": user["id"]}).sort("created_at", -1).limit(100)
+    calls_cur = db.iq_calls.find({"user_id": user["id"]}).sort("created_at", -1).limit(500)
     calls = [_strip_mongo_id(c) async for c in calls_cur]
     call_ids = [c["id"] for c in calls]
     resolutions_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
     resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in resolutions_cur}
+    wagers_cur = db.iq_wagers.find({"call_id": {"$in": call_ids}})
+    wagers_by_call = {w["call_id"]: _strip_mongo_id(w) async for w in wagers_cur}
     open_calls = [c for c in calls if c.get("state") in ("draft", "locked")]
     brief = _iq.build_reggie_brief(user, calls, resolutions_by_call, open_calls)
+
+    # Phase 3 additions — interpretation + coaching.
+    insights = _iqi.generate_insights(user, calls, resolutions_by_call, wagers_by_call, _iq.now_iso())
+    brief["insights"] = insights
+    is_adult = bool((user.get("eligibility") or {}).get("adult_features_unlocked"))
+    brief["coaching_line"] = _iqi.coaching_line_for_bet_context(insights, is_adult)
     return brief
+
+
+@api.get("/iq/user/insights")
+async def iq_user_insights(device_id: str):
+    """Standalone insights endpoint for the My IQ tab and future
+    Reggie/Marc panels. Same data the brief exposes, isolated."""
+    import iq_insights as _iqi
+    user = await _ensure_user_by_device(device_id)
+    calls_cur = db.iq_calls.find({"user_id": user["id"]}).sort("created_at", -1).limit(500)
+    calls = [_strip_mongo_id(c) async for c in calls_cur]
+    call_ids = [c["id"] for c in calls]
+    res_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+    resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in res_cur}
+    wag_cur = db.iq_wagers.find({"call_id": {"$in": call_ids}})
+    wagers_by_call = {w["call_id"]: _strip_mongo_id(w) async for w in wag_cur}
+    insights = _iqi.generate_insights(user, calls, resolutions_by_call, wagers_by_call, _iq.now_iso())
+    is_adult = bool((user.get("eligibility") or {}).get("adult_features_unlocked"))
+    coaching = _iqi.coaching_line_for_bet_context(insights, is_adult)
+    return {
+        "user_id": user["id"],
+        "insights": insights,
+        "coaching_line": coaching,
+        "insight_count": len(insights),
+    }
+
+
+@api.get("/iq/community/specialist-consensus")
+async def iq_specialist_consensus(subject_game_id: Optional[str] = None,
+                                    kind: str = "game_pick",
+                                    dimension: str = "hockey_iq"):
+    """For a given subject, contrast overall public consensus with the
+    consensus of users whose reputation in the chosen dimension is
+    qualified. No collapsed 'Community Edge' score — just two
+    distributions with sample sizes."""
+    import iq_insights as _iqi
+    if dimension not in _VALID_REP_DIMENSIONS:
+        raise HTTPException(status_code=400, detail=f"invalid dimension: {dimension}")
+    q = {"visibility": {"$in": ["public", "anonymous_aggregate"]},
+         "state": {"$in": ["locked", "resolved"]}, "kind": kind}
+    if subject_game_id:
+        q["subject.game_id"] = subject_game_id
+    calls_cur = db.iq_calls.find(q).limit(500)
+    calls = [_strip_mongo_id(c) async for c in calls_cur]
+    if not calls:
+        return _iqi.specialist_consensus([], dimension=dimension)
+
+    user_ids = list({c["user_id"] for c in calls})
+    users_cur = db.iq_users.find({"id": {"$in": user_ids}})
+    users_by_id = {u["id"]: u async for u in users_cur}
+    # Compute reputation for each author. Cached would be nicer at scale.
+    author_rows = []
+    for c in calls:
+        author = users_by_id.get(c["user_id"], {})
+        rep = await _reputation_for_user(c["user_id"])
+        author_rows.append({
+            "call": c,
+            "author_user_id": c["user_id"],
+            "author_user": author,
+            "author_reputation": rep,
+        })
+    return _iqi.specialist_consensus(author_rows, dimension=dimension)
 
 
 @api.get("/iq/legacy/projection")

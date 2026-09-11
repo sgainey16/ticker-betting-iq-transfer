@@ -483,49 +483,69 @@ function MyIQTab({ user, deviceId, onUserChange }) {
   }, [deviceId, user]);
 
   const s = brief?.accuracy_summary;
+  const insights = brief?.insights || [];
+  const coachingLine = brief?.coaching_line;
 
   return (
     <div className="space-y-8" data-testid="iq-my-iq">
       <Hero
         kicker="My IQ"
-        headline={brief && s?.total_resolved > 0
-          ? `${s.total_resolved} calls graded. ${s.accuracy_pct ?? "—"}% on gradeable.`
-          : "You haven't graded any calls yet."}
-        sub={brief && s?.total_resolved > 0
-          ? "Your record, honest. First-instinct vs revised, by kind, by reasoning tag — everything Hockey IQ is learning about how you decide."
+        headline={insights.length > 0
+          ? "What Hockey IQ is learning about you"
+          : (brief && s?.total_resolved > 0
+              ? `${s.total_resolved} calls graded. ${s.accuracy_pct ?? "—"}% on gradeable.`
+              : "You haven't graded any calls yet.")}
+        sub={insights.length > 0
+          ? "Interpretation over raw numbers. Each read carries its sample size — historical performance is not future edge."
           : "Every game you pick, every prop you call — Ticker remembers. Start on Tonight, come back here to see the pattern."}
       />
 
+      {/* PHASE 3: Insight list — sentences, not a wall of numbers. */}
       {loading ? (
-        <SkeletonCard label="Loading your history…" />
-      ) : s && s.total_resolved > 0 ? (
-        <div className="grid sm:grid-cols-4 gap-3">
-          <StatTile
-            icon={CheckCircle2}
-            label="Accuracy"
-            value={s.accuracy_pct != null ? `${s.accuracy_pct}%` : "—"}
-            sub={`${s.correct} of ${s.gradeable} gradeable`}
-            accent="emerald"
-          />
-          <StatTile
-            icon={Sparkles}
-            label="First instinct"
-            value={s.first_instinct_accuracy_pct != null ? `${s.first_instinct_accuracy_pct}%` : "—"}
-            sub="how often your gut was right"
-          />
-          <StatTile
-            icon={TrendingUp}
-            label="Changed mind"
-            value={s.changed_mind_accuracy_pct != null ? `${s.changed_mind_accuracy_pct}%` : "—"}
-            sub="revised & correct"
-          />
-          <StatTile
-            icon={Award}
-            label="Total graded"
-            value={s.total_resolved}
-            sub={s.ungradeable ? `${s.ungradeable} ungradeable` : "all binary"}
-          />
+        <SkeletonCard label="Reading your record…" />
+      ) : insights.length > 0 ? (
+        <div className="space-y-3" data-testid="iq-insights-list">
+          {coachingLine && (
+            <div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/40 p-4 sm:p-5" data-testid="iq-coaching-line">
+              <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-amber-300 mb-2 flex items-center gap-2">
+                <Target className="w-3 h-3" /> Marc · tonight's read
+              </div>
+              <div className="text-white text-sm sm:text-base leading-relaxed">{coachingLine}</div>
+            </div>
+          )}
+          {insights.slice(0, 8).map((i) => (
+            <div
+              key={`${i.code}-${i.sample_size}`}
+              data-testid={`iq-insight-${i.code}`}
+              className={`rounded-lg border p-4 sm:p-5 ${
+                i.confidence === "high"
+                  ? "bg-[#0e1533]/60 border-[#1e5dff]/50"
+                  : "bg-black/30 border-white/15"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className={`font-accent text-[10px] uppercase tracking-widest ${
+                  i.confidence === "high" ? "text-[#1e5dff]" : "text-white/50"
+                }`}>{i.confidence} confidence</span>
+                <span className="text-white/30 text-xs">·</span>
+                <span className="text-white/40 text-xs">{i.sample_size} calls</span>
+                <span className="text-white/30 text-xs">·</span>
+                <span className="text-white/40 text-xs">{i.category}</span>
+              </div>
+              <div className="font-headline text-white text-base sm:text-lg leading-snug mb-1">
+                {i.headline}
+              </div>
+              <div className="text-white/70 text-sm leading-relaxed">
+                {i.marc_voice}
+              </div>
+            </div>
+          ))}
         </div>
+      ) : s && s.total_resolved > 0 ? (
+        <EmptyCard
+          headline={`${s.total_resolved} calls graded — patterns still forming.`}
+          body={`Hockey IQ won't call out patterns from a small sample. Each interpretation needs at least 10 calls in that category. You're on your way.`}
+        />
       ) : (
         <EmptyCard
           headline="Not enough data yet."
