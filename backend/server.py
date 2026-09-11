@@ -1911,6 +1911,401 @@ async def betting_import_commit(payload: BulkImportReq):
     }
 
 
+# ====================================================================
+# Ticker Hockey IQ — Phase 0 endpoints.
+# Coexists with existing systems. Frozen Spot Check untouched.
+# See /app/memory/PHASE_0_DATA_ARCHITECTURE.md.
+# New collections: iq_users, iq_calls, iq_events, iq_signals,
+#                  iq_wagers, iq_resolutions.
+# Legacy `predictions` and `bet_log` are read-only through the
+# projection endpoint — never modified.
+# ====================================================================
+import iq_core as _iq  # noqa: E402
+
+
+# ---------------------- Pydantic request shapes ----------------------
+class AttestAdultReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    jurisdiction: str = Field(min_length=2, max_length=8)  # ISO country/region code
+    policy_version_accepted: str = "adult-unlock-policy-v1"
+    method: str = "self_attestation_v1"
+    nickname: Optional[str] = None
+
+
+class CallEventReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    call_id: Optional[str] = None
+    kind: str
+    payload: dict = Field(default_factory=dict)
+    source: str = "tap"
+    # Only used when kind creates a new call — the "what is this call about"
+    subject: Optional[dict] = None
+    call_kind: Optional[str] = None  # 'game_pick' | 'prop_pick' | ...
+
+
+class ResolveCallReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    outcome_status: str
+    correct: Optional[bool] = None
+    actual: dict = Field(default_factory=dict)
+    grading_rule: str
+    grading_version: str = "v1"
+    source: str = "manual"
+    raw_evidence: Optional[dict] = None
+
+
+class WagerReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    played: bool
+    odds_text: Optional[str] = None
+    stake: Optional[float] = None
+    units: Optional[float] = None
+    book: Optional[str] = None
+
+
+# ---------------------- Helpers ----------------------
+_VALID_EVENT_KINDS = {
+    "draft_created", "instinct_captured", "reasoning_added", "signal_consumed",
+    "revision", "confidence_set", "locked", "abandoned", "wager_attached",
+    "resolution_delivered", "voided", "reflection",
+}
+_VALID_CALL_KINDS = {
+    "game_pick", "prop_pick", "pick10_entry", "fantasy_lineup",
+    "series_pick", "community_take",
+}
+
+
+async def _ensure_user_by_device(device_id: str, nickname: Optional[str] = None) -> dict:
+    """Get-or-create User keyed on device_id. Non-destructive."""
+    existing = await db.iq_users.find_one({"device_ids": device_id})
+    if existing:
+        return existing
+    user = _iq.User(
+        device_ids=[device_id],
+        nickname=nickname or "Guest",
+    ).model_dump()
+    await db.iq_users.insert_one(user)
+    return user
+
+
+async def _load_events(call_id: str) -> list[dict]:
+    cur = db.iq_events.find({"call_id": call_id}).sort("ts", 1)
+    return [doc async for doc in cur]
+
+
+async def _reproject_call(call_id: str) -> dict:
+    """Reload call + all events, project, and persist projected fields."""
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    events = await _load_events(call_id)
+    projected = _iq.project_call_from_events(call, events)
+    await db.iq_calls.update_one(
+        {"id": call_id},
+        {"$set": {
+            "stance": projected["stance"],
+            "first_instinct": projected["first_instinct"],
+            "state": projected["state"],
+            "locked_at": projected["locked_at"],
+            "resolved_at": projected["resolved_at"],
+        }},
+    )
+    projected.pop("_id", None)
+    return projected
+
+
+def _strip_mongo_id(doc):
+    if doc:
+        doc.pop("_id", None)
+    return doc
+
+
+# ---------------------- Endpoints ----------------------
+
+@api.post("/iq/user/attest-adult")
+async def iq_attest_adult(payload: AttestAdultReq):
+    """Records an adult-attestation event with full provenance and unlocks
+    adult features for this user. NEVER stores DOB. Method is versioned so
+    we can upgrade to real KYC later without a schema change."""
+    if payload.method not in ("self_attestation_v1",):
+        # Phase 0 only accepts self-attestation. Higher-assurance methods
+        # need partner integration.
+        raise HTTPException(status_code=400, detail="unsupported attestation method for Phase 0")
+
+    user = await _ensure_user_by_device(payload.device_id, payload.nickname)
+    attestation = {
+        "method": payload.method,
+        "attested_at": _iq.now_iso(),
+        "policy_version": payload.policy_version_accepted,
+        "jurisdiction": payload.jurisdiction,
+        "revoked_at": None,
+    }
+    await db.iq_users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "eligibility.adult_features_unlocked": True,
+            "eligibility.attestation": attestation,
+        }},
+    )
+    updated = await db.iq_users.find_one({"id": user["id"]})
+    return _strip_mongo_id(updated)
+
+
+@api.get("/iq/user")
+async def iq_get_user(device_id: str):
+    """Get-or-create the User for this device. Idempotent."""
+    user = await _ensure_user_by_device(device_id)
+    return _strip_mongo_id(user)
+
+
+@api.post("/iq/call/event")
+async def iq_post_event(payload: CallEventReq):
+    """The single write endpoint. Every voice utterance, every tap, every
+    import lands here.
+
+    Behaviour:
+      - kind must be a known event kind.
+      - If call_id is None and kind == 'draft_created' or 'instinct_captured':
+          creates a new UserCall in state='draft', then appends the event.
+          Requires payload.subject or top-level subject + call_kind for context.
+      - Otherwise: appends the event to the existing call and re-projects.
+      - kind='locked': strict validation via validate_locked_event(). Isolated
+        positive utterances DO NOT lock.
+      - kind='wager_attached': requires user.adult_features_unlocked=true.
+    """
+    if payload.kind not in _VALID_EVENT_KINDS:
+        raise HTTPException(status_code=400, detail=f"unknown event kind: {payload.kind}")
+
+    user = await _ensure_user_by_device(payload.device_id)
+
+    # Strict lock validation BEFORE persisting anything.
+    if payload.kind == "locked":
+        err = _iq.validate_locked_event(payload.payload)
+        if err:
+            raise HTTPException(status_code=400, detail=err)
+
+    # Adult-gated events
+    if payload.kind == "wager_attached":
+        if not (user.get("eligibility") or {}).get("adult_features_unlocked"):
+            raise HTTPException(
+                status_code=403,
+                detail="wager_attached requires adult-features unlock (self attestation).",
+            )
+
+    # New-call creation
+    call_id = payload.call_id
+    if call_id is None:
+        if payload.kind not in ("draft_created", "instinct_captured"):
+            raise HTTPException(
+                status_code=400,
+                detail="new calls must open with 'draft_created' or 'instinct_captured'.",
+            )
+        call_kind = payload.call_kind or "game_pick"
+        if call_kind not in _VALID_CALL_KINDS:
+            raise HTTPException(status_code=400, detail=f"unknown call_kind: {call_kind}")
+        subject = payload.subject or {}
+        new_call = _iq.UserCall(user_id=user["id"], kind=call_kind, subject=subject).model_dump()
+        await db.iq_calls.insert_one(new_call)
+        call_id = new_call["id"]
+
+    # Verify call exists and belongs to this user
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    if call["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="call belongs to another user")
+
+    # State guards — what event kinds are allowed by current state?
+    # 'draft'  → any editing kind allowed
+    # 'locked' → only resolution, void, wager, reflection allowed (no more edits)
+    # 'resolved' / 'abandoned' / 'voided' → only reflection / voided allowed
+    _LOCKED_ALLOWED = {"resolution_delivered", "voided", "wager_attached", "reflection", "signal_consumed"}
+    _TERMINAL_ALLOWED = {"reflection", "voided"}
+    state_now = call.get("state")
+    if state_now == "locked" and payload.kind not in _LOCKED_ALLOWED:
+        raise HTTPException(
+            status_code=409,
+            detail=f"call is locked — only resolution/void/wager/reflection allowed (got '{payload.kind}').",
+        )
+    if state_now in ("resolved", "abandoned", "voided") and payload.kind not in _TERMINAL_ALLOWED:
+        raise HTTPException(
+            status_code=409,
+            detail=f"call is in terminal state '{state_now}' — only reflection/void allowed.",
+        )
+
+    event = _iq.CallEvent(
+        call_id=call_id,
+        user_id=user["id"],
+        source=payload.source,
+        kind=payload.kind,
+        payload=payload.payload,
+    ).model_dump()
+    await db.iq_events.insert_one(event)
+
+    projected = await _reproject_call(call_id)
+    return {"call": projected, "event": _strip_mongo_id(event)}
+
+
+@api.get("/iq/call/{call_id}")
+async def iq_get_call(call_id: str):
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    events = await _load_events(call_id)
+    events = [_strip_mongo_id(e) for e in events]
+    resolution = await db.iq_resolutions.find_one({"call_id": call_id})
+    wager = None
+    if call.get("wager_id"):
+        wager = await db.iq_wagers.find_one({"id": call["wager_id"]})
+    return {
+        "call": _strip_mongo_id(call),
+        "events": events,
+        "resolution": _strip_mongo_id(resolution),
+        "wager": _strip_mongo_id(wager),
+    }
+
+
+@api.get("/iq/user/{user_id}/calls")
+async def iq_list_user_calls(user_id: str, state: Optional[str] = None, limit: int = 50):
+    q = {"user_id": user_id}
+    if state:
+        q["state"] = state
+    cur = db.iq_calls.find(q).sort("created_at", -1).limit(min(200, limit))
+    return {"calls": [_strip_mongo_id(c) async for c in cur]}
+
+
+@api.post("/iq/call/{call_id}/resolve")
+async def iq_resolve_call(call_id: str, payload: ResolveCallReq):
+    """Records a verified resolution. Writes a Resolution record + a
+    'resolution_delivered' event so the projector moves state to 'resolved'.
+    This endpoint is called by a grader (Phase 2) or manually in tests."""
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    if call.get("state") not in ("locked",):
+        raise HTTPException(
+            status_code=409,
+            detail=f"only locked calls can be resolved (state='{call.get('state')}').",
+        )
+    valid_status = {"correct", "incorrect", "push", "void", "ungradeable", "partial"}
+    if payload.outcome_status not in valid_status:
+        raise HTTPException(status_code=400, detail=f"invalid outcome_status: {payload.outcome_status}")
+
+    resolution = _iq.Resolution(
+        call_id=call_id,
+        outcome_status=payload.outcome_status,
+        correct=payload.correct,
+        actual=payload.actual,
+        grading_rule=payload.grading_rule,
+        grading_version=payload.grading_version,
+        source=payload.source,
+        raw_evidence=payload.raw_evidence,
+    ).model_dump()
+    await db.iq_resolutions.insert_one(resolution)
+
+    event = _iq.CallEvent(
+        call_id=call_id,
+        user_id=call["user_id"],
+        source="system",
+        kind="resolution_delivered",
+        payload={"resolution_id": resolution["id"], "outcome_status": payload.outcome_status},
+    ).model_dump()
+    await db.iq_events.insert_one(event)
+
+    projected = await _reproject_call(call_id)
+    return {"call": projected, "resolution": _strip_mongo_id(resolution)}
+
+
+@api.post("/iq/call/{call_id}/wager")
+async def iq_attach_wager(call_id: str, payload: WagerReq):
+    """Attach an optional Wager to a locked-or-later UserCall. Adult-gated."""
+    user = await _ensure_user_by_device(payload.device_id)
+    if not (user.get("eligibility") or {}).get("adult_features_unlocked"):
+        raise HTTPException(status_code=403, detail="wager attachment requires adult-features unlock.")
+
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    if call["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="call belongs to another user")
+    if call.get("state") not in ("locked", "resolved"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"wager can only attach to locked or resolved calls (state='{call.get('state')}').",
+        )
+    if call.get("wager_id"):
+        raise HTTPException(status_code=409, detail="a wager is already attached to this call.")
+
+    wager = _iq.Wager(
+        user_id=user["id"],
+        call_id=call_id,
+        played=payload.played,
+        odds_text=payload.odds_text,
+        stake=payload.stake,
+        units=payload.units,
+        book=payload.book,
+    ).model_dump()
+    await db.iq_wagers.insert_one(wager)
+    await db.iq_calls.update_one({"id": call_id}, {"$set": {"wager_id": wager["id"]}})
+
+    # Append the event so the journey reflects the attachment
+    event = _iq.CallEvent(
+        call_id=call_id,
+        user_id=user["id"],
+        source="tap",
+        kind="wager_attached",
+        payload={"wager_id": wager["id"], "played": payload.played},
+    ).model_dump()
+    await db.iq_events.insert_one(event)
+
+    return {"wager": _strip_mongo_id(wager), "event": _strip_mongo_id(event)}
+
+
+@api.get("/iq/user/brief")
+async def iq_user_brief(device_id: str):
+    """Reggie's pre-loaded user brief. Personal history is DERIVED here,
+    never read from Signal. Wager/spot-check data is stripped for
+    non-adult-eligible users."""
+    user = await _ensure_user_by_device(device_id)
+    calls_cur = db.iq_calls.find({"user_id": user["id"]}).sort("created_at", -1).limit(100)
+    calls = [_strip_mongo_id(c) async for c in calls_cur]
+    call_ids = [c["id"] for c in calls]
+    resolutions_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+    resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in resolutions_cur}
+    open_calls = [c for c in calls if c.get("state") in ("draft", "locked")]
+    brief = _iq.build_reggie_brief(user, calls, resolutions_by_call, open_calls)
+    return brief
+
+
+@api.get("/iq/legacy/projection")
+async def iq_legacy_projection(device_id: str, user_name: Optional[str] = None):
+    """Read-only projection of existing Prediction and BetLog records
+    into UserCall/Wager/Resolution shape. Neither collection is modified.
+    This is how new IQ read surfaces see the same records as UserCalls
+    without a destructive migration."""
+    projected_calls = []
+
+    # Legacy bet_log — keyed by device_id
+    async for b in db.bet_log.find({"device_id": device_id}).sort("created_at", -1).limit(500):
+        projected_calls.append(_iq.project_legacy_bet(_strip_mongo_id(b)))
+
+    # Legacy predictions — keyed by user_name (the collision-prone identity).
+    # Only project if caller provides a user_name filter.
+    if user_name:
+        async for p in db.predictions.find({"user_name": user_name}).sort("created_at", -1).limit(500):
+            projected_calls.append(_iq.project_legacy_prediction(_strip_mongo_id(p)))
+
+    return {
+        "device_id": device_id,
+        "user_name_filter": user_name,
+        "count": len(projected_calls),
+        "projected": projected_calls,
+    }
+
+
 app.include_router(api)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly

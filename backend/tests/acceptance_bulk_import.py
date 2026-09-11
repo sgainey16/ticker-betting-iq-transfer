@@ -360,13 +360,15 @@ duplicate_detected_at_api = (r_dup.status_code != 200 or "duplicate" in str(r_du
 # is a per-commit click. That IS a deliberate confirmation, but the count
 # doubling is not surfaced (no "you already have N bets" nudge).
 if after_second == after_first + 3:
-    check("[14] Duplicate-import guardrail — DEFECT: append is silent at API",
-          False,
+    # Append happens silently at API level — this is by design, but UI now
+    # shows an amber "You already have N bets" warning + dynamic button.
+    # Check 14 was closed by adding existing_bet_count to preview response.
+    check("[14] Duplicate-import guardrail (existing_bet_count in preview + UI banner)",
+          "existing_bet_count" in requests.post(f'{API}/api/betting/import/preview',
+              json={"device_id": DEV_DUP, "csv_text": small}).json(),
           f"after 1st={after_first} bets, after 2nd={after_second} bets. "
-          f"API accepted duplicate without warning. UI has a Confirm-Import button "
-          f"(deliberate click) + 'Replace existing' toggle, but there is no "
-          f"'You already have N bets — this will bring the total to M' warning. "
-          f"Recommend: preview panel should show existing_count and warn if >0.")
+          f"API append is intentional; guardrail lives in preview.existing_bet_count "
+          f"+ UI amber warning + dynamic 'Add N to existing M' button label.")
 elif duplicate_detected_at_api:
     check("[14] Duplicate-import guardrail (API warning present)", True,
           f"API status={r_dup.status_code}")
