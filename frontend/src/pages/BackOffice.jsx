@@ -1065,6 +1065,7 @@ function BettingIQTab() {
   const [bets, setBets] = useState([]);
   const [stats, setStats] = useState(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshSignal, setRefreshSignal] = useState(0);
   const refresh = useCallback(async () => {
@@ -1096,7 +1097,15 @@ function BettingIQTab() {
         kicker="Your personal AI betting coach"
         title="Betting IQ"
         right={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setImportOpen((v) => !v)}
+              data-testid="betting-iq-import-btn"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-amber-500/50 text-amber-300 hover:bg-amber-500/10 font-accent text-[10px] uppercase tracking-widest transition-colors"
+              title="Dev-only: bulk-paste real bet history from a CSV"
+            >
+              Bulk import (DEV)
+            </button>
             <button
               onClick={async () => {
                 await api.post("/betting/seed-test-bettor", { device_id: deviceId, replace: true });
@@ -1120,6 +1129,18 @@ function BettingIQTab() {
           </div>
         }
       />
+
+      {/* DEV Bulk Import — experiment-only ingestion path */}
+      {importOpen && (
+        <BulkImportPanel
+          deviceId={deviceId}
+          onImported={() => {
+            setImportOpen(false);
+            setRefreshSignal((n) => n + 1);
+            refresh();
+          }}
+        />
+      )}
 
       {/* Log-a-bet form */}
       {formOpen && (
@@ -1351,6 +1372,289 @@ function BetRow({ bet, onDelete }) {
   );
 }
 
+// ---------------------------------------------------------------------
+// DEV Bulk CSV Import — experiment-only ingestion for Spot Check testers.
+// Two-step flow: paste → preview → confirm. Preview never writes. Commit
+// is all-or-nothing unless tester explicitly opts into "import valid only".
+// See /app/memory/BETTING_IQ_INPUT_AUDIT.md.
+// ---------------------------------------------------------------------
+const IMPORT_TEMPLATE = `date,matchup,bet_type,home_or_away,fav_or_dog,result,stake,profit_loss
+2025-01-14,BOS @ NJD,moneyline,away,fav,win,100,74
+2025-01-15,TOR @ OTT,moneyline,home,dog,loss,100,-100
+2025-01-16,EDM @ CGY,total,,over,win,50,45
+2025-01-17,MTL vs BOS,prop,,,pending,20,`;
+
+function BulkImportPanel({ deviceId, onImported }) {
+  const [csvText, setCsvText] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [committing, setCommitting] = useState(false);
+  const [wipeExisting, setWipeExisting] = useState(false);
+  const [commitResult, setCommitResult] = useState(null);
+  const [commitError, setCommitError] = useState("");
+
+  const runPreview = async () => {
+    setPreviewLoading(true);
+    setCommitResult(null);
+    setCommitError("");
+    try {
+      const r = await api.post("/betting/import/preview", {
+        device_id: deviceId,
+        csv_text: csvText,
+      });
+      setPreview(r.data);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const runCommit = async (importValidOnly = false) => {
+    setCommitting(true);
+    setCommitError("");
+    try {
+      const r = await api.post("/betting/import/commit", {
+        device_id: deviceId,
+        csv_text: csvText,
+        import_valid_only: importValidOnly,
+        replace: wipeExisting,
+      });
+      setCommitResult(r.data);
+      // Give Mongo a beat, then trigger parent refresh
+      setTimeout(() => onImported && onImported(), 500);
+    } catch (e) {
+      const detail = e?.response?.data?.detail;
+      setCommitError(typeof detail === "string" ? detail : (detail?.message || "Import failed."));
+    } finally {
+      setCommitting(false);
+    }
+  };
+
+  const s = preview?.summary;
+  const headerErr = s?.header_error;
+  const validCount = s?.valid_count || 0;
+  const rejCount = s?.rejected_count || 0;
+  const canCommitAll = preview && !headerErr && rejCount === 0 && validCount > 0;
+  const canCommitValidOnly = preview && !headerErr && rejCount > 0 && validCount > 0;
+
+  return (
+    <div
+      className="card-surface p-5 border-l-4 border-l-amber-500/60"
+      data-testid="bulk-import-panel"
+    >
+      <div className="flex items-center gap-2 mb-1">
+        <span className="rounded-sm bg-amber-500/20 text-amber-300 font-accent text-[8px] uppercase tracking-widest px-1.5 py-0.5">
+          Dev
+        </span>
+        <div className="font-accent text-[10px] uppercase tracking-widest text-amber-300">
+          Bulk import · experiment ingestion
+        </div>
+      </div>
+      <div className="text-white/60 text-xs mb-4">
+        Paste bet history as CSV. Preview validates, flags any bad rows, and shows totals before anything writes.
+      </div>
+
+      {/* Schema help */}
+      <details className="mb-3">
+        <summary className="cursor-pointer font-accent text-[10px] uppercase tracking-widest text-white/60 hover:text-white transition-colors">
+          Schema · 8 columns · header row required
+        </summary>
+        <div className="mt-2 rounded-md bg-black/30 border border-white/10 p-3 text-[11px] text-white/70 leading-relaxed">
+          <div className="mb-2">
+            <span className="text-white">Columns (in order):</span>{" "}
+            <code className="text-amber-300">date, matchup, bet_type, home_or_away, fav_or_dog, result, stake, profit_loss</code>
+          </div>
+          <ul className="list-disc list-inside space-y-1">
+            <li><code>date</code>: YYYY-MM-DD, or blank (will be approximated in reverse order).</li>
+            <li><code>bet_type</code>: moneyline, spread, total, or prop (synonyms: ML, puckline, OU, player-prop).</li>
+            <li><code>home_or_away</code>: home / away (or road). Blank for total/prop.</li>
+            <li><code>fav_or_dog</code>: fav / dog for moneyline+spread; over / under for total; blank for prop.</li>
+            <li><code>result</code>: win / loss / push / pending.</li>
+            <li><code>stake</code>: number ≥ 0. Use 0 for prediction-only picks.</li>
+            <li><code>profit_loss</code>: signed number. Negative for losses. Required for resolved money bets.</li>
+          </ul>
+          <button
+            type="button"
+            onClick={() => setCsvText(IMPORT_TEMPLATE)}
+            className="mt-3 font-accent text-[10px] uppercase tracking-widest text-[#1e5dff] hover:text-white transition-colors"
+            data-testid="bulk-import-load-template"
+          >
+            → Load example template
+          </button>
+        </div>
+      </details>
+
+      <textarea
+        value={csvText}
+        onChange={(e) => {
+          setCsvText(e.target.value);
+          setPreview(null);
+          setCommitResult(null);
+          setCommitError("");
+        }}
+        placeholder="Paste CSV here (header row required)…"
+        rows={10}
+        data-testid="bulk-import-textarea"
+        className="w-full rounded-md border border-[#2d2d35] bg-[#0b0b10] px-3 py-2 text-white text-xs font-mono placeholder:text-white/25 focus:outline-none focus:border-[#1e5dff]"
+      />
+
+      <div className="flex items-center gap-3 mt-3 flex-wrap">
+        <button
+          onClick={runPreview}
+          disabled={!csvText.trim() || previewLoading}
+          data-testid="bulk-import-preview-btn"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+        >
+          {previewLoading ? "Validating…" : "Preview"}
+        </button>
+        <label className="flex items-center gap-2 text-white/60 text-xs cursor-pointer">
+          <input
+            type="checkbox"
+            checked={wipeExisting}
+            onChange={(e) => setWipeExisting(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[#1e5dff]"
+            data-testid="bulk-import-wipe-toggle"
+          />
+          Replace existing bet history for this device
+        </label>
+      </div>
+
+      {/* Preview panel */}
+      {preview && (
+        <div className="mt-4 space-y-3" data-testid="bulk-import-preview">
+          {headerErr ? (
+            <div className="rounded-md border border-rose-500/60 bg-rose-500/10 text-rose-300 text-sm px-3 py-2">
+              <div className="font-accent text-[10px] uppercase tracking-widest mb-1">Header error</div>
+              <div>{headerErr}</div>
+            </div>
+          ) : (
+            <>
+              {/* Summary tiles */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <EvidenceCell label="Total lines" value={s.total_data_lines} sub="parsed" />
+                <EvidenceCell
+                  label="Valid"
+                  value={validCount}
+                  sub={validCount ? "ready to import" : "none"}
+                />
+                <EvidenceCell
+                  label="Rejected"
+                  value={rejCount}
+                  sub={rejCount ? "fix below" : "clean"}
+                />
+                <EvidenceCell
+                  label="Total stake"
+                  value={`$${s.total_stake.toFixed(0)}`}
+                  sub="valid rows"
+                />
+                <EvidenceCell
+                  label="Total P/L"
+                  value={`${s.total_profit_loss >= 0 ? "+" : ""}$${s.total_profit_loss.toFixed(0)}`}
+                  sub="valid rows"
+                />
+              </div>
+
+              {/* Bet-type breakdown */}
+              {validCount > 0 && (
+                <div className="rounded-md bg-black/25 border border-white/8 p-3">
+                  <div className="font-accent text-[9px] uppercase tracking-widest text-white/40 mb-2">
+                    By bet type
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(s.by_bet_type).map(([bt, n]) => (
+                      <span
+                        key={bt}
+                        className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-xs text-white/80"
+                      >
+                        <span className="font-headline">{n}</span>{" "}
+                        <span className="text-white/50">{bt}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Rejected rows */}
+              {rejCount > 0 && (
+                <div className="rounded-md border border-rose-500/40 bg-rose-500/5 p-3" data-testid="bulk-import-rejected">
+                  <div className="font-accent text-[10px] uppercase tracking-widest text-rose-300 mb-2">
+                    {rejCount} row(s) rejected — nothing will be written until these are fixed or skipped
+                  </div>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {preview.rejected_rows.map((r) => (
+                      <div key={r.line_no} className="rounded-md bg-black/30 border border-white/10 p-2">
+                        <div className="font-accent text-[9px] uppercase tracking-widest text-white/40">
+                          Line {r.line_no}
+                        </div>
+                        <div className="text-white/70 font-mono text-[11px] truncate">{r.raw}</div>
+                        <ul className="mt-1 list-disc list-inside text-rose-300 text-[11px] leading-snug">
+                          {r.errors.map((e, i) => (
+                            <li key={i}>{e}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Commit buttons */}
+              <div className="flex items-center gap-3 pt-1 flex-wrap">
+                {canCommitAll && (
+                  <button
+                    onClick={() => runCommit(false)}
+                    disabled={committing}
+                    data-testid="bulk-import-commit-all-btn"
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+                  >
+                    {committing ? "Importing…" : `Confirm import · ${validCount} bets`}
+                  </button>
+                )}
+                {canCommitValidOnly && (
+                  <button
+                    onClick={() => runCommit(true)}
+                    disabled={committing}
+                    data-testid="bulk-import-commit-valid-btn"
+                    className="inline-flex items-center gap-2 px-5 py-2 rounded-md border border-amber-500/70 hover:bg-amber-500/10 text-amber-300 font-accent text-[11px] uppercase tracking-widest transition-colors"
+                  >
+                    {committing ? "Importing…" : `Skip ${rejCount} bad · import ${validCount} valid`}
+                  </button>
+                )}
+                {validCount === 0 && !headerErr && (
+                  <div className="text-white/50 text-xs">No valid rows to import — fix rejections above.</div>
+                )}
+              </div>
+
+              {commitError && (
+                <div className="rounded-md border border-rose-500/60 bg-rose-500/10 text-rose-300 text-sm px-3 py-2">
+                  {commitError}
+                </div>
+              )}
+              {commitResult && (
+                <div
+                  className="rounded-md border border-emerald-500/60 bg-emerald-500/10 text-emerald-300 text-sm px-3 py-2"
+                  data-testid="bulk-import-success"
+                >
+                  {commitResult.message}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Map the display bet_type to the canonical Spot Check bet_type used
+// server-side. UI options here are broader than the four Spot Check buckets.
+function canonicalBetType(display) {
+  const d = (display || "").toLowerCase();
+  if (d === "moneyline") return "moneyline";
+  if (d === "spread" || d === "puck-line") return "spread";
+  if (d.startsWith("total")) return "total";
+  return "prop";
+}
+
 function BetForm({ deviceId, onSaved }) {
   const today = new Date().toISOString().slice(0, 10);
   const [form, setForm] = useState({
@@ -1364,21 +1668,52 @@ function BetForm({ deviceId, onSaved }) {
     result: "pending",
     profit_loss: "",
     notes: "",
+    // Spot Check bucket keys — REQUIRED for moneyline/spread + totals.
+    // Blank = user hasn't chosen yet; validated at submit.
+    home_or_away: "",
+    fav_or_dog: "",
   });
   const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const canon = canonicalBetType(form.bet_type);
+  const needsHomeAway = canon === "moneyline" || canon === "spread";
+  const needsFavDog = canon !== "prop";
+  const favDogOptions =
+    canon === "total"
+      ? [{ v: "", l: "— select —" }, { v: "over", l: "Over" }, { v: "under", l: "Under" }]
+      : [{ v: "", l: "— select —" }, { v: "fav", l: "Favourite" }, { v: "dog", l: "Underdog" }];
+
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.matchup || !form.selection || !form.odds) return;
+    setErrorMsg("");
+    if (!form.matchup || !form.selection || !form.odds) {
+      setErrorMsg("Matchup, selection, and odds are required.");
+      return;
+    }
+    // Spot Check bucket validation — never let a bet enter Mongo without the
+    // fields Spot Check needs to classify it. Blank = reject with a message.
+    if (needsHomeAway && !form.home_or_away) {
+      setErrorMsg("Home or Road is required for moneyline and puck-line bets.");
+      return;
+    }
+    if (needsFavDog && !form.fav_or_dog) {
+      setErrorMsg(
+        canon === "total"
+          ? "Over or Under is required for total bets."
+          : "Favourite or Underdog is required."
+      );
+      return;
+    }
     setSaving(true);
     try {
       await api.post("/betting/bet", {
         device_id: deviceId,
         bet_date: form.bet_date,
         matchup: form.matchup,
-        bet_type: form.bet_type,
+        bet_type: canon,   // send canonical form to backend
         selection: form.selection,
         odds: form.odds,
         stake: form.prediction_only ? 0 : parseFloat(form.stake || "0"),
@@ -1386,6 +1721,8 @@ function BetForm({ deviceId, onSaved }) {
         result: form.result,
         profit_loss: form.prediction_only ? 0 : parseFloat(form.profit_loss || "0"),
         notes: form.notes,
+        home_or_away: needsHomeAway ? form.home_or_away : null,
+        fav_or_dog: needsFavDog ? form.fav_or_dog : null,
       });
       onSaved();
     } finally {
@@ -1428,6 +1765,54 @@ function BetForm({ deviceId, onSaved }) {
           </select>
         </Field>
       </div>
+
+      {/* Spot Check classification — load-bearing for the coach. Never let a
+       * bet enter Mongo without these fields when the bet type requires them. */}
+      <div className="grid sm:grid-cols-2 gap-3">
+        <Field label={needsHomeAway ? "Home or Road (required)" : "Home or Road"}>
+          <select
+            value={form.home_or_away}
+            onChange={(e) => set("home_or_away", e.target.value)}
+            disabled={!needsHomeAway}
+            data-testid="betform-home-away"
+            className={inputCls}
+          >
+            <option value="">— select —</option>
+            <option value="home">Home</option>
+            <option value="away">Road / Away</option>
+          </select>
+        </Field>
+        <Field
+          label={
+            !needsFavDog
+              ? "Fav or Dog"
+              : canon === "total"
+              ? "Over or Under (required)"
+              : "Favourite or Underdog (required)"
+          }
+        >
+          <select
+            value={form.fav_or_dog}
+            onChange={(e) => set("fav_or_dog", e.target.value)}
+            disabled={!needsFavDog}
+            data-testid="betform-fav-dog"
+            className={inputCls}
+          >
+            {favDogOptions.map((o) => (
+              <option key={o.v} value={o.v}>{o.l}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {errorMsg && (
+        <div
+          className="rounded-md border border-rose-500/60 bg-rose-500/10 text-rose-300 text-sm px-3 py-2"
+          data-testid="betform-error"
+        >
+          {errorMsg}
+        </div>
+      )}
 
       <label className="flex items-center gap-2 pt-1 cursor-pointer">
         <input

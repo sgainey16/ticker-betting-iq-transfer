@@ -1775,6 +1775,135 @@ async def betting_seed_test_bettor(payload: SeedTestBettorReq):
     return {"seeded": len(seeds), "device_id": payload.device_id}
 
 
+# --------------------------------------------------------------------
+# Betting IQ — DEV Bulk CSV Import.
+# Experiment-only ingestion for the 3–5 person Spot Check test.
+# NOT a general sportsbook importer. See /app/memory/BETTING_IQ_INPUT_AUDIT.md.
+#
+# Two-step: /preview never writes. /commit re-parses the same csv_text so
+# preview and commit can never diverge. All-or-nothing on the commit path:
+# either every valid row lands or nothing does. Rejected rows are surfaced
+# with per-row error messages so testers can fix + re-preview.
+# --------------------------------------------------------------------
+import bet_csv_parser as _csv  # noqa: E402
+from datetime import date as _date, timedelta as _timedelta  # noqa: E402
+
+
+class BulkImportReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    csv_text: str = Field(min_length=0, max_length=200_000)
+    # Only honoured on /commit. Tester must explicitly opt in when rejected
+    # rows exist — otherwise commit refuses to write anything.
+    import_valid_only: bool = False
+    # When true, wipes existing bets for this device before importing.
+    replace: bool = False
+
+
+def _backfill_dates(rows: list[dict]) -> list[dict]:
+    """Assign a plausible bet_date to any row that came in with None. Newest
+    row gets 'today', each subsequent row is 1 day older. Flags approximation
+    in the 'notes' field so the tester sees which dates were estimated."""
+    today = _date.today()
+    approx_i = 0
+    for r in rows:
+        if r.get("bet_date"):
+            continue
+        r["bet_date"] = (today - _timedelta(days=approx_i)).isoformat()
+        r["notes"] = "date approximated on import"
+        approx_i += 1
+    return rows
+
+
+@api.post("/betting/import/preview")
+async def betting_import_preview(payload: BulkImportReq):
+    """Parse + validate the paste. Never writes. Returns valid_rows,
+    rejected_rows, and a summary the frontend renders as the preview.
+
+    Contract: this endpoint is idempotent and side-effect free. Client
+    can call it repeatedly as the tester edits the paste."""
+    result = _csv.parse_csv(payload.csv_text)
+    return result
+
+
+@api.post("/betting/import/commit")
+async def betting_import_commit(payload: BulkImportReq):
+    """Persist the paste to Mongo. Re-parses csv_text server-side so preview
+    and commit can never disagree.
+
+    All-or-nothing semantics:
+      - If rejected_rows is empty → writes every valid row.
+      - If rejected_rows is non-empty AND import_valid_only=False → refuses
+        (409). Prevents silent partial imports.
+      - If rejected_rows is non-empty AND import_valid_only=True → writes only
+        valid rows and returns both counts.
+    """
+    parsed = _csv.parse_csv(payload.csv_text)
+    header_err = parsed["summary"].get("header_error")
+    if header_err:
+        raise HTTPException(status_code=400, detail=header_err)
+
+    rejected = parsed["rejected_rows"]
+    valid = parsed["valid_rows"]
+
+    if rejected and not payload.import_valid_only:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": (
+                    f"{len(rejected)} row(s) rejected. Fix them and re-preview, "
+                    "or resubmit with import_valid_only=true to skip them."
+                ),
+                "rejected_count": len(rejected),
+                "valid_count": len(valid),
+            },
+        )
+
+    if not valid:
+        return {
+            "written": 0,
+            "valid_count": 0,
+            "rejected_count": len(rejected),
+            "summary": parsed["summary"],
+            "message": "Nothing to import — no valid rows.",
+        }
+
+    # Optional wipe of existing bets for this device.
+    if payload.replace:
+        await db.bet_log.delete_many({"device_id": payload.device_id})
+
+    # Assign IDs + device_id + created_at, backfill dates, then insert as one shot.
+    now = datetime.now(timezone.utc).isoformat()
+    valid = _backfill_dates(valid)
+    docs = []
+    for r in valid:
+        docs.append({
+            "id": str(uuid.uuid4()),
+            "device_id": payload.device_id,
+            "bet_date": r["bet_date"],
+            "matchup": r["matchup"],
+            "bet_type": r["bet_type"],
+            "selection": r["selection"],
+            "odds": r["odds"],
+            "stake": r["stake"],
+            "prediction_only": r["prediction_only"],
+            "result": r["result"],
+            "profit_loss": r["profit_loss"],
+            "notes": r["notes"],
+            "home_or_away": r["home_or_away"],
+            "fav_or_dog": r["fav_or_dog"],
+            "created_at": now,
+        })
+    await db.bet_log.insert_many(docs)
+
+    return {
+        "written": len(docs),
+        "valid_count": len(valid),
+        "rejected_count": len(rejected),
+        "summary": parsed["summary"],
+        "message": f"Imported {len(docs)} bets.",
+    }
+
 
 app.include_router(api)
 
