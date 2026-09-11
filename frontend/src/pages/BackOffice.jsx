@@ -1433,8 +1433,23 @@ function BulkImportPanel({ deviceId, onImported }) {
   const headerErr = s?.header_error;
   const validCount = s?.valid_count || 0;
   const rejCount = s?.rejected_count || 0;
+  const existingCount = preview?.existing_bet_count ?? 0;
+  const projectedTotal = wipeExisting ? validCount : existingCount + validCount;
+  const showAppendWarning = !!preview && !headerErr && !wipeExisting && existingCount > 0 && validCount > 0;
+  const showReplaceWarning = !!preview && !headerErr && wipeExisting && existingCount > 0;
   const canCommitAll = preview && !headerErr && rejCount === 0 && validCount > 0;
   const canCommitValidOnly = preview && !headerErr && rejCount > 0 && validCount > 0;
+
+  const commitLabelAll = wipeExisting
+    ? `Replace ${existingCount} existing bets with ${validCount} imported bets`
+    : existingCount > 0
+    ? `Add ${validCount} bets to existing ${existingCount}`
+    : `Confirm import · ${validCount} bets`;
+  const commitLabelValidOnly = wipeExisting
+    ? `Replace ${existingCount} existing · import ${validCount} valid · skip ${rejCount} bad`
+    : existingCount > 0
+    ? `Skip ${rejCount} bad · add ${validCount} to existing ${existingCount}`
+    : `Skip ${rejCount} bad · import ${validCount} valid`;
 
   return (
     <div
@@ -1528,6 +1543,44 @@ function BulkImportPanel({ deviceId, onImported }) {
             </div>
           ) : (
             <>
+              {/* Append vs Replace guardrail — unmistakable before Confirm.
+               * Users must NEVER accidentally double their history. */}
+              {showAppendWarning && (
+                <div
+                  className="rounded-md border border-amber-500/70 bg-amber-500/10 text-amber-200 px-3 py-2"
+                  data-testid="bulk-import-append-warning"
+                >
+                  <div className="font-accent text-[10px] uppercase tracking-widest text-amber-300 mb-1">
+                    Append mode
+                  </div>
+                  <div className="text-sm leading-snug">
+                    You already have <span className="font-headline text-white">{existingCount}</span>{" "}
+                    bets in Betting IQ. This import will{" "}
+                    <span className="font-headline text-white">ADD {validCount}</span> bets,
+                    bringing your history to{" "}
+                    <span className="font-headline text-white">{projectedTotal}</span>.
+                  </div>
+                  <div className="text-xs text-amber-200/70 mt-1">
+                    Toggle "Replace existing" above if you meant to wipe and start over.
+                  </div>
+                </div>
+              )}
+              {showReplaceWarning && (
+                <div
+                  className="rounded-md border border-rose-500/70 bg-rose-500/10 text-rose-200 px-3 py-2"
+                  data-testid="bulk-import-replace-warning"
+                >
+                  <div className="font-accent text-[10px] uppercase tracking-widest text-rose-300 mb-1">
+                    Replace mode · destructive
+                  </div>
+                  <div className="text-sm leading-snug">
+                    This will <span className="font-headline text-white">delete all {existingCount}</span>{" "}
+                    existing bets and replace them with{" "}
+                    <span className="font-headline text-white">{validCount}</span> imported bets.
+                  </div>
+                </div>
+              )}
+
               {/* Summary tiles */}
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <EvidenceCell label="Total lines" value={s.total_data_lines} sub="parsed" />
@@ -1604,9 +1657,13 @@ function BulkImportPanel({ deviceId, onImported }) {
                     onClick={() => runCommit(false)}
                     disabled={committing}
                     data-testid="bulk-import-commit-all-btn"
-                    className="inline-flex items-center gap-2 px-5 py-2 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+                    className={`inline-flex items-center gap-2 px-5 py-2 rounded-md ${
+                      wipeExisting
+                        ? "bg-rose-600 hover:bg-rose-500"
+                        : "bg-emerald-600 hover:bg-emerald-500"
+                    } disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors`}
                   >
-                    {committing ? "Importing…" : `Confirm import · ${validCount} bets`}
+                    {committing ? "Importing…" : commitLabelAll}
                   </button>
                 )}
                 {canCommitValidOnly && (
@@ -1616,7 +1673,7 @@ function BulkImportPanel({ deviceId, onImported }) {
                     data-testid="bulk-import-commit-valid-btn"
                     className="inline-flex items-center gap-2 px-5 py-2 rounded-md border border-amber-500/70 hover:bg-amber-500/10 text-amber-300 font-accent text-[11px] uppercase tracking-widest transition-colors"
                   >
-                    {committing ? "Importing…" : `Skip ${rejCount} bad · import ${validCount} valid`}
+                    {committing ? "Importing…" : commitLabelValidOnly}
                   </button>
                 )}
                 {validCount === 0 && !headerErr && (

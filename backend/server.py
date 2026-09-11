@@ -1820,9 +1820,15 @@ async def betting_import_preview(payload: BulkImportReq):
     """Parse + validate the paste. Never writes. Returns valid_rows,
     rejected_rows, and a summary the frontend renders as the preview.
 
+    Also returns existing_bet_count for this device so the frontend can
+    render an unmistakable append-vs-replace warning before Confirm.
+
     Contract: this endpoint is idempotent and side-effect free. Client
     can call it repeatedly as the tester edits the paste."""
     result = _csv.parse_csv(payload.csv_text)
+    result["existing_bet_count"] = await db.bet_log.count_documents(
+        {"device_id": payload.device_id}
+    )
     return result
 
 
