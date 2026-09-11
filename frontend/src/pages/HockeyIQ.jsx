@@ -17,6 +17,7 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Radio, Brain, Trophy, Users, Target, Sparkles,
   Lock, Unlock, CheckCircle2, TrendingUp, Award, Flame,
+  Send, Eye, EyeOff, MessageSquare, Globe,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { getDeviceId } from "@/lib/device";
@@ -122,9 +123,11 @@ export default function HockeyIQ() {
 //           GamePickerStrip. Live NHL data via existing endpoints.
 // =====================================================================
 function TonightTab() {
+  const deviceId = useMemo(() => getDeviceId(), []);
   const [games, setGames] = useState([]);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGameId, setSelectedGameId] = useState(null);
 
   useEffect(() => {
     let live = true;
@@ -140,6 +143,7 @@ function TonightTab() {
   }, []);
 
   const gameCount = games.length;
+  const selectedGame = games.find((g) => g.id === selectedGameId);
 
   return (
     <div className="space-y-8" data-testid="iq-tonight">
@@ -161,8 +165,8 @@ function TonightTab() {
           <GamePickerStrip
             games={games}
             teams={teams}
-            selectedGameId={null}
-            onSelect={() => {}}
+            selectedGameId={selectedGameId}
+            onSelect={setSelectedGameId}
             playAllLabel="All Games"
             testids={{
               root: "iq-tonight-picker",
@@ -170,28 +174,285 @@ function TonightTab() {
               game: (id) => `iq-tonight-picker-game-${id}`,
             }}
           />
-          <div className="rounded-xl bg-gradient-to-br from-[#0e1533]/60 to-[#050510]/60 border border-white/10 p-5 sm:p-6">
-            <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff] mb-1">
-              Ready to call it?
+
+          {selectedGame ? (
+            <MakeACall
+              deviceId={deviceId}
+              game={selectedGame}
+              teams={teams}
+              onClosed={() => setSelectedGameId(null)}
+            />
+          ) : (
+            <div className="rounded-xl bg-gradient-to-br from-[#0e1533]/60 to-[#050510]/60 border border-white/10 p-5 sm:p-6" data-testid="iq-tonight-prompt">
+              <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff] mb-1">
+                Pick a game above
+              </div>
+              <div className="font-headline text-xl sm:text-2xl text-white mb-1">
+                Then tell Ticker who you like.
+              </div>
+              <p className="text-white/60 text-sm">
+                It becomes a call in your history. Keep it private — it still counts toward your Personal IQ.
+                Publish it — it goes on the community feed and, when it resolves, adds to your community credibility.
+              </p>
             </div>
-            <div className="font-headline text-xl sm:text-2xl text-white mb-3">
-              Go to the full picking room →
-            </div>
-            <p className="text-white/60 text-sm mb-4 max-w-2xl">
-              The current predictions surface has everything wired up — game-by-game pick, reasoning, streak, leaderboard.
-              It's moving into Hockey IQ properly in Phase 2. Until then, this is where you play tonight's card.
-            </p>
-            <Link
-              to="/show"
-              data-testid="iq-tonight-open-predictions"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
-            >
-              Open tonight's picks
-            </Link>
-          </div>
+          )}
         </>
       )}
     </div>
+  );
+}
+
+
+// The inline "Make a call" flow — Think → Call → Lock → optionally Publish.
+// Uses the Phase 0 event pipeline. Zero new endpoints needed.
+function MakeACall({ deviceId, game, teams, onClosed }) {
+  const teamMeta = (code) => teams.find((t) => t.code === code) || {};
+  const home = teamMeta(game.home);
+  const away = teamMeta(game.away);
+  const homeName = home.name || game.home;
+  const awayName = away.name || game.away;
+
+  const [step, setStep] = useState("instinct");  // instinct | reason | lock | done
+  const [callId, setCallId] = useState(null);
+  const [pick, setPick] = useState(null);
+  const [reasoning, setReasoning] = useState("");
+  const [confidence, setConfidence] = useState(5);
+  const [visibility, setVisibility] = useState("private");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const startCall = async (whichSide) => {
+    setBusy(true); setErr("");
+    try {
+      const r = await api.post("/iq/call/event", {
+        device_id: deviceId, call_id: null, kind: "instinct_captured",
+        call_kind: "game_pick",
+        subject: { game_id: game.id, home: game.home, away: game.away },
+        payload: { pick: whichSide }, source: "tap",
+      });
+      setCallId(r.data.call.id);
+      setPick(whichSide);
+      setStep("reason");
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Couldn't start the call.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const submitReasoning = async () => {
+    setBusy(true); setErr("");
+    try {
+      if (reasoning.trim()) {
+        await api.post("/iq/call/event", {
+          device_id: deviceId, call_id: callId, kind: "reasoning_added",
+          payload: { text: reasoning.trim(), tags: [] }, source: "tap",
+        });
+      }
+      await api.post("/iq/call/event", {
+        device_id: deviceId, call_id: callId, kind: "confidence_set",
+        payload: { value: confidence }, source: "tap",
+      });
+      setStep("lock");
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Couldn't save reasoning.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const lockCall = async () => {
+    setBusy(true); setErr("");
+    try {
+      await api.post("/iq/call/event", {
+        device_id: deviceId, call_id: callId, kind: "locked",
+        payload: {
+          explicit: true,
+          ui_action: "iq_tonight_lock_button",
+          confirmation_prompt: `Lock ${pick === game.home ? homeName : awayName}?`,
+          user_response: "confirmed",
+        },
+        source: "tap",
+      });
+      if (visibility !== "private") {
+        await api.patch(`/iq/call/${callId}/visibility`, { device_id: deviceId, visibility });
+      }
+      setStep("done");
+    } catch (e) {
+      setErr(e?.response?.data?.detail || "Couldn't lock the call.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const reset = () => {
+    setStep("instinct"); setCallId(null); setPick(null);
+    setReasoning(""); setConfidence(5); setVisibility("private");
+    onClosed?.();
+  };
+
+  return (
+    <div className="rounded-xl bg-gradient-to-br from-[#0e1533]/70 to-[#050510]/70 border border-[#1e5dff]/30 p-5 sm:p-6" data-testid="iq-make-a-call">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-[#1e5dff] mb-1">
+            {step === "done" ? "Locked" : "Make a call"}
+          </div>
+          <div className="font-headline text-lg sm:text-xl text-white leading-tight">
+            {awayName} @ {homeName}
+          </div>
+        </div>
+        <button
+          onClick={reset}
+          className="text-white/40 hover:text-white text-xs font-accent uppercase tracking-widest"
+          data-testid="iq-make-a-call-cancel"
+        >
+          {step === "done" ? "Done" : "Cancel"}
+        </button>
+      </div>
+
+      {err && <div className="text-rose-300 text-xs mb-3">{err}</div>}
+
+      {step === "instinct" && (
+        <div>
+          <div className="text-white/60 text-sm mb-3">First instinct — who wins?</div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => startCall(game.away)}
+              disabled={busy}
+              data-testid="iq-mkcall-pick-away"
+              className="rounded-lg bg-black/40 border border-white/15 hover:border-[#1e5dff] hover:bg-[#1e5dff]/10 p-4 transition-colors text-left"
+            >
+              <div className="font-accent text-[10px] uppercase tracking-widest text-white/50">Away</div>
+              <div className="font-headline text-white text-lg mt-1">{awayName}</div>
+            </button>
+            <button
+              onClick={() => startCall(game.home)}
+              disabled={busy}
+              data-testid="iq-mkcall-pick-home"
+              className="rounded-lg bg-black/40 border border-white/15 hover:border-[#1e5dff] hover:bg-[#1e5dff]/10 p-4 transition-colors text-left"
+            >
+              <div className="font-accent text-[10px] uppercase tracking-widest text-white/50">Home</div>
+              <div className="font-headline text-white text-lg mt-1">{homeName}</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "reason" && (
+        <div className="space-y-3">
+          <div className="text-white/70 text-sm">
+            You said <span className="font-headline text-white">{pick === game.home ? homeName : awayName}</span>. Anything driving that?
+          </div>
+          <textarea
+            value={reasoning}
+            onChange={(e) => setReasoning(e.target.value)}
+            placeholder="Optional — a line of reasoning. Ticker remembers this."
+            rows={2}
+            data-testid="iq-mkcall-reasoning"
+            className="w-full rounded-md border border-white/15 bg-black/40 px-3 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[#1e5dff]"
+          />
+          <label className="block">
+            <div className="flex items-center justify-between text-xs text-white/60">
+              <span>Confidence</span>
+              <span className="font-headline text-white">{confidence}/10</span>
+            </div>
+            <input
+              type="range" min="1" max="10" value={confidence}
+              onChange={(e) => setConfidence(parseInt(e.target.value, 10))}
+              data-testid="iq-mkcall-confidence"
+              className="w-full accent-[#1e5dff]"
+            />
+          </label>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={submitReasoning}
+              disabled={busy}
+              data-testid="iq-mkcall-continue"
+              className="px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+            >
+              {busy ? "Saving…" : "Continue →"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "lock" && (
+        <div className="space-y-4">
+          <div className="rounded-md bg-black/30 border border-white/10 p-3">
+            <div className="font-accent text-[10px] uppercase tracking-widest text-white/40 mb-1">Your call</div>
+            <div className="font-headline text-white text-lg">{pick === game.home ? homeName : awayName}</div>
+            <div className="text-white/60 text-xs">Confidence {confidence}/10{reasoning ? ` · "${reasoning}"` : ""}</div>
+          </div>
+
+          <div>
+            <div className="font-accent text-[10px] uppercase tracking-widest text-white/50 mb-2">Visibility · your choice</div>
+            <div className="grid gap-2">
+              <VisibilityOption
+                value="private" current={visibility} onChoose={setVisibility}
+                icon={EyeOff} label="Private"
+                sub="Only you. Still counts toward your Personal IQ."
+              />
+              <VisibilityOption
+                value="public" current={visibility} onChoose={setVisibility}
+                icon={Globe} label="Public"
+                sub="Post to the community feed. Builds community credibility when it resolves."
+              />
+              <VisibilityOption
+                value="anonymous_aggregate" current={visibility} onChoose={setVisibility}
+                icon={Eye} label="Anonymous"
+                sub="Signal shared, identity hidden. Doesn't reveal your strategy."
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              onClick={lockCall}
+              disabled={busy}
+              data-testid="iq-mkcall-lock"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              {busy ? "Locking…" : "Lock the call"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "done" && (
+        <div className="text-center py-2">
+          <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+          <div className="font-headline text-white text-lg">Call is on the record.</div>
+          <div className="text-white/60 text-sm mt-1">
+            {visibility === "private" && "Kept private. It'll count toward My IQ when it resolves."}
+            {visibility === "public" && "Published to the community feed. Community credibility unlocks on resolve."}
+            {visibility === "anonymous_aggregate" && "Published anonymously. Signal without the strategy."}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VisibilityOption({ value, current, onChoose, icon: Icon, label, sub }) {
+  const active = value === current;
+  return (
+    <button
+      onClick={() => onChoose(value)}
+      data-testid={`iq-mkcall-vis-${value}`}
+      className={`text-left rounded-md border p-3 transition-colors flex items-start gap-2 ${
+        active
+          ? "bg-[#1e5dff]/15 border-[#1e5dff]"
+          : "bg-black/30 border-white/10 hover:border-white/25"
+      }`}
+    >
+      <Icon className={`w-4 h-4 mt-0.5 ${active ? "text-[#1e5dff]" : "text-white/50"}`} />
+      <div>
+        <div className={`font-accent text-[11px] uppercase tracking-widest ${active ? "text-white" : "text-white/70"}`}>{label}</div>
+        <div className="text-white/50 text-xs mt-0.5">{sub}</div>
+      </div>
+    </button>
   );
 }
 
@@ -204,14 +465,20 @@ function TonightTab() {
 // =====================================================================
 function MyIQTab({ user, deviceId, onUserChange }) {
   const [brief, setBrief] = useState(null);
+  const [rep, setRep] = useState(null);
   const [loading, setLoading] = useState(true);
   const isAdult = !!user?.eligibility?.adult_features_unlocked;
 
   useEffect(() => {
     let live = true;
-    api.get(`/iq/user/brief?device_id=${encodeURIComponent(deviceId)}`)
-       .then((r) => { if (live) setBrief(r.data); })
-       .finally(() => setLoading(false));
+    Promise.all([
+      api.get(`/iq/user/brief?device_id=${encodeURIComponent(deviceId)}`),
+      api.get(`/iq/reputation?device_id=${encodeURIComponent(deviceId)}`),
+    ]).then(([b, r]) => {
+      if (!live) return;
+      setBrief(b.data);
+      setRep(r.data.reputation);
+    }).finally(() => setLoading(false));
     return () => { live = false; };
   }, [deviceId, user]);
 
@@ -229,8 +496,6 @@ function MyIQTab({ user, deviceId, onUserChange }) {
           : "Every game you pick, every prop you call — Ticker remembers. Start on Tonight, come back here to see the pattern."}
       />
 
-      {/* Accuracy snapshot — derived from Phase 0 brief. Only shows if there
-       * are resolved calls to summarise. */}
       {loading ? (
         <SkeletonCard label="Loading your history…" />
       ) : s && s.total_resolved > 0 ? (
@@ -268,8 +533,56 @@ function MyIQTab({ user, deviceId, onUserChange }) {
         />
       )}
 
+      {/* Reputation dimensions — five separate scores, never collapsed. */}
+      {rep && <ReputationBlock rep={rep} isAdult={isAdult} />}
+
       {/* Adult Betting section — content flexes based on eligibility. */}
       <BettingSection user={user} deviceId={deviceId} onUnlocked={onUserChange} isAdult={isAdult} />
+    </div>
+  );
+}
+
+
+function ReputationBlock({ rep, isAdult }) {
+  const dims = [
+    { key: "hockey_iq",        label: "Hockey IQ",        pitch: "general prediction",       icon: Brain },
+    { key: "accuracy_overall", label: "Accuracy",         pitch: "everything gradeable",     icon: CheckCircle2 },
+    { key: "community_cred",   label: "Community cred",   pitch: "public + resolved",        icon: Users },
+    { key: "fantasy_iq",       label: "Fantasy IQ",       pitch: "lineup calls",             icon: Trophy },
+    isAdult ? { key: "betting_iq", label: "Betting IQ", pitch: "wager-attached accuracy", icon: Target } : null,
+  ].filter(Boolean);
+  return (
+    <div className="space-y-3" data-testid="iq-reputation-block">
+      <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/50">
+        Reputation · kept separate on purpose
+      </div>
+      <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {dims.map((d) => {
+          const r = rep[d.key] || { n: 0, correct: 0, accuracy_pct: null, qualified: false };
+          const Icon = d.icon;
+          return (
+            <div
+              key={d.key}
+              data-testid={`iq-rep-${d.key}`}
+              className={`rounded-lg bg-black/40 border p-4 ${r.qualified ? "border-[#1e5dff]/40" : "border-white/10"}`}
+            >
+              <div className="flex items-center gap-1.5 mb-1">
+                <Icon className={`w-3.5 h-3.5 ${r.qualified ? "text-[#1e5dff]" : "text-white/40"}`} />
+                <div className="font-accent text-[9px] uppercase tracking-widest text-white/50">{d.label}</div>
+              </div>
+              <div className="font-headline text-2xl text-white tabular-nums leading-none">
+                {r.accuracy_pct != null ? `${r.accuracy_pct}%` : "—"}
+              </div>
+              <div className="text-white/40 text-[11px] mt-2">
+                {r.n} graded · {d.pitch}
+                {!r.qualified && r.n < 10 && (
+                  <span className="block mt-0.5 text-white/30">Unqualified · {10 - r.n} more needed</span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -468,50 +781,201 @@ function FantasyTab() {
 //   / Community Edge™ come in later phases.
 // =====================================================================
 function CommunityTab() {
+  const deviceId = useMemo(() => getDeviceId(), []);
+  const [feed, setFeed] = useState([]);
+  const [posts, setPosts] = useState([]);
   const [board, setBoard] = useState([]);
+  const [dimension, setDimension] = useState("hockey_iq");
+  const [postBody, setPostBody] = useState("");
+  const [posting, setPosting] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let live = true;
-    api.get("/predictions/leaderboard").then((r) => {
-      if (!live) return;
-      setBoard(r.data.leaderboard || []);
+  const load = () => {
+    Promise.all([
+      api.get("/iq/community/public-calls?limit=20"),
+      api.get("/iq/community/posts?limit=20"),
+      api.get(`/iq/leaderboard?dimension=${dimension}`),
+    ]).then(([f, p, b]) => {
+      setFeed(f.data.feed || []);
+      setPosts(p.data.posts || []);
+      setBoard(b.data.leaderboard || []);
     }).finally(() => setLoading(false));
-    return () => { live = false; };
-  }, []);
+  };
+
+  useEffect(() => { load(); }, [dimension]);
+
+  const submitPost = async () => {
+    if (!postBody.trim()) return;
+    setPosting(true);
+    try {
+      await api.post("/iq/community/post", {
+        device_id: deviceId, kind: "discussion", body: postBody.trim(),
+        language_marker: navigator.language || null,
+      });
+      setPostBody("");
+      load();
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const DIMS = [
+    { id: "hockey_iq",        label: "Hockey IQ" },
+    { id: "accuracy_overall", label: "Accuracy" },
+    { id: "community_cred",   label: "Community cred" },
+    { id: "fantasy_iq",       label: "Fantasy IQ" },
+  ];
 
   return (
     <div className="space-y-8" data-testid="iq-community">
       <Hero
-        kicker="Community"
+        kicker="Community · Hockey IQ"
         headline="Who actually knows their stuff?"
-        sub="Right now: overall accuracy across everyone playing tonight's card. Verified team specialists, forum threads and Community Edge™ come next."
+        sub="Public calls with outcomes attached. Conversation about hockey. Leaderboards that reward accuracy — not posting frequency."
       />
 
-      {loading ? (
-        <SkeletonCard label="Loading the room…" />
-      ) : board.length === 0 ? (
-        <EmptyCard headline="Nobody's on the board yet." body="Play tonight's card. You'll show up here." />
-      ) : (
-        <div className="rounded-xl bg-black/30 border border-white/10 overflow-hidden">
-          <div className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-3 border-b border-white/10 font-accent text-[9px] uppercase tracking-widest text-white/40">
-            <div>#</div><div>Player</div><div className="text-right">Correct</div><div className="text-right">Resolved</div><div className="text-right">Accuracy</div>
+      {/* Public call feed — the payoff of publishing */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/60">Public calls</div>
+          <div className="text-[10px] text-white/30">graded when the game ends</div>
+        </div>
+        {loading ? (
+          <SkeletonCard label="Loading the room…" />
+        ) : feed.length === 0 ? (
+          <EmptyCard headline="Nobody has published yet." body="Publish a locked call from Tonight to be first." />
+        ) : (
+          <div className="grid gap-2" data-testid="iq-community-feed">
+            {feed.map((f) => (
+              <div key={f.call_id} className="rounded-md bg-black/30 border border-white/10 p-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-accent text-[9px] uppercase tracking-widest text-white/40">
+                      {f.author.anonymous ? "Anonymous" : f.author.nickname}
+                    </span>
+                    {f.author.anonymous && <Eye className="w-3 h-3 text-white/30" />}
+                  </div>
+                  <div className="font-headline text-white text-base leading-tight">
+                    Called <span className="text-[#1e5dff]">{f.pick}</span>
+                    {f.first_instinct && f.first_instinct.pick !== f.pick && (
+                      <span className="text-white/40 text-sm ml-1">(revised from {f.first_instinct.pick})</span>
+                    )}
+                  </div>
+                  {f.reasoning_tags?.length > 0 && (
+                    <div className="text-white/50 text-xs mt-1">tags: {f.reasoning_tags.join(", ")}</div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  {f.outcome ? (
+                    f.outcome.correct === true ? (
+                      <span className="inline-flex items-center gap-1 text-emerald-400 font-accent text-[11px] uppercase tracking-widest">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> right
+                      </span>
+                    ) : f.outcome.correct === false ? (
+                      <span className="font-accent text-[11px] uppercase tracking-widest text-rose-400">wrong</span>
+                    ) : (
+                      <span className="font-accent text-[11px] uppercase tracking-widest text-white/40">{f.outcome.status}</span>
+                    )
+                  ) : (
+                    <span className="font-accent text-[11px] uppercase tracking-widest text-white/30">pending</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          {board.slice(0, 20).map((row, i) => (
-            <div key={row.user_name} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-2.5 items-center border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
-              <div className={`font-headline w-7 text-center ${i < 3 ? "text-[#1e5dff]" : "text-white/40"}`}>{i + 1}</div>
-              <div className="text-white font-accent text-sm truncate">{row.user_name}</div>
-              <div className="text-white/70 text-sm text-right tabular-nums">{row.correct}</div>
-              <div className="text-white/70 text-sm text-right tabular-nums">{row.resolved}</div>
-              <div className="text-white font-headline text-right tabular-nums">{row.accuracy}%</div>
-            </div>
+        )}
+      </div>
+
+      {/* Community conversation */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/60">Talk hockey</div>
+          <div className="text-[10px] text-white/30">general hockey — betting talk stays in the adult section</div>
+        </div>
+        <div className="rounded-md bg-black/30 border border-white/10 p-3">
+          <textarea
+            value={postBody}
+            onChange={(e) => setPostBody(e.target.value)}
+            placeholder="What are you seeing tonight?"
+            rows={2}
+            data-testid="iq-community-post-body"
+            className="w-full rounded-md bg-black/40 border border-white/10 px-3 py-2 text-white text-sm placeholder:text-white/25 focus:outline-none focus:border-[#1e5dff]"
+          />
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={submitPost}
+              disabled={!postBody.trim() || posting}
+              data-testid="iq-community-post-submit"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#1e5dff] hover:bg-[#3574ff] disabled:opacity-40 text-white font-accent text-[11px] uppercase tracking-widest transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" /> Post
+            </button>
+          </div>
+        </div>
+        {posts.length > 0 && (
+          <div className="grid gap-2" data-testid="iq-community-posts">
+            {posts.slice(0, 10).map((p) => (
+              <div key={p.id} className="rounded-md bg-black/20 border border-white/8 p-3">
+                <div className="font-accent text-[9px] uppercase tracking-widest text-white/40 mb-1">
+                  {p.author_nickname} · {new Date(p.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </div>
+                <div className="text-white text-sm leading-snug whitespace-pre-wrap">{p.body}</div>
+                {p.culture_meta?.team_refs?.length > 0 && (
+                  <div className="text-white/40 text-[11px] mt-1">re: {p.culture_meta.team_refs.join(", ")}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Verified-performance leaderboards — per dimension */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="font-accent text-[10px] uppercase tracking-[0.3em] text-white/60 mr-2">
+            Leaderboard
+          </div>
+          {DIMS.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setDimension(d.id)}
+              data-testid={`iq-leaderboard-dim-${d.id}`}
+              className={`font-accent text-[10px] uppercase tracking-widest px-2 py-1 rounded-full transition-colors ${
+                dimension === d.id
+                  ? "bg-[#1e5dff]/25 text-white border border-[#1e5dff]/60"
+                  : "bg-black/30 text-white/50 border border-white/10 hover:text-white"
+              }`}
+            >
+              {d.label}
+            </button>
           ))}
         </div>
-      )}
+
+        {board.length === 0 ? (
+          <div className="rounded-md bg-black/20 border border-white/10 p-4 text-white/50 text-sm">
+            No one is qualified for the <span className="text-white">{DIMS.find(x => x.id === dimension)?.label}</span> leaderboard yet.
+            Users need at least 10 resolved calls in this dimension to appear. Volume alone doesn't rank.
+          </div>
+        ) : (
+          <div className="rounded-md bg-black/30 border border-white/10 overflow-hidden">
+            <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2 border-b border-white/10 font-accent text-[9px] uppercase tracking-widest text-white/40">
+              <div>#</div><div>Player</div><div className="text-right">Graded</div><div className="text-right">Accuracy</div>
+            </div>
+            {board.slice(0, 15).map((row, i) => (
+              <div key={row.user_id} className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 items-center border-b border-white/5 last:border-b-0 hover:bg-white/[0.03]">
+                <div className={`font-headline w-7 text-center ${i < 3 ? "text-[#1e5dff]" : "text-white/40"}`}>{i + 1}</div>
+                <div className="text-white font-accent text-sm truncate">{row.nickname}</div>
+                <div className="text-white/70 text-sm text-right tabular-nums">{row.n}</div>
+                <div className="text-white font-headline text-right tabular-nums">{row.accuracy_pct}%</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="rounded-xl border border-dashed border-white/15 p-5 text-white/50 text-sm">
         <span className="font-accent text-[10px] uppercase tracking-widest text-white/40">Coming next</span>
-        <div className="mt-1">Verified specialists · per-team leaderboards · forum threads with fact/reported/rumor tiers · Community Edge™</div>
+        <div className="mt-1">Verified team specialists · per-team leaderboards · reply threads with fact/reported/rumor tiers · a cultural language layer that keeps Reggie current without polluting his voice.</div>
       </div>
     </div>
   );

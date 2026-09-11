@@ -2306,6 +2306,224 @@ async def iq_legacy_projection(device_id: str, user_name: Optional[str] = None):
     }
 
 
+# ====================================================================
+# Ticker Hockey IQ — Phase 2: private/public visibility, community
+# conversation, per-dimension reputation, verified leaderboards.
+#
+# Design principles enforced at this layer:
+#   - Visibility default = 'private'. Public/anonymous is opt-in.
+#   - Community posts NEVER auto-created — always explicit action.
+#   - Reputation derived at read time, never materialized.
+#   - Leaderboards require minimum sample size (10 resolved calls in
+#     that dimension) — "reward verified performance, not volume."
+#   - Betting-only conversation stays in adult surfaces; the hockey
+#     community feed here is not gated but never surfaces wager data.
+# ====================================================================
+
+
+class VisibilityReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    visibility: str  # 'private' | 'public' | 'anonymous_aggregate'
+
+
+class PostCreateReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    kind: str = "discussion"
+    body: str = Field(min_length=1, max_length=4000)
+    call_id: Optional[str] = None
+    target: Optional[dict] = None
+    parent_post_id: Optional[str] = None
+    team_refs: list[str] = Field(default_factory=list)
+    player_refs: list[str] = Field(default_factory=list)
+    language_marker: Optional[str] = None
+
+
+_VALID_VISIBILITY = {"private", "public", "anonymous_aggregate"}
+_VALID_POST_KINDS = {"discussion", "observation", "question", "call_share"}
+_VALID_REP_DIMENSIONS = {"hockey_iq", "betting_iq", "fantasy_iq", "accuracy_overall", "community_cred"}
+
+
+@api.patch("/iq/call/{call_id}/visibility")
+async def iq_set_call_visibility(call_id: str, payload: VisibilityReq):
+    """Set a call's visibility. Private by default; publishing is opt-in.
+    Emits a `visibility_changed` event so the journey stays complete."""
+    if payload.visibility not in _VALID_VISIBILITY:
+        raise HTTPException(status_code=400, detail=f"invalid visibility: {payload.visibility}")
+    user = await _ensure_user_by_device(payload.device_id)
+    call = await db.iq_calls.find_one({"id": call_id})
+    if not call:
+        raise HTTPException(status_code=404, detail="call not found")
+    if call["user_id"] != user["id"]:
+        raise HTTPException(status_code=403, detail="call belongs to another user")
+    # You can only publish a call that has been locked or resolved.
+    if payload.visibility != "private" and call.get("state") not in ("locked", "resolved"):
+        raise HTTPException(
+            status_code=409,
+            detail="only locked or resolved calls can be published to the community feed.",
+        )
+
+    now = _iq.now_iso()
+    updates = {"visibility": payload.visibility}
+    if payload.visibility != "private" and not call.get("published_at"):
+        updates["published_at"] = now
+    if payload.visibility == "private":
+        updates["published_at"] = None
+    await db.iq_calls.update_one({"id": call_id}, {"$set": updates})
+
+    event = _iq.CallEvent(
+        call_id=call_id,
+        user_id=user["id"],
+        source="tap",
+        kind="visibility_changed",
+        payload={"from": call.get("visibility", "private"), "to": payload.visibility},
+    ).model_dump()
+    await db.iq_events.insert_one(event)
+
+    updated = await db.iq_calls.find_one({"id": call_id})
+    return _strip_mongo_id(updated)
+
+
+@api.get("/iq/community/public-calls")
+async def iq_community_public_calls(limit: int = 30):
+    """Feed of publicly-locked UserCalls with their outcomes if resolved.
+    Anonymous-aggregate calls surface with 'Anonymous' as the author.
+    Never leaks wager info."""
+    cur = db.iq_calls.find(
+        {"visibility": {"$in": ["public", "anonymous_aggregate"]},
+         "state": {"$in": ["locked", "resolved"]}}
+    ).sort("published_at", -1).limit(min(200, limit))
+    calls = [c async for c in cur]
+    if not calls:
+        return {"feed": []}
+    user_ids = list({c["user_id"] for c in calls})
+    users_cur = db.iq_users.find({"id": {"$in": user_ids}})
+    users_by_id = {u["id"]: u async for u in users_cur}
+    call_ids = [c["id"] for c in calls]
+    res_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+    resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in res_cur}
+
+    feed = []
+    for c in calls:
+        u = users_by_id.get(c["user_id"], {})
+        feed.append(_iq.public_call_feed_item(c, u, resolutions_by_call.get(c["id"])))
+    return {"feed": feed}
+
+
+@api.post("/iq/community/post")
+async def iq_create_post(payload: PostCreateReq):
+    """Create a hockey-community post or comment. Structured metadata is
+    captured for future cultural mining but NEVER auto-fed to Reggie/Marc.
+    Wager-specific talk does not belong here — the adult Betting surfaces
+    have their own surfaces."""
+    if payload.kind not in _VALID_POST_KINDS:
+        raise HTTPException(status_code=400, detail=f"invalid post kind: {payload.kind}")
+    user = await _ensure_user_by_device(payload.device_id)
+
+    # Region is captured only if user is adult-attested and has jurisdiction.
+    region = None
+    att = (user.get("eligibility") or {}).get("attestation")
+    if att:
+        region = att.get("jurisdiction")
+
+    culture_meta = _iq.CultureMeta(
+        language_marker=payload.language_marker,
+        team_refs=payload.team_refs,
+        player_refs=payload.player_refs,
+        region=region,
+        culture_layer_status="raw",
+    ).model_dump()
+
+    # If call_share, ensure the call is public and owned by this user.
+    if payload.kind == "call_share":
+        if not payload.call_id:
+            raise HTTPException(status_code=400, detail="call_share requires call_id")
+        call = await db.iq_calls.find_one({"id": payload.call_id})
+        if not call:
+            raise HTTPException(status_code=404, detail="call not found")
+        if call["user_id"] != user["id"]:
+            raise HTTPException(status_code=403, detail="cannot share another user's call")
+        if call.get("visibility") not in ("public", "anonymous_aggregate"):
+            raise HTTPException(status_code=409, detail="call must be published before sharing to the community feed")
+
+    post = _iq.CommunityPost(
+        user_id=user["id"],
+        kind=payload.kind,
+        body=payload.body,
+        call_id=payload.call_id,
+        target=payload.target or {},
+        parent_post_id=payload.parent_post_id,
+        culture_meta=_iq.CultureMeta(**culture_meta),
+    ).model_dump()
+    await db.iq_posts.insert_one(post)
+    return _strip_mongo_id(post)
+
+
+@api.get("/iq/community/posts")
+async def iq_list_posts(limit: int = 30, parent_post_id: Optional[str] = None):
+    """Community feed. Filter by parent to get replies to a thread."""
+    q: dict = {}
+    if parent_post_id is None:
+        q["parent_post_id"] = None
+    else:
+        q["parent_post_id"] = parent_post_id
+    cur = db.iq_posts.find(q).sort("created_at", -1).limit(min(200, limit))
+    posts = [_strip_mongo_id(p) async for p in cur]
+    # Attach author nickname (never reveal user_id in feed payload)
+    user_ids = list({p["user_id"] for p in posts})
+    users_cur = db.iq_users.find({"id": {"$in": user_ids}})
+    users_by_id = {u["id"]: u async for u in users_cur}
+    for p in posts:
+        u = users_by_id.get(p["user_id"], {})
+        p["author_nickname"] = u.get("nickname", "Guest")
+    return {"posts": posts}
+
+
+async def _reputation_for_user(user_id: str) -> dict:
+    """Compute the derived per-dimension reputation for one user."""
+    calls_cur = db.iq_calls.find({"user_id": user_id})
+    calls = [_strip_mongo_id(c) async for c in calls_cur]
+    call_ids = [c["id"] for c in calls]
+    res_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+    resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in res_cur}
+    wag_cur = db.iq_wagers.find({"call_id": {"$in": call_ids}})
+    wagers_by_call = {w["call_id"]: _strip_mongo_id(w) async for w in wag_cur}
+    posts_cur = db.iq_posts.find({"user_id": user_id})
+    posts = [p async for p in posts_cur]
+    return _iq.compute_reputation(calls, resolutions_by_call, wagers_by_call, posts)
+
+
+@api.get("/iq/reputation")
+async def iq_reputation(device_id: str):
+    """Reputation dimensions for the current user. Derived, not stored."""
+    user = await _ensure_user_by_device(device_id)
+    rep = await _reputation_for_user(user["id"])
+    is_adult = bool((user.get("eligibility") or {}).get("adult_features_unlocked"))
+    # Strip betting_iq from the response for non-adults so it never leaks.
+    if not is_adult:
+        rep.pop("betting_iq", None)
+    return {"user_id": user["id"], "nickname": user["nickname"], "reputation": rep, "adult_features_unlocked": is_adult}
+
+
+@api.get("/iq/leaderboard")
+async def iq_leaderboard(dimension: str = "hockey_iq", limit: int = 25):
+    """Verified-performance leaderboard for one dimension. Only qualified
+    users (>= 10 resolved calls in that dimension) appear. Reward accuracy,
+    not volume. Betting IQ leaderboard is NOT gated at the API layer —
+    users self-select in by attesting. UI hides it for non-adults."""
+    if dimension not in _VALID_REP_DIMENSIONS:
+        raise HTTPException(status_code=400, detail=f"invalid dimension: {dimension}")
+    # Compute reputation for every IQ user. At Phase 2 scale this is cheap.
+    users_cur = db.iq_users.find({})
+    user_reps: list[dict] = []
+    async for u in users_cur:
+        rep = await _reputation_for_user(u["id"])
+        user_reps.append({"user_id": u["id"], "nickname": u["nickname"], "reputation": rep})
+    board = _iq.leaderboard_from_user_reps(user_reps, dimension, limit=limit)
+    return {"dimension": dimension, "leaderboard": board}
+
+
 app.include_router(api)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly

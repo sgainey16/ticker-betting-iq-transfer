@@ -105,6 +105,7 @@ CallEventKind = Literal[
     "resolution_delivered",    # system wrote a Resolution
     "voided",                  # bad grade retracted
     "reflection",              # post-game user note
+    "visibility_changed",      # private ↔ public ↔ anonymous_aggregate (Phase 2)
 ]
 
 
@@ -152,6 +153,13 @@ CallKind = Literal[
 ]
 
 
+# Visibility axis (Phase 2) — ORTHOGONAL to lifecycle state. A call can be
+# locked+private (fantasy user protecting their edge), locked+public
+# (published to community feed with identity), or locked+anonymous_aggregate
+# (contributes to community stats but user identity not shown).
+CallVisibility = Literal["private", "public", "anonymous_aggregate"]
+
+
 class UserCall(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
@@ -160,6 +168,8 @@ class UserCall(BaseModel):
     stance: CallStance = Field(default_factory=CallStance)
     first_instinct: Optional[FirstInstinct] = None
     state: str = "draft"  # one of CallState
+    visibility: str = "private"  # Phase 2 — private by default, opt-in publish
+    published_at: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
     locked_at: Optional[str] = None
     resolved_at: Optional[str] = None
@@ -632,3 +642,205 @@ def build_reggie_brief(
     if is_adult and spot_check_state:
         brief["spot_check_state"] = spot_check_state
     return brief
+
+
+# ============================================================
+# Phase 2 — Community & Reputation
+# ============================================================
+
+# Post kinds — closed vocabulary, extensible. NO "wager_talk" here — that
+# lives inside the adult 18+ Betting section, never in the Hockey IQ
+# Community feed. Youth surfaces never touch either.
+PostKind = Literal[
+    "discussion",     # open hockey conversation
+    "observation",    # "eyes at the rink" style
+    "question",       # ask the room
+    "call_share",     # attached to a publicly-locked UserCall
+]
+
+
+class CultureMeta(BaseModel):
+    """Structured metadata captured at write-time so a future cultural layer
+    can mine language safely. NOT fed to Reggie/Marc raw — Phase 2 only
+    captures. Filtering + approval into character bibles is a later phase.
+    """
+    language_marker: Optional[str] = None    # user's UI locale, e.g. 'en-CA'
+    team_refs: list[str] = Field(default_factory=list)  # ['BOS','MTL']
+    player_refs: list[str] = Field(default_factory=list)
+    region: Optional[str] = None              # from attestation jurisdiction if adult; else None
+    culture_layer_status: str = "raw"         # 'raw' | 'filtered' | 'approved_for_persona'
+
+
+class CommunityPost(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    kind: str  # one of PostKind
+    body: str = Field(min_length=1, max_length=4000)
+    call_id: Optional[str] = None             # if attached to a publicly-locked UserCall
+    target: dict[str, Any] = Field(default_factory=dict)  # {game_id?, team_ref?, player_id?}
+    culture_meta: CultureMeta = Field(default_factory=CultureMeta)
+    created_at: str = Field(default_factory=now_iso)
+    parent_post_id: Optional[str] = None      # replies use the same object for simplicity
+
+
+# ============================================================
+# Reputation — derived at read time from Phase 0 data.
+# Five dimensions kept SEPARATE per user directive: don't collapse into
+# a single meaningless score.
+# ============================================================
+def compute_reputation(
+    calls: list[dict],
+    resolutions_by_call: dict[str, dict],
+    wagers_by_call: dict[str, dict],
+    posts: list[dict],
+) -> dict:
+    """Compute per-dimension reputation scores. All values are derived —
+    no reputation is materialized in Mongo. Recomputable on demand.
+
+    Dimensions (kept separate on purpose):
+      - hockey_iq          general prediction accuracy across game_pick/prop_pick/series_pick/pick10_entry
+      - betting_iq         accuracy on UserCalls with a wager attached (adult-only)
+      - fantasy_iq         count + gradeable rate on fantasy_lineup calls
+      - accuracy_overall   raw record across everything gradeable
+      - community_cred     publicly-locked calls that resolved correctly
+
+    Each dimension carries a `qualified` flag — minimum sample size before
+    the score should appear on a leaderboard. Prevents 1-of-1 flukes from
+    ranking above 43-of-60 track records.
+    """
+    MIN_QUAL = 10
+
+    hockey_kinds = {"game_pick", "prop_pick", "series_pick", "pick10_entry"}
+
+    def _init():
+        return {"n": 0, "correct": 0, "ungradeable": 0, "accuracy_pct": None, "qualified": False}
+
+    hockey = _init()
+    betting = _init()
+    fantasy = _init()
+    overall = _init()
+    community = _init()
+
+    for c in calls:
+        if c.get("state") != "resolved":
+            continue
+        res = resolutions_by_call.get(c["id"]) or {}
+        correct = res.get("correct")
+        kind = c.get("kind")
+
+        # Overall
+        if correct is None:
+            overall["ungradeable"] += 1
+        else:
+            overall["n"] += 1
+            if correct:
+                overall["correct"] += 1
+
+        # Hockey IQ (general prediction)
+        if kind in hockey_kinds:
+            if correct is None:
+                hockey["ungradeable"] += 1
+            else:
+                hockey["n"] += 1
+                if correct:
+                    hockey["correct"] += 1
+
+        # Betting IQ (only calls with wagers)
+        if c["id"] in wagers_by_call:
+            if correct is None:
+                betting["ungradeable"] += 1
+            else:
+                betting["n"] += 1
+                if correct:
+                    betting["correct"] += 1
+
+        # Fantasy IQ
+        if kind == "fantasy_lineup":
+            if correct is None:
+                fantasy["ungradeable"] += 1
+            else:
+                fantasy["n"] += 1
+                if correct:
+                    fantasy["correct"] += 1
+
+        # Community credibility — publicly-locked calls that resolved.
+        # NEVER counts private calls. Volume without accuracy doesn't move
+        # this — see leaderboard: qualified only past MIN_QUAL sample size.
+        if c.get("visibility") == "public":
+            if correct is None:
+                community["ungradeable"] += 1
+            else:
+                community["n"] += 1
+                if correct:
+                    community["correct"] += 1
+
+    def _finalize(d):
+        if d["n"] > 0:
+            d["accuracy_pct"] = round(100.0 * d["correct"] / d["n"], 1)
+        d["qualified"] = d["n"] >= MIN_QUAL
+        return d
+
+    return {
+        "hockey_iq": _finalize(hockey),
+        "betting_iq": _finalize(betting),
+        "fantasy_iq": _finalize(fantasy),
+        "accuracy_overall": _finalize(overall),
+        "community_cred": _finalize(community),
+        # Post volume surfaced as info, NOT as a rank driver
+        "posts_count": len(posts),
+    }
+
+
+def leaderboard_from_user_reps(
+    user_reps: list[dict], dimension: str, limit: int = 25
+) -> list[dict]:
+    """Given a list of {user_id, nickname, reputation} rows, produce a ranked
+    leaderboard for one dimension. Only `qualified` users appear (>= MIN_QUAL
+    graded calls in that dimension) — this is what "reward verified
+    performance not posting frequency" means at the query layer.
+    """
+    valid = ("hockey_iq", "betting_iq", "fantasy_iq", "accuracy_overall", "community_cred")
+    if dimension not in valid:
+        return []
+    rows = []
+    for u in user_reps:
+        d = (u.get("reputation") or {}).get(dimension) or {}
+        if not d.get("qualified"):
+            continue
+        rows.append({
+            "user_id": u.get("user_id"),
+            "nickname": u.get("nickname"),
+            "n": d["n"],
+            "correct": d["correct"],
+            "accuracy_pct": d["accuracy_pct"] or 0,
+        })
+    rows.sort(key=lambda r: (r["accuracy_pct"], r["n"]), reverse=True)
+    return rows[:limit]
+
+
+def public_call_feed_item(call: dict, user: dict, resolution: Optional[dict]) -> dict:
+    """Shape a UserCall for the public community feed. Never leaks wager info.
+    Anonymises the user for `anonymous_aggregate` visibility."""
+    is_anon = call.get("visibility") == "anonymous_aggregate"
+    return {
+        "call_id": call["id"],
+        "kind": call.get("kind"),
+        "subject": call.get("subject", {}),
+        "pick": (call.get("stance") or {}).get("pick"),
+        "confidence": (call.get("stance") or {}).get("confidence_1_10"),
+        "reasoning_tags": (call.get("stance") or {}).get("reasoning_tags", []),
+        "first_instinct": call.get("first_instinct"),   # publish the whole journey
+        "state": call.get("state"),
+        "locked_at": call.get("locked_at"),
+        "resolved_at": call.get("resolved_at"),
+        "published_at": call.get("published_at"),
+        "author": {
+            "user_id": None if is_anon else user.get("id"),
+            "nickname": "Anonymous" if is_anon else user.get("nickname", "Guest"),
+            "anonymous": is_anon,
+        },
+        "outcome": None if not resolution else {
+            "status": resolution.get("outcome_status"),
+            "correct": resolution.get("correct"),
+        },
+    }
