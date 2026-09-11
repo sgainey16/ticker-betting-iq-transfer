@@ -24,14 +24,33 @@ Voice canon:   /app/memory/CHARACTER_STYLE_GUIDE.md §5.11 (Marcisms)
 from typing import Any
 
 
-# --- Recommendation thresholds -----------------------------------------
-# These are starting values chosen to feel right at small sample sizes.
-# Tune once we have real 5-10 bettor data.
-MIN_N_FOR_CALL = 10           # below this → NEUTRAL / insufficient
-LEAN_IN_MIN_WIN_RATE = 55.0   # win-rate % gate for LEAN IN
-LEAN_IN_MIN_ROI      = 10.0   # ROI % gate for LEAN IN (money bets)
-SKIP_MAX_WIN_RATE    = 40.0   # win-rate % gate for SKIP
-SKIP_MIN_LOSS_ROI    = -10.0  # ROI % (negative) gate for SKIP
+# --- Recommendation thresholds (v2) ------------------------------------
+# Guiding principle: ROI is the trust signal. Win-rate is a corroborator
+# / shape-indicator, never a first-class gate. This eliminates the two
+# hard errors from the v1 stress test (profitable low-win-rate dog
+# bettors incorrectly told to SKIP).
+MIN_N_FOR_ROI_CALL       = 15    # min money bets for ROI-driven verdict
+MIN_N_FOR_WINRATE_CALL   = 20    # min resolved bets for win-rate fallback
+MIN_N_INSUFFICIENT       = 10    # below this → always insufficient / thin
+
+LEAN_IN_ROI_STRONG       = 15.0  # ≥ this at n≥15 money bets → LEAN_IN
+LEAN_IN_ROI_MODERATE     =  5.0  # ≥ this at n≥30 money bets → LEAN_IN
+LEAN_IN_N_FOR_MODERATE   = 30
+
+SKIP_ROI_STRONG          = -15.0 # ≤ this at n≥15 → SKIP
+SKIP_ROI_MODERATE        =  -5.0 # ≤ this at n≥30 → SKIP
+SKIP_N_FOR_MODERATE      = 30
+
+CROSSED_WIN_RATE_HIGH    = 60.0  # 60%+ win rate + negative ROI → crossed SKIP
+CROSSED_WIN_RATE_LOW     = 45.0  # ≤45% win rate + positive ROI → crossed LEAN_IN
+
+# Win-rate-only fallback (used ONLY when money bets are too thin).
+# Conservative bands so we don't claim edge from picks alone.
+WINRATE_FALLBACK_LEAN_IN = 62.0
+WINRATE_FALLBACK_SKIP    = 35.0
+
+# Match hierarchy still uses this floor for widening.
+MIN_N_FOR_CALL = MIN_N_INSUFFICIENT  # retained for _find_best_bucket()
 
 
 # --- Human names for spot buckets --------------------------------------
@@ -129,35 +148,69 @@ def _find_best_bucket(bets: list[dict], bet_type: str, home_or_away: str | None,
     return exact_matches, "none"
 
 
-# --- The decision function ---------------------------------------------
-def _decide(summary: dict) -> str:
+# --- The decision function (v2) ----------------------------------------
+# Returns (recommendation, reason_code). Recommendation is one of the
+# three user-facing verdicts. reason_code is an internal shape label that
+# drives Marc's language.
+def _decide(summary: dict) -> tuple[str, str]:
     n         = summary["n"]
+    resolved  = summary["resolved"]
     win_rate  = summary["win_rate_pct"]
     roi       = summary["roi_pct"]
+    money_n   = summary["money_bet_count"]
 
-    if n < MIN_N_FOR_CALL:
-        return "NEUTRAL"
+    # -- Insufficient-sample protection (unchanged) --
+    if n < MIN_N_INSUFFICIENT:
+        return "NEUTRAL", "insufficient"
 
-    # SKIP if the losing evidence is clear on either dimension
-    if (win_rate is not None and win_rate <= SKIP_MAX_WIN_RATE):
-        return "SKIP"
-    if (roi is not None and roi <= SKIP_MIN_LOSS_ROI):
-        return "SKIP"
+    # -- Primary path: ROI drives when money-bet sample is enough --
+    if money_n >= MIN_N_FOR_ROI_CALL and roi is not None:
+        # Strong positive → LEAN_IN
+        if roi >= LEAN_IN_ROI_STRONG:
+            # Crossed signal: profitable despite low win rate
+            if win_rate is not None and win_rate <= CROSSED_WIN_RATE_LOW:
+                return "LEAN_IN", "crossed_signal_positive"
+            return "LEAN_IN", "roi_strong_positive"
+        # Moderate positive on larger sample → LEAN_IN
+        if roi >= LEAN_IN_ROI_MODERATE and money_n >= LEAN_IN_N_FOR_MODERATE:
+            return "LEAN_IN", "roi_moderate_positive"
+        # Strong negative → SKIP
+        if roi <= SKIP_ROI_STRONG:
+            if win_rate is not None and win_rate >= CROSSED_WIN_RATE_HIGH:
+                return "SKIP", "crossed_signal_negative"
+            return "SKIP", "roi_strong_negative"
+        # Moderate negative on larger sample → SKIP
+        if roi <= SKIP_ROI_MODERATE and money_n >= SKIP_N_FOR_MODERATE:
+            return "SKIP", "roi_moderate_negative"
+        # Between the bands but crossed shapes still warrant naming.
+        # These slot into NEUTRAL but Marc calls out the shape.
+        if win_rate is not None:
+            if win_rate >= CROSSED_WIN_RATE_HIGH and roi < 0:
+                return "NEUTRAL", "crossed_signal_flat_negative"
+            if win_rate <= CROSSED_WIN_RATE_LOW and roi > 0:
+                return "NEUTRAL", "crossed_signal_flat_positive"
+        return "NEUTRAL", "flat_no_signal"
 
-    # LEAN IN needs BOTH win-rate and (if we have money bets) ROI to clear
-    if (win_rate is not None and win_rate >= LEAN_IN_MIN_WIN_RATE):
-        if roi is None or roi >= LEAN_IN_MIN_ROI:
-            return "LEAN_IN"
+    # -- Win-rate-only fallback (prediction-only history or thin money) --
+    # Conservative bands. Never claim edge from picks alone.
+    if resolved >= MIN_N_FOR_WINRATE_CALL and win_rate is not None:
+        if win_rate <= WINRATE_FALLBACK_SKIP:
+            return "SKIP", "winrate_fallback_skip"
+        if win_rate >= WINRATE_FALLBACK_LEAN_IN:
+            return "LEAN_IN", "winrate_fallback_lean_in"
+        return "NEUTRAL", "winrate_fallback_flat"
 
-    return "NEUTRAL"
+    # Have sample but neither ROI-driven nor win-rate-driven verdict fits.
+    return "NEUTRAL", "thin_for_call"
 
 
-# --- Marc's voice templates --------------------------------------------
+# --- Marc's voice templates (v2) ---------------------------------------
 # Marc is a veteran analyst. He helps you recognize your OWN tendencies.
-# He never says "you should bet this" or "great value tonight." Sometimes
-# the right move is no move. When numbers are big enough to matter, he
-# tells you. When they aren't, he says so.
-def _marc_line(recommendation: str, summary: dict, bucket_name: str, match_level: str) -> str:
+# He never says "you should bet this" or "you have an edge." Personal
+# historical performance ≠ market edge — without odds parsing + CLV we
+# do not have evidence of edge, we have evidence of past outcomes.
+# Templates are keyed on the internal reason_code from _decide().
+def _marc_line(recommendation: str, reason: str, summary: dict, bucket_name: str, match_level: str) -> str:
     n         = summary["n"]
     wins      = summary["wins"]
     losses    = summary["losses"]
@@ -166,62 +219,120 @@ def _marc_line(recommendation: str, summary: dict, bucket_name: str, match_level
     profit    = summary["profit_loss"]
     money_n   = summary["money_bet_count"]
 
-    # Insufficient sample gets Marc's "small sample" register — spec §7 canon.
-    if recommendation == "NEUTRAL" and n < MIN_N_FOR_CALL:
-        if n == 0:
-            return (
-                "You haven't logged bets like this yet. "
-                "Log a few and I'll have something worth telling you."
-            )
-        return (
-            f"Small sample — you've got {n} bet{'s' if n != 1 else ''} on {bucket_name}. "
-            "Don't convince yourself you've found something that isn't there yet. "
-            "Log more of these before either of us calls it a pattern."
-        )
+    def _record_snippet() -> str:
+        rate_bit = f", {win_rate}%" if win_rate is not None else ""
+        return f"{wins}\u2013{losses}{rate_bit}"
 
-    # NEUTRAL with enough sample — sample is real but the numbers don't clearly point either way
-    if recommendation == "NEUTRAL":
+    def _roi_snippet() -> str:
+        if roi is None or money_n < 5:
+            return ""
+        sign = "+" if profit >= 0 else ""
+        return f", {sign}{roi}% ROI, {sign}${profit:.0f} over {money_n} money bets"
+
+    # ---- INSUFFICIENT (n < 10) ----
+    if reason == "insufficient":
+        if n == 0:
+            return ("You haven't logged bets like this yet. "
+                    "Log a few and I'll have something worth telling you.")
+        return (f"Small sample \u2014 you've got {n} bet{'s' if n != 1 else ''} on {bucket_name}. "
+                "Don't convince yourself you've found something that isn't there yet. "
+                "Log more of these before either of us calls it a pattern.")
+
+    # ---- CROSSED SIGNAL — LEAN_IN flavor (low win rate + positive ROI) ----
+    if reason == "crossed_signal_positive":
+        return (f"This one's counterintuitive. You're {_record_snippet()} on {bucket_name} "
+                f"\u2014 which looks bad on paper. But the wallet says otherwise{_roi_snippet()}. "
+                f"When the underdogs cash in this spot, they cash big. "
+                f"Your record looks bad; your bankroll doesn't. That's a green flag, not a green light "
+                f"\u2014 it means your process here has been sound, not that tonight's price is right.")
+
+    # ---- CROSSED SIGNAL — SKIP flavor (high win rate + negative ROI) ----
+    if reason == "crossed_signal_negative":
+        return (f"You're winning often here \u2014 {_record_snippet()} on {bucket_name} \u2014 "
+                f"but you're still losing money{_roi_snippet()}. "
+                f"The wins are cheap and the losses are expensive. "
+                f"Winning often and making money aren't the same thing. "
+                f"If tonight's number is short again, you're chasing the pattern that hurts you.")
+
+    # ---- CROSSED SIGNAL FLAT — sits in NEUTRAL but Marc names the shape ----
+    if reason == "crossed_signal_flat_negative":
+        return (f"Tricky shape here. You're {_record_snippet()} on {bucket_name} \u2014 "
+                f"but that record hasn't translated to profit{_roi_snippet()}. "
+                f"Winning often isn't the same as making money. "
+                f"Not enough of a gap yet to call it a bad spot, but be honest with yourself "
+                f"about whether the price ever gives you enough.")
+
+    if reason == "crossed_signal_flat_positive":
+        return (f"Interesting shape. You're only {_record_snippet()} on {bucket_name}, "
+                f"but you've made money on it{_roi_snippet()}. "
+                f"The wins cash big when they cash. "
+                f"Not enough sample to call it a strength yet, but there's something to keep watching.")
+
+    # ---- LEAN_IN — strong positive ROI, ordinary win rate ----
+    if reason == "roi_strong_positive":
+        return (f"Historically, you've performed well in this spot. {_record_snippet()} on {bucket_name}"
+                f"{_roi_snippet()}. That's your track record \u2014 not proof of a market edge. "
+                f"It doesn't tell us whether tonight's price offers real value; that's a separate read. "
+                f"But your process here has been sound. Look closer.")
+
+    # ---- LEAN_IN — moderate positive on larger sample ----
+    if reason == "roi_moderate_positive":
+        n_bit = f"over {money_n} bets" if money_n else f"over {n} bets"
+        return (f"You've quietly built something here. {_record_snippet()} {n_bit} on {bucket_name}"
+                f"{_roi_snippet()}. {n_bit.capitalize()}, that's enough history to take the pattern "
+                f"seriously. It still doesn't tell us whether tonight's line is good \u2014 "
+                f"that's a separate read \u2014 but the track record is real, not variance.")
+
+    # ---- SKIP — strong negative ROI ----
+    if reason == "roi_strong_negative":
+        return (f"You've struggled here. {_record_snippet()} on {bucket_name}{_roi_snippet()}. "
+                f"Sample's big enough, hole's deep enough \u2014 that's not a slump, it's a pattern. "
+                f"Passing tonight isn't quitting. It's a position. "
+                f"You don't need action on every game to be a good bettor.")
+
+    # ---- SKIP — moderate negative on larger sample ----
+    if reason == "roi_moderate_negative":
+        return (f"The evidence isn't loud, but it's consistent. {_record_snippet()} on {bucket_name} "
+                f"over {money_n} money bets{_roi_snippet()}. "
+                f"You're not getting blown out \u2014 you're steadily leaking. "
+                f"Long-term, that's the harder pattern to catch. "
+                f"Passing is a position.")
+
+    # ---- Win-rate fallback (prediction-only history) ----
+    if reason == "winrate_fallback_lean_in":
+        return (f"On your picks alone \u2014 no money at risk \u2014 you've been {_record_snippet()} "
+                f"on {bucket_name}. That's a strong personal record, but picks and priced bets "
+                f"aren't the same game. Log a few with real stakes before we call it more than that.")
+
+    if reason == "winrate_fallback_skip":
+        return (f"On picks alone you're {_record_snippet()} on {bucket_name}. "
+                f"That's a lot of misses. "
+                f"Even without money on the line, that's your read of this spot missing more than hitting. "
+                f"Not a great starting point for a real bet.")
+
+    if reason == "winrate_fallback_flat":
+        return (f"On picks alone you're {_record_snippet()} on {bucket_name}. "
+                f"Sample's there, but no clear read either way. "
+                f"Nothing to lean on, nothing to run from.")
+
+    # ---- NEUTRAL — flat, no signal (large enough sample, mid range) ----
+    if reason == "flat_no_signal":
         parts = [f"You've got {n} bets on {bucket_name}"]
         if win_rate is not None:
-            parts.append(f"({wins}–{losses}, {win_rate}%)")
-        parts.append("— sample's there, but nothing sharp either way.")
-        return " ".join(parts) + " No edge to lean on, no reason to run from it. Bet it if the read is right; don't bet it if it isn't."
-
-    if recommendation == "SKIP":
-        # Choose the phrasing that matches WHY it fired
-        lead = f"You've struggled with {bucket_name}."
-        record = f"You're {wins}–{losses} in this spot"
-        rate_bit = f" — {win_rate}%" if win_rate is not None else ""
-        roi_bit = ""
-        if roi is not None and money_n >= 5:
-            sign = "+" if profit >= 0 else ""
-            roi_bit = f" · {sign}{roi}% ROI, {sign}${profit:.0f} P/L over {money_n} money bets"
-
-        # Rotate closer based on match specificity — more specific match → more definitive close
-        if match_level == "exact":
-            closer = "Passing is a position. You don't need action on every game."
-        elif match_level in ("bet_type+fav_dog", "bet_type+home_away"):
-            closer = "The pattern's clear enough. Leave it alone tonight."
-        else:
-            closer = "The tape's telling you something. Don't force it."
-
-        return f"{lead} {record}{rate_bit}{roi_bit}. {closer}"
-
-    if recommendation == "LEAN_IN":
-        lead = f"{bucket_name.capitalize()} has actually been one of your better spots."
-        record = f"{wins}–{losses}"
-        rate_bit = f" ({win_rate}%)" if win_rate is not None else ""
-        roi_bit = ""
-        if roi is not None and money_n >= 5:
-            sign = "+" if roi >= 0 else ""
-            roi_bit = f", {sign}{roi}% ROI"
-
-        closer = (
-            "Doesn't guarantee tonight — but you've earned the right to look closer. "
-            "Now find the shot worth taking."
+            parts.append(f"({wins}\u2013{losses}, {win_rate}%)")
+        parts.append("\u2014 sample's there, but nothing sharp either way.")
+        return " ".join(parts) + (
+            " No edge to lean on, no reason to run from it. "
+            "Bet it if the read is right; don't bet it if it isn't."
         )
-        return f"{lead} {record}{rate_bit}{roi_bit} on {bucket_name}. {closer}"
 
+    if reason == "thin_for_call":
+        return (f"You've logged {n} bet{'s' if n != 1 else ''} on {bucket_name} "
+                f"but only {money_n} with real stakes. "
+                f"Sample's technically there, but the money-bet sample's still too thin for a call. "
+                f"Play it by the read; let the log build.")
+
+    # Fallback (should never hit)
     return "No read yet."
 
 
@@ -229,26 +340,21 @@ def _marc_line(recommendation: str, summary: dict, bucket_name: str, match_level
 def spot_check(bets: list[dict], bet_type: str, home_or_away: str | None, fav_or_dog: str | None) -> dict[str, Any]:
     """Given a user's bet log + a proposed spot, return the recommendation + evidence.
 
-    Response contract (frontend depends on this shape):
+    v2 contract:
     {
       "recommendation": "LEAN_IN" | "NEUTRAL" | "SKIP",
-      "bucket": {
-         "label": "road favourites",
-         "bet_type": "moneyline",
-         "home_or_away": "away",
-         "fav_or_dog": "fav",
-         "match_level": "exact" | "bet_type+fav_dog" | "bet_type+home_away" | "bet_type" | "none",
-      },
-      "evidence": { n, resolved, wins, losses, pushes, win_rate_pct, roi_pct, profit_loss, stake_total, money_bet_count },
-      "marc_line": "You've struggled with road favourites…",
-      "headline": "SKIP",
-      "sub_headline": "Your history says this is a weak situation for you. Passing is a position."
+      "reason": internal shape label (drives Marc's language),
+      "bucket": {...},
+      "evidence": {...},
+      "marc_line": "...",
+      "headline": "LEAN IN" | "NEUTRAL" | "SKIP",
+      "sub_headline": "...",
     }
     """
     label = bucket_label(bet_type, home_or_away, fav_or_dog)
     matching, match_level = _find_best_bucket(bets, bet_type, home_or_away, fav_or_dog)
     summary = _summarize(matching)
-    rec = _decide(summary)
+    rec, reason = _decide(summary)
 
     sub_headlines = {
         "LEAN_IN": "Historical data suggests this is one of your stronger situations.",
@@ -258,6 +364,7 @@ def spot_check(bets: list[dict], bet_type: str, home_or_away: str | None, fav_or
 
     return {
         "recommendation": rec,
+        "reason": reason,
         "headline": rec.replace("_", " "),
         "sub_headline": sub_headlines[rec],
         "bucket": {
@@ -268,7 +375,7 @@ def spot_check(bets: list[dict], bet_type: str, home_or_away: str | None, fav_or
             "match_level": match_level,
         },
         "evidence": summary,
-        "marc_line": _marc_line(rec, summary, label, match_level),
+        "marc_line": _marc_line(rec, reason, summary, label, match_level),
     }
 
 
