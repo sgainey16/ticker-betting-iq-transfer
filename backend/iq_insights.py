@@ -512,28 +512,44 @@ _FORBIDDEN_PHRASES = (
 
 def coaching_line_for_bet_context(insights: list[dict], is_adult: bool) -> Optional[str]:
     """Pick the most-relevant Marc line for adult betting coaching, or
-    return None if evidence doesn't support any coaching yet.
+    fall back to a general coaching line derived from any insight when
+    the user hasn't unlocked betting. Returns None only when there is
+    genuinely nothing to say (empty insight list).
 
     Coaching philosophy (see PHASE_0_RATIFIED §14 amendments):
       - Never suggest increasing stake / volume
       - "Passing is a position" family only
       - Streak recognition without risk escalation
     """
-    if not is_adult:
+    # Adult path — betting-aware priority order.
+    if is_adult:
+        priority_codes = (
+            "recent_volume_up_accuracy_down",   # → "passing is a position"
+            "overconfidence",                   # → "double-check the ones where you're certain"
+            "recent_cold",                      # → "be more selective this week"
+            "recent_hot",                       # → "enjoy the streak, don't scale risk"
+            "team_bias_underperform",           # → "be more skeptical"
+        )
+        by_code = {i["code"]: i for i in insights}
+        for code in priority_codes:
+            if code in by_code:
+                return by_code[code]["marc_voice"]
+
+    # General fallback — pick the highest-confidence insight so a
+    # non-adult My IQ still gets a coach line grounded in real evidence.
+    if not insights:
         return None
-    # Priority order for adult coaching
-    priority_codes = (
-        "recent_volume_up_accuracy_down",   # → "passing is a position"
-        "overconfidence",                   # → "double-check the ones where you're certain"
-        "recent_cold",                      # → "be more selective this week"
-        "recent_hot",                       # → "enjoy the streak, don't scale risk"
-        "team_bias_underperform",           # → "be more skeptical"
+    general_priority = (
+        "recent_cold", "recent_hot", "specialist_category",
+        "kind_strength", "kind_weakness", "changed_mind_helps",
+        "changed_mind_hurts", "confidence_miscalibrated",
     )
     by_code = {i["code"]: i for i in insights}
-    for code in priority_codes:
+    for code in general_priority:
         if code in by_code:
             return by_code[code]["marc_voice"]
-    return None
+    # Last resort — first (highest confidence) insight
+    return insights[0].get("marc_voice")
 
 
 # ============================================================

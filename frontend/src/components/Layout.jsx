@@ -65,12 +65,19 @@ function LayoutInner({ children }) {
   // features (nickname pill, notifications, etc.).
   const showBackOffice = location.pathname.startsWith("/home-v2");
 
+  // Hockey IQ is a full sub-app — it owns its own compressed chrome,
+  // its own coach docks, its own Reggie surfaces. Global Ticker header,
+  // footer, LiveDesk mini-bar and the global Reggie FAB all step aside
+  // so the sub-app can breathe on mobile.
+  const isIQRoute = location.pathname.startsWith("/iq");
+
   return (
     <div className="min-h-screen">
       {/* LaunchZoneBanner ("no charge / free launch window") removed per
        * user request. Component file stays on disk — flip it back on when
        * we're ready to talk pricing. */}
 
+      {!isIQRoute && (
       <header
         className="sticky top-0 z-40 glass border-b border-[#2d2d35]"
         role="banner"
@@ -133,23 +140,25 @@ function LayoutInner({ children }) {
           </div>
         </div>
       </header>
+      )}
 
       {/* Global Red Light alert — fixed under the header, appears when a
        * goal event flows through the LiveProvider (demo mode ticks every
        * ~10-15s). */}
-      <GoalAlertBar />
+      {!isIQRoute && <GoalAlertBar />}
 
       {/* Off-Home routes get extra bottom padding so the fixed mini-player
        * doesn't cover the footer / last row of content. Landscape shrinks
        * the vertical padding so the show frame gets more real estate. */}
       <main
-        className={`max-w-7xl mx-auto px-5 sm:px-8 py-8 landscape:py-2 ${
+        className={`${isIQRoute ? "" : "max-w-7xl mx-auto px-5 sm:px-8 py-8 landscape:py-2"} ${
           needsMiniBarPadding ? "pb-24" : ""
         }`}
       >
         {children}
       </main>
 
+      {!isIQRoute && (
       <footer className={`max-w-7xl mx-auto px-5 sm:px-8 py-10 text-xs text-white/40 font-accent uppercase tracking-widest space-y-1.5 ${needsMiniBarPadding ? "pb-24" : ""}`}>
         <div className="flex items-center gap-2 flex-wrap">
           <NHLShield size={14} className="opacity-60" />
@@ -165,13 +174,14 @@ function LayoutInner({ children }) {
           the property of their respective teams.
         </div>
       </footer>
+      )}
 
       {/* Mounted ONCE — audio elements survive every route change so the
        * broadcast keeps rolling while users hop between pages. Renders as
        * full frame (portaled into #broadcast-slot on /) or mini bar. */}
-      <LiveDesk autoFlow={true} />
+      {!isIQRoute && <LiveDesk autoFlow={true} />}
 
-      <ReggieAssistant />
+      {!isIQRoute && <ReggieAssistant />}
       <IosInstallPrompt />
     </div>
   );

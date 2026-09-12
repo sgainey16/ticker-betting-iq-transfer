@@ -203,8 +203,8 @@ check("[E] specialist_category surfaces (narrow specialty)",
       "specialist_category" in codes_by_persona["E"],
       f"codes: {codes_by_persona['E']}")
 
-check("[non-adult] A/B/C/E do NOT get an adult coaching_line",
-      all(briefs[n].get("coaching_line") is None for n in ("A", "B", "C", "E")),
+check("[non-adult] A/B/C/E still get a coaching_line grounded in their own evidence",
+      all((briefs[n].get("coaching_line") or "").strip() for n in ("A", "B", "C", "E")),
       f"coach values: " + ", ".join(f"{n}={briefs[n].get('coaching_line')!r}" for n in "ABCE"))
 
 sets = {n: tuple(sorted(codes_by_persona[n])) for n in ("A", "B", "C", "D", "E")}

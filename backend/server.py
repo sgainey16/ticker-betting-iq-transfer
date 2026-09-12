@@ -2598,6 +2598,149 @@ async def iq_leaderboard(dimension: str = "hockey_iq", limit: int = 25):
     return {"dimension": dimension, "leaderboard": board}
 
 
+# -----------------------------------------------------------------------------
+# Community Presentation helpers (Product Integration Pass)
+# Enriches public-call feed items with author reputation + specialty tags so
+# Community stops looking like a database dump and starts answering
+# "who called this and are they historically good at it?"
+# -----------------------------------------------------------------------------
+@api.get("/iq/community/feed-enriched")
+async def iq_community_feed_enriched(limit: int = 20):
+    """Public call feed with author reputation attached so the UI can render
+    specialist chips inline. Each item now carries:
+        - author.nickname / anonymous flag (unchanged)
+        - author.reputation_summary: {dimension, accuracy_pct, n, qualified}
+        - author.specialty: highest-qualified dimension label or None
+    """
+    cur = db.iq_calls.find(
+        {"visibility": {"$in": ["public", "anonymous_aggregate"]},
+         "state": {"$in": ["locked", "resolved"]}}
+    ).sort("published_at", -1).limit(min(200, limit))
+    calls = [c async for c in cur]
+    if not calls:
+        return {"feed": []}
+    user_ids = list({c["user_id"] for c in calls})
+    users_cur = db.iq_users.find({"id": {"$in": user_ids}})
+    users_by_id = {u["id"]: u async for u in users_cur}
+    reps_by_user: dict[str, dict] = {}
+    for uid in user_ids:
+        reps_by_user[uid] = await _reputation_for_user(uid)
+    call_ids = [c["id"] for c in calls]
+    res_cur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+    resolutions_by_call = {r["call_id"]: _strip_mongo_id(r) async for r in res_cur}
+
+    # Dimension display order (highest priority first) for picking specialty.
+    _DIM_DISPLAY = [
+        ("community_cred",   "Community"),
+        ("hockey_iq",        "Hockey IQ"),
+        ("accuracy_overall", "Accuracy"),
+        ("fantasy_iq",       "Fantasy"),
+    ]
+
+    feed = []
+    for c in calls:
+        u = users_by_id.get(c["user_id"], {})
+        base = _iq.public_call_feed_item(c, u, resolutions_by_call.get(c["id"]))
+        rep = reps_by_user.get(c["user_id"], {}) or {}
+        specialty = None
+        rep_summary = None
+        for key, label in _DIM_DISPLAY:
+            row = rep.get(key) or {}
+            if row.get("qualified"):
+                specialty = {"key": key, "label": label,
+                             "accuracy_pct": row.get("accuracy_pct"),
+                             "n": row.get("n")}
+                break
+        # Always attach an overall rep summary for the accuracy dimension
+        overall = rep.get("accuracy_overall") or {}
+        rep_summary = {
+            "accuracy_pct": overall.get("accuracy_pct"),
+            "n": overall.get("n", 0),
+            "qualified": bool(overall.get("qualified")),
+        }
+        base.setdefault("author", {})
+        base["author"]["specialty"] = specialty
+        base["author"]["reputation_summary"] = rep_summary
+        feed.append(base)
+    return {"feed": feed}
+
+
+@api.get("/iq/community/specialists")
+async def iq_community_specialists(dimension: str = "hockey_iq", limit: int = 6):
+    """Top qualified authors in one reputation dimension. Same qualification
+    threshold as the leaderboard — >= 10 resolved calls in that dimension.
+    Used for the Community 'Specialists' strip above the feed."""
+    if dimension not in _VALID_REP_DIMENSIONS:
+        raise HTTPException(status_code=400, detail=f"invalid dimension: {dimension}")
+    users_cur = db.iq_users.find({})
+    user_reps: list[dict] = []
+    async for u in users_cur:
+        rep = await _reputation_for_user(u["id"])
+        user_reps.append({"user_id": u["id"], "nickname": u["nickname"], "reputation": rep})
+    board = _iq.leaderboard_from_user_reps(user_reps, dimension, limit=limit)
+    return {"dimension": dimension, "specialists": board}
+
+
+# -----------------------------------------------------------------------------
+# DEV-ONLY: seed a fresh history + auto-grade tonight's locked calls so the
+# Marc/Reggie loop can be demonstrated end-to-end without waiting for real
+# game data. Gated behind IQ_DEV_MODE env flag so it never ships in production.
+# -----------------------------------------------------------------------------
+class DevSeedReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=6, max_length=80)
+    persona: str = "balanced_bettor"  # aligns with acceptance_iq_phase3.py personas
+
+
+@api.get("/iq/dev/mode")
+async def iq_dev_mode():
+    """Passive probe — is IQ_DEV_MODE enabled? Frontend uses this to decide
+    whether to render the dev auto-resolve trigger."""
+    return {"enabled": os.environ.get("IQ_DEV_MODE", "0") == "1"}
+
+
+@api.post("/iq/dev/simulate-resolve")
+async def iq_dev_simulate_resolve(device_id: str):
+    """Deterministically resolve every LOCKED call this user has so the
+    My IQ + Community + Coach loop can be demonstrated without a live feed.
+    Only enabled when IQ_DEV_MODE=1. Marks each outcome via the standard
+    /iq/call/{id}/resolve pipeline so the projector + insights fire."""
+    if os.environ.get("IQ_DEV_MODE", "0") != "1":
+        raise HTTPException(status_code=403, detail="dev mode disabled")
+    user = await _ensure_user_by_device(device_id)
+    locked = [c async for c in db.iq_calls.find(
+        {"user_id": user["id"], "state": "locked"}
+    ).sort("created_at", 1)]
+    resolved_count = 0
+    for i, call in enumerate(locked):
+        # Deterministic outcome: alternates correct/incorrect with a
+        # slight lean toward correct so the demo shows an above-50% clip.
+        correct = (i % 3) != 2  # 2 of every 3 correct
+        outcome_status = "correct" if correct else "incorrect"
+        resolution = _iq.Resolution(
+            call_id=call["id"],
+            outcome_status=outcome_status,
+            correct=correct,
+            actual={"simulated": True, "final_score": None},
+            grading_rule="dev_simulate_v1",
+            grading_version="dev-v1",
+            source="dev_simulate",
+            raw_evidence={"reason": "IQ_DEV_MODE simulated resolution"},
+        ).model_dump()
+        await db.iq_resolutions.insert_one(resolution)
+        event = _iq.CallEvent(
+            call_id=call["id"],
+            user_id=user["id"],
+            source="system",
+            kind="resolution_delivered",
+            payload={"resolution_id": resolution["id"], "outcome_status": outcome_status},
+        ).model_dump()
+        await db.iq_events.insert_one(event)
+        await _reproject_call(call["id"])
+        resolved_count += 1
+    return {"resolved": resolved_count, "user_id": user["id"]}
+
+
 app.include_router(api)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly

@@ -1,0 +1,43 @@
+{
+  "summary": "Full backend + frontend testing for Hockey IQ Product Integration Pass. Backend: 65/65 pytest cases pass (52 pre-existing regression + 13 new for /iq/community/feed-enriched, /iq/community/specialists, /iq/dev/mode, /iq/dev/simulate-resolve, plus full return-loop end-to-end with 44 resolved calls). Frontend: all 4 tabs render at 390x844 with compressed 48px sticky chrome, single header (no double chrome, no global Reggie FAB), IQCoachDock present on every tab with Reggie+Marc portraits, MakeCallPanel auto-renders on Tonight with first game auto-selected (Colorado Avalanche @ Edmonton Oilers coach line verified), Make-a-call flow AWAY -> reasoning -> lock successfully writes events and navigates to My IQ, IQCoachChat opens inline and closes cleanly, My IQ with seeded device demo-mobile-5151a21e97 leads with insights + rep block (no cold-start), My IQ with fresh device shows ColdStartCard + Adult Unlock card + Dev-resolve trigger (no 'Not enough data'), Community shows Marc consensus line 'Room and specialists both on H (95% of 20). Rare alignment.', Specialists strip with 4 dimension pills works, enriched feed items show GUEST + graded count + Called X + RIGHT outcome pill, Fantasy shows Reggie dock + Open Fantasy link, zero forbidden dev/roadmap phrases across all four tabs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/iq/user/brief", "issue": "coaching_line is None even when insights are non-empty because coaching_line_for_bet_context() requires is_adult=True AND a specific priority-code insight (recent_hot/cold, overconfidence, team_bias, recent_volume_up_accuracy_down). Review request expected coaching_line populated whenever insights are non-empty. Frontend has a graceful fallback ('N calls in the book. Ask me...') so UX is OK, but the review acceptance criterion is not strictly met for non-adult contexts. Consider adding a non-adult fallback path in iq_insights.coaching_line_for_bet_context (or a new coaching_line_general())."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "MakeCallPanel", "issue": "After locking, setStep('done') fires immediately followed by onDone() which navigates to My IQ tab. The 'On the record' confirmation state effectively never renders visibly to the user because Tonight tab unmounts. Consider showing the confirmation for ~1.5s (setTimeout) before triggering onDone, or make onDone no-op for the auto-navigate case.", "selector": "[data-testid=iq-make-a-call]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Community · Specialists strip", "issues": ["All 6 specialist cards show 'GUEST' as nickname because seeded users default to 'Guest'. Not a bug per se — actual seeded data — but visually reads as if the specialist chip is broken. Consider hiding the strip when all authors are anonymous/guest, or nudging nickname generation to give unique names to seeded users."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iq_integration_pass.py",
+    "/app/test_reports/pytest/iq_integration.xml"
+  ],
+  "action_items": [
+    "Consider extending coaching_line_for_bet_context() (or adding a general coaching line) so /iq/user/brief returns a non-empty coaching_line for non-adult users whose insights are non-empty. This is the only unmet review acceptance bullet.",
+    "Delay onDone() in MakeCallPanel by ~1.2-1.5s (or via a 'View my read' button) so the user actually sees the 'On the record' confirmation before Tonight unmounts.",
+    "Optional: give seeded demo users unique nicknames so the Community Specialists strip doesn't read as a wall of 'GUEST'."
+  ],
+  "critical_code_review_comments": [
+    "HockeyIQ.jsx is 876 lines — approaching the 700 line ceiling. TonightTab, MyIQTab, CommunityTab, FantasyTab, DevSimulateResolve, AdultUnlockCard, ReputationBlock, ColdStartCard, InsightsList, YesterdayCard, BettingSection, BettingTile, FeedItem, SkeletonCard, EmptyCard are all colocated. Should be split (e.g., /pages/iq/TonightTab.jsx, MyIQTab.jsx, CommunityTab.jsx, FantasyTab.jsx).",
+    "HockeyIQ.jsx TonightTab useEffect closes over selectedGameId with eslint-disable and only runs once; if games array updates after mount, auto-select won't re-fire. Minor.",
+    "MakeCallPanel: onDone timing (see UI bug above).",
+    "DevSimulateResolve endpoint has no auth beyond IQ_DEV_MODE env; anyone hitting the preview URL can resolve any device_id's calls with deterministic outcomes. Fine for internal preview, MUST be off in prod.",
+    "iq_community_feed_enriched calls _reputation_for_user() in a loop per unique author — N round-trips to Mongo. Fine at demo scale but should be batched if feed grows beyond ~50 unique authors."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iq_integration_pass.py (new)"
+  ],
+  "success_rate": {"backend": "100% (65/65 pytest, incl. 13 new)", "frontend": "~95% — all 4 tabs, make-a-call events, chat open/close, cold-start, consensus, specialists all verified. Only ambiguity: 'On the record' state visually skipped due to onDone navigation timing."},
+  "test_credentials": "No auth. Seeded device with 44-call history: demo-mobile-5151a21e97 (verified working — shows specialist_category insight, 27/44 correct, rep block populated).",
+  "seed_data_creation": "Two fresh test devices seeded via /api/iq/call/event pipeline: test-loop-* (24 game_picks + 20 prop_picks with mixed outcomes) and test-sim-* (3 game_picks resolved via /iq/dev/simulate-resolve). Adult attestation seeded for a third test-iq-* device.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_iq_integration_pass.py — run with `export $(grep -v '^#' /app/frontend/.env | xargs) && pytest backend/tests/test_iq_integration_pass.py -v`. Seeded demo device for UI testing: localStorage.ticker.device_id='demo-mobile-5151a21e97'. IQ_DEV_MODE=1 is active in backend .env; the /iq/dev/simulate-resolve endpoint is deterministic (2 of 3 correct). All 4 Hockey IQ tabs render clean at 390x844 with no forbidden dev/roadmap phrases; coach docks per tab work; MakeCallPanel event pipeline verified end-to-end."
+}

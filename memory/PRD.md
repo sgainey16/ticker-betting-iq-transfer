@@ -110,3 +110,54 @@ An AI-powered sports television network MVP focused strictly on hockey. Phase 1 
 ## Health
 - **Mocked**: Live Scoreboard engine (`live.py`), Betting odds (`mockOdds.js`), Recap Show date pinned to Apr 12 2025, Team Room stats.
 - **Broken**: Sportradar (403).
+
+---
+
+## Hockey IQ Product Integration Pass — Feb 12, 2026
+Objective: make Reggie + Marc feel visibly and functionally present inside the 4-tab Hockey IQ sub-app at 390×844. The intelligence engine (Phase 0–3) was already built and frozen.
+
+### Completed
+- **Chrome compression** — `Layout.jsx` now hides global Ticker header/footer/LiveDesk/Reggie FAB on `/iq/*` so Hockey IQ owns its own single 48px sticky bar.
+- **Coach docks on every tab** — new `IQCoachDock` component (Reggie + Marc portraits via existing `HostPortrait`) with a contextual coaching line and "Talk to X" chips.
+  - Tonight: reacts to the selected game.
+  - My IQ: leads with Marc's coaching line from `/api/iq/user/brief`.
+  - Fantasy: Reggie asks about the roster.
+  - Community: Marc reads the consensus/specialist split.
+- **Inline `IQCoachChat`** — bottom-sheet chat surface per tab, uses existing `/api/assistant/reggie/chat` + `/action` (not the global FAB).
+- **Reusable `MakeCallPanel`** — extracted so any surface (Tonight, cold-start, later Fantasy/Community reply) can capture a `UserCall` via the Phase 0 event pipeline (`instinct_captured` → optional `reasoning_added` → `confidence_set` → `locked`).
+- **Tonight** — first game auto-selects so MakeCallPanel is on screen at load. No dead landing state.
+- **My IQ coach-first** — Marc coach dock + insight cards render FIRST; reputation grid is secondary evidence below.
+- **My IQ cold-start** — empty history now shows Reggie's "We haven't seen you call anything yet" card with an inline MakeCallPanel prefilled to the first game, instead of "Not enough data".
+- **Automatic return loop** — new `/api/iq/dev/simulate-resolve` (dev-gated by `IQ_DEV_MODE=1`) deterministically grades locked calls with a 2-of-3 correct pattern so the make → lock → auto-resolve → My IQ update → Marc coaching update loop can be demonstrated without waiting for a real Sportradar feed.
+- **Community people-first** — new `/api/iq/community/feed-enriched` attaches author reputation + top-qualified specialty to each public call. New `/api/iq/community/specialists?dimension=` returns top-N per dimension. Feed items now render: portrait + nickname + specialty chip (Community · 84%) + call + outcome pill. Marc consensus card interprets the room ("Room and specialists both on over. Rare alignment.").
+- **Adult coaching_line fallback** — `iq_insights.coaching_line_for_bet_context()` now returns a general Marc line derived from any qualifying insight when the user hasn't unlocked betting. Non-adults still get grounded coaching, only betting-specific priorities remain adult-gated.
+- **Consumer-language cleanup** — Every "Phase N", "Yahoo/ESPN coming later", "kept separate on purpose", "existing tracker", "frozen v2", "Coming next" phrase removed from the /iq surface.
+
+### Test results
+- 65/65 backend pytest (52 pre-existing + 13 new integration-pass cases)
+- 35/35 Phase 0 acceptance
+- 40/41 Phase 2 acceptance (single test-data contamination — pre-existing, unrelated)
+- 14/14 Phase 3 acceptance (updated one assertion to reflect intentional non-adult coaching line)
+- Testing agent: PASS (backend 100%, frontend ~95% — no critical bugs, retest_needed=false)
+
+### Files touched
+- `backend/server.py` — 3 new endpoints (`feed-enriched`, `specialists`, `dev/mode`, `dev/simulate-resolve`)
+- `backend/iq_insights.py` — non-adult coaching line fallback
+- `backend/.env` — `IQ_DEV_MODE=1` for preview
+- `backend/tests/test_iq_integration_pass.py` — 13 new tests (from testing agent)
+- `backend/tests/acceptance_iq_phase3.py` — assertion updated for new coaching behavior
+- `frontend/src/pages/HockeyIQ.jsx` — full rewrite
+- `frontend/src/components/iq/IQCoachDock.jsx` — new
+- `frontend/src/components/iq/IQCoachChat.jsx` — new
+- `frontend/src/components/iq/MakeCallPanel.jsx` — new (extracted, reusable)
+- `frontend/src/components/Layout.jsx` — `isIQRoute` chrome-suppression gate
+
+### Still Deferred (per user scope lockdown)
+- Sportradar production upgrade
+- Yahoo/ESPN fantasy import
+- Sportsbook payment integration
+- Full forum expansion
+- Tonight's 10 / Accuracy Wheel / Betting DNA UIs
+- Voice-first ElevenLabs playback on Marc/Reggie coach lines (text-only this pass)
+- Server-side refactor into `/app/backend/routes/`
+
