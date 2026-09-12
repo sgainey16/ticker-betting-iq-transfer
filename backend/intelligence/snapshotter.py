@@ -68,10 +68,13 @@ def _empty_provenance(sources: list[dict], is_retry: bool = False) -> Provenance
         sources_consulted=[SourceRecord(**s) for s in sources],
         written_at=now_iso(), engine_version=ENGINE_VERSION,
     )
-    if is_retry:
-        # Retry marker embedded as a source-line so provenance stays typed.
+    if is_retry and sources:
+        # Retry marker embedded honestly: reuse the first source's name and
+        # tag the endpoint so this remains attributable to the same provider
+        # that first-sighted the game.
+        first_name = sources[0]["name"]
         p.sources_consulted.append(SourceRecord(
-            name="sportradar",  # placeholder; the RETRY signal is the endpoint text
+            name=first_name,
             endpoint="__retry_after_technical_failure__",
             fetched_at=now_iso(), http_status=200, cache_hit=False,
             fields_populated=[],
@@ -109,7 +112,8 @@ async def _build_snapshot(db, game: dict, kind: str,
     return doc.model_dump()
 
 
-async def emit_schedule_release_first_sight(db, ticker_game_id: str) -> Optional[str]:
+async def emit_schedule_release_first_sight(db, ticker_game_id: str,
+                                              first_sight_provider: str = "nhl_public") -> Optional[str]:
     """Emit the schedule_release snapshot at genuine first sight.
 
     - Guarded against duplicate emission by the (ticker_game_id, kind,
@@ -119,6 +123,10 @@ async def emit_schedule_release_first_sight(db, ticker_game_id: str) -> Optional
       locked_at = server_now() at retry time, NEVER the original mint time.
     - This function refuses to run for games already known (defends
       against later 'fill-in' attempts).
+
+    first_sight_provider names the actual provider whose ingest caused the
+    canonical game to appear (nhl_public / sportsdata_io / highlightly).
+    Recorded honestly in provenance.
     """
     game = await db["iq_canonical_games"].find_one({"ticker_game_id": ticker_game_id})
     if not game:
@@ -126,9 +134,11 @@ async def emit_schedule_release_first_sight(db, ticker_game_id: str) -> Optional
     if await _snapshot_exists(db, ticker_game_id, "schedule_release"):
         return None
     data_sources = [{
-        "name": "sportradar", "endpoint": "canonical_game_first_sight",
+        "name": first_sight_provider,
+        "endpoint": "canonical_game_first_sight",
         "fetched_at": now_iso(), "http_status": 200, "cache_hit": False,
-        "fields_populated": [],
+        "fields_populated": ["scheduled_iso_at_snapshot", "home_team_id",
+                             "away_team_id", "venue"],
     }]
     doc = await _build_snapshot(db, game, "schedule_release", data_sources,
                                 is_retry=(ticker_game_id in _schedule_release_backlog))
@@ -205,9 +215,10 @@ async def worker_tick(db, now_dt: Optional[datetime] = None) -> dict:
                 stats[f"missed_{kind}"] += 1
                 continue    # window closed — DO NOT backfill
             data_sources = [{
-                "name": "sportradar", "endpoint": f"scheduler_tick/{kind}",
+                "name": "nhl_public",
+                "endpoint": f"scheduler_tick/{kind}",
                 "fetched_at": now_iso(), "http_status": 200, "cache_hit": False,
-                "fields_populated": [],
+                "fields_populated": ["scheduled_iso_at_snapshot"],
             }]
             doc = await _build_snapshot(db, game, kind, data_sources)
             if doc is None:
