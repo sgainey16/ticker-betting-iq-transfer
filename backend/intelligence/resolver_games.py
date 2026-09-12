@@ -151,9 +151,14 @@ async def resolve_game(db, hint: GameHint,
         if existing:
             return existing["ticker_game_id"]
 
-    # Step 3 — natural-key close match
-    close = await _find_natural_close(db, home_id, away_id, hint.season,
-                                      hint.season_type, hint.scheduled_iso)
+    # Step 3 — natural-key close match. Skipped for POST because playoff
+    # series have unique NHL game IDs and back-to-back games between the
+    # same two teams fall inside a 72h window, which would collapse
+    # distinct games into one canonical game.
+    close: list[dict] = []
+    if hint.season_type != "POST":
+        close = await _find_natural_close(db, home_id, away_id, hint.season,
+                                          hint.season_type, hint.scheduled_iso)
     if len(close) == 1:
         await _attach_new_provider_id(db, close[0]["ticker_game_id"], hint)
         return close[0]["ticker_game_id"]

@@ -2757,6 +2757,7 @@ app.include_router(api)
 # Foundation 1A — mount the dev-gated QA endpoints and bootstrap indexes.
 from intelligence.routes_qa import build_router as _iq1a_qa_router
 from intelligence.indexes import ensure_indexes as _iq1a_ensure_indexes
+from intelligence.indexes_1b import ensure_indexes_1b as _iq1b_ensure_indexes
 app.include_router(_iq1a_qa_router(db), prefix="/api")
 
 
@@ -2766,6 +2767,10 @@ async def _iq1a_startup():
         await _iq1a_ensure_indexes(db)
     except Exception as _e:
         logger.warning("iq1a index bootstrap failed: %s", _e)
+    try:
+        await _iq1b_ensure_indexes(db)
+    except Exception as _e:
+        logger.warning("iq1b index bootstrap failed: %s", _e)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly
 # (Kubernetes ingress only forwards /api/* to the backend). Kept /static as

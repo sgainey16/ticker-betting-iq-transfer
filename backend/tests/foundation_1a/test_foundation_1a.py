@@ -55,12 +55,28 @@ async def db():
     # Clear the module-level schedule_release backlog between tests so
     # stale ticker_game_ids from prior test databases don't leak forward.
     _schedule_release_backlog.clear()
-    client = AsyncIOMotorClient(os.environ.get("MONGO_URL", "mongodb://localhost:27017"))
+    client = AsyncIOMotorClient(
+        os.environ.get("MONGO_URL", "mongodb://localhost:27017"),
+        maxPoolSize=5, serverSelectionTimeoutMS=20000,
+        connectTimeoutMS=20000, socketTimeoutMS=20000,
+    )
     dbname = f"iq1a_test_{uuid.uuid4().hex[:8]}"
     d = client[dbname]
-    await ensure_indexes(d)
+    # Retry index creation on transient AutoReconnect (crowded test runs).
+    from pymongo.errors import AutoReconnect
+    for attempt in range(3):
+        try:
+            await ensure_indexes(d)
+            break
+        except AutoReconnect:
+            if attempt == 2:
+                raise
+            await asyncio.sleep(0.5)
     yield d
-    await client.drop_database(dbname)
+    try:
+        await client.drop_database(dbname)
+    except Exception:
+        pass
     client.close()
 
 
