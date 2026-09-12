@@ -174,6 +174,8 @@ class UserCall(BaseModel):
     locked_at: Optional[str] = None
     resolved_at: Optional[str] = None
     context_snapshot: Optional[dict[str, Any]] = None
+    context_snapshot_ref: Optional[str] = None
+    context_snapshot_state: Optional[Literal["attached", "no_snapshot_before_lock"]] = None
     wager_id: Optional[str] = None
 
 

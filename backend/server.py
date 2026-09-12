@@ -2146,6 +2146,17 @@ async def iq_post_event(payload: CallEventReq):
     await db.iq_events.insert_one(event)
 
     projected = await _reproject_call(call_id)
+
+    # Foundation 1A hook: on a successful lock, attempt lock-time
+    # snapshot attachment. Idempotent, retryable, terminal-state discipline
+    # lives inside the helper. Never raises into the request path.
+    if payload.kind == "locked":
+        try:
+            from intelligence.lock_time_attachment import attach as _iq1a_attach
+            await _iq1a_attach(db, call_id)
+        except Exception as _e:
+            logger.warning("iq1a attach hook failed for %s: %s", call_id, _e)
+
     return {"call": projected, "event": _strip_mongo_id(event)}
 
 
@@ -2742,6 +2753,19 @@ async def iq_dev_simulate_resolve(device_id: str):
 
 
 app.include_router(api)
+
+# Foundation 1A — mount the dev-gated QA endpoints and bootstrap indexes.
+from intelligence.routes_qa import build_router as _iq1a_qa_router
+from intelligence.indexes import ensure_indexes as _iq1a_ensure_indexes
+app.include_router(_iq1a_qa_router(db), prefix="/api")
+
+
+@app.on_event("startup")
+async def _iq1a_startup():
+    try:
+        await _iq1a_ensure_indexes(db)
+    except Exception as _e:
+        logger.warning("iq1a index bootstrap failed: %s", _e)
 
 # Serve generated audio via /api/audio/* so the ingress routes it correctly
 # (Kubernetes ingress only forwards /api/* to the backend). Kept /static as
