@@ -37,6 +37,10 @@ CorrectionReason = Literal[
     "goalie_line_correction",
     "sog_correction",
     "outcome_correction",
+    "canonical_identity_repair",   # used ONLY when a prior version is materially wrong
+                                   # because a Foundation 1A identity defect attached the
+                                   # wrong game's truth to this canonical. Emitted only if
+                                   # the newest version does not already match rightful truth.
     "other",
 ]
 

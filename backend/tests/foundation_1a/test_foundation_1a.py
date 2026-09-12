@@ -269,6 +269,200 @@ async def test_regular_season_postponement_still_uses_natural_key(db):
     assert tgid1 == tgid2, "regular-season natural-key close-match must still work"
 
 
+# ---------------------------------------------------------------------------
+# Same-provider identity exclusion — the newly approved 1A patch.
+# Prevents distinct games between the same teams inside the ±72h window
+# from collapsing when they carry DIFFERENT same-provider IDs. Preserves
+# every other legitimate identity path.
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_reg_same_teams_consecutive_day_home_and_home_stays_separate(db):
+    """T1 — Two REG games between the same teams on consecutive days
+    with different nhl_public IDs must mint two canonicals."""
+    day = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("nhl_public", {"tri_code": "PIT"},
+                     display_name="Pittsburgh Penguins", market="Pittsburgh")
+    away = TeamHint("nhl_public", {"tri_code": "FLA"},
+                     display_name="Florida Panthers", market="Florida")
+    hint_a = GameHint("nhl_public", 111, "2026-2027", "REG",
+                      home, away, _iso_at(day), declares_new_game=True)
+    hint_b = GameHint("nhl_public", 222, "2026-2027", "REG",
+                      home, away, _iso_at(day + timedelta(hours=24)),
+                      declares_new_game=True)
+    tgid_a = await resolve_game(db, hint_a)
+    tgid_b = await resolve_game(db, hint_b)
+    assert tgid_a != tgid_b
+    assert await db["iq_canonical_games"].count_documents({}) == 2
+
+
+@pytest.mark.asyncio
+async def test_reg_pit_fla_real_collision_pattern_stays_separate(db):
+    """T2 — Concrete reproduction of the live collision: real NHL IDs
+    2025021211 (Apr 4) and 2025021223 (Apr 5), PIT home, FLA away."""
+    apr_04 = datetime(2026, 4, 4, 21, 0, 0, tzinfo=timezone.utc)
+    apr_05 = datetime(2026, 4, 5, 19, 0, 0, tzinfo=timezone.utc)
+    home = TeamHint("nhl_public", {"tri_code": "PIT"},
+                     display_name="Pittsburgh Penguins", market="Pittsburgh")
+    away = TeamHint("nhl_public", {"tri_code": "FLA"},
+                     display_name="Florida Panthers", market="Florida")
+    hint_a = GameHint("nhl_public", 2025021211, "2025-2026", "REG",
+                      home, away, _iso_at(apr_04), declares_new_game=True)
+    hint_b = GameHint("nhl_public", 2025021223, "2025-2026", "REG",
+                      home, away, _iso_at(apr_05), declares_new_game=True)
+    tgid_a = await resolve_game(db, hint_a)
+    tgid_b = await resolve_game(db, hint_b)
+    assert tgid_a != tgid_b, "live PIT/FLA collision pattern must not repeat"
+    # Each canonical carries its own distinct nhl_public.id
+    doc_a = await db["iq_canonical_games"].find_one({"ticker_game_id": tgid_a})
+    doc_b = await db["iq_canonical_games"].find_one({"ticker_game_id": tgid_b})
+    assert doc_a["provider_ids"]["nhl_public"]["id"] == 2025021211
+    assert doc_b["provider_ids"]["nhl_public"]["id"] == 2025021223
+
+
+@pytest.mark.asyncio
+async def test_reg_same_provider_id_postponement_stays_one_canonical(db):
+    """T3 — Postponement with SAME provider ID must remain a single
+    canonical. Handled by step 2 (provider-id exact); the amendment
+    changes nothing here."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("nhl_public", {"tri_code": "STL"},
+                     display_name="St. Louis Blues", market="St. Louis")
+    away = TeamHint("nhl_public", {"tri_code": "DAL"},
+                     display_name="Dallas Stars", market="Dallas")
+    hint1 = GameHint("nhl_public", 555, "2026-2027", "REG",
+                     home, away, _iso_at(tue), declares_new_game=True)
+    tgid1 = await resolve_game(db, hint1)
+    # Same provider id, reschedule +48h
+    hint2 = GameHint("nhl_public", 555, "2026-2027", "REG",
+                     home, away, _iso_at(tue + timedelta(hours=48)))
+    tgid2 = await resolve_game(db, hint2)
+    assert tgid1 == tgid2
+    assert await db["iq_canonical_games"].count_documents({}) == 1
+
+
+@pytest.mark.asyncio
+async def test_reg_reissued_id_with_positive_evidence_stays_one_canonical(db):
+    """T4 — Rare: provider reissues its own ID for a rescheduled game
+    and supplies prior_scheduled_iso as positive evidence. Must resolve
+    to the same canonical via step 4's positive-evidence path."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    orig_iso = _iso_at(tue)
+    home = TeamHint("sportradar", {"id": "sr-h1", "alias": "EDM"},
+                     display_name="Edmonton", market="Edmonton")
+    away = TeamHint("sportradar", {"id": "sr-a1", "alias": "VAN"},
+                     display_name="Vancouver", market="Vancouver")
+    hint1 = GameHint("sportradar", "sr-orig-t4", "2026", "REG",
+                     home, away, orig_iso, declares_new_game=True)
+    tgid1 = await resolve_game(db, hint1)
+    # Reissued id, 7 days later (>72h), with positive evidence.
+    hint2 = GameHint("sportradar", "sr-reissued-t4", "2026", "REG",
+                     home, away, _iso_at(tue + timedelta(days=7)),
+                     supporting_evidence={"prior_scheduled_iso": orig_iso})
+    tgid2 = await resolve_game(db, hint2)
+    assert tgid1 == tgid2
+
+
+@pytest.mark.asyncio
+async def test_reg_reissued_id_without_evidence_within_72h_now_refuses(db):
+    """T5 — Under the amendment, a hint carrying a DIFFERENT
+    same-provider ID within ±72h must NOT be silently absorbed via step
+    3. It must fall through to step 4, and without positive evidence,
+    step 4 refuses. This is the fix for the collision pattern."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("sportradar", {"id": "sr-h5", "alias": "EDM"},
+                     display_name="Edmonton", market="Edmonton")
+    away = TeamHint("sportradar", {"id": "sr-a5", "alias": "VAN"},
+                     display_name="Vancouver", market="Vancouver")
+    hint1 = GameHint("sportradar", "sr-orig-t5", "2026", "REG",
+                     home, away, _iso_at(tue), declares_new_game=True)
+    await resolve_game(db, hint1)
+    # Different same-provider id, ~48h later, no supporting_evidence.
+    hint2 = GameHint("sportradar", "sr-different-t5", "2026", "REG",
+                     home, away, _iso_at(tue + timedelta(hours=48)))
+    with pytest.raises(UnresolvedGameIdentity):
+        await resolve_game(db, hint2)
+    # No new canonical minted (step 4 refused; reconciliation queued).
+    assert await db["iq_canonical_games"].count_documents({}) == 1
+
+
+@pytest.mark.asyncio
+async def test_cross_provider_first_attachment_still_works(db):
+    """T6 — Cross-provider reconciliation must still function. An
+    nhl_public canonical exists; a sportsdata_io hint for the same
+    game arrives within ±72h. Step 3 attaches sdio to the existing
+    canonical because the candidate has no sdio.id."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("nhl_public", {"tri_code": "NYR"},
+                     display_name="New York Rangers", market="New York")
+    away = TeamHint("nhl_public", {"tri_code": "NJD"},
+                     display_name="New Jersey Devils", market="New Jersey")
+    hint_a = GameHint("nhl_public", 777, "2026-2027", "REG",
+                     home, away, _iso_at(tue), declares_new_game=True)
+    tgid_a = await resolve_game(db, hint_a)
+    # sportsdata_io hint arrives close in time — no sdio id on candidate,
+    # so step 3 attaches.
+    hint_b = GameHint("sportsdata_io", 888, "2026-2027", "REG",
+                     home, away, _iso_at(tue + timedelta(hours=1)))
+    tgid_b = await resolve_game(db, hint_b)
+    assert tgid_a == tgid_b
+    doc = await db["iq_canonical_games"].find_one({"ticker_game_id": tgid_a})
+    assert doc["provider_ids"]["nhl_public"]["id"] == 777
+    assert doc["provider_ids"]["sportsdata_io"]["id"] == 888
+
+
+@pytest.mark.asyncio
+async def test_pre_same_teams_consecutive_stays_separate(db):
+    """T8 — Preseason parity. Two exhibition games between the same
+    teams within ±72h with distinct nhl_public IDs must stay separate.
+    (T7 = the pre-existing POST test still passes; nothing changes.)"""
+    day = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("nhl_public", {"tri_code": "BUF"},
+                     display_name="Buffalo Sabres", market="Buffalo")
+    away = TeamHint("nhl_public", {"tri_code": "OTT"},
+                     display_name="Ottawa Senators", market="Ottawa")
+    hint_a = GameHint("nhl_public", 12345, "2026-2027", "PRE",
+                      home, away, _iso_at(day), declares_new_game=True)
+    hint_b = GameHint("nhl_public", 12346, "2026-2027", "PRE",
+                      home, away, _iso_at(day + timedelta(hours=30)),
+                      declares_new_game=True)
+    tgid_a = await resolve_game(db, hint_a)
+    tgid_b = await resolve_game(db, hint_b)
+    assert tgid_a != tgid_b
+    assert await db["iq_canonical_games"].count_documents({}) == 2
+
+
+@pytest.mark.asyncio
+async def test_ambiguity_still_raised_when_multiple_candidates_survive(db):
+    """T9 — If, after applying the same-provider exclusion, more than
+    one candidate still matches (e.g., two prior canonicals carry no
+    same-provider id and both natural-close-match the hint), the
+    resolver still raises AmbiguousGameHint."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    home = TeamHint("sportradar", {"id": "sr-h9", "alias": "EDM"},
+                     display_name="Edmonton", market="Edmonton")
+    away = TeamHint("sportradar", {"id": "sr-a9", "alias": "VAN"},
+                     display_name="Vancouver", market="Vancouver")
+    # Mint two sportradar canonicals for same teams, close in time.
+    await resolve_game(db, GameHint(
+        "sportradar", "sr-1", "2026", "REG",
+        home, away, _iso_at(tue), declares_new_game=True))
+    await resolve_game(db, GameHint(
+        "sportradar", "sr-2", "2026", "REG",
+        home, away, _iso_at(tue + timedelta(hours=24)), declares_new_game=True))
+    # Now an nhl_public hint arrives inside 72h. Neither candidate has an
+    # nhl_public id, so both survive the same-provider exclusion.
+    hint = GameHint(
+        "nhl_public", 909090, "2026", "REG",
+        TeamHint("nhl_public", {"tri_code": "EDM"},
+                 display_name="Edmonton", market="Edmonton"),
+        TeamHint("nhl_public", {"tri_code": "VAN"},
+                 display_name="Vancouver", market="Vancouver"),
+        _iso_at(tue + timedelta(hours=12)),
+    )
+    with pytest.raises(AmbiguousGameHint):
+        await resolve_game(db, hint)
+
+
 @pytest.mark.asyncio
 async def test_far_postponement_without_evidence_raises_unresolved(db):
     tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)

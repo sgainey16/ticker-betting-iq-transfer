@@ -66,15 +66,41 @@ async def _find_by_provider_id(db, provider: str, pid: Any) -> Optional[dict]:
 
 
 async def _find_natural_close(db, home_id: str, away_id: str, season: str,
-                              season_type: str, scheduled_iso: str) -> list[dict]:
+                              season_type: str, scheduled_iso: str,
+                              hint_provider: Optional[str] = None,
+                              hint_provider_game_id: Any = None) -> list[dict]:
+    """Return candidates that natural-key close-match this hint.
+
+    Same-provider identity exclusion (approved 1A patch):
+        If the incoming hint carries a provider_game_id and a candidate
+        already stores an ID for that SAME provider that differs from the
+        hint, the candidate is NOT eligible. Same-provider IDs are unique
+        per game; a differing same-provider ID means the candidate is a
+        different real game, not a reschedule of the hint.
+
+    This preserves:
+      - same-provider exact-ID matching (step 2 already covers it)
+      - cross-provider reconciliation (candidate has no ID for the hint's
+        provider → still eligible)
+      - postponement handling with unchanged provider ID (step 2)
+      - reissued-ID postponement (step 4 positive-evidence path)
+    """
     target = _parse_iso(scheduled_iso)
     lo = (target - _CLOSE_MATCH_WINDOW).isoformat().replace("+00:00", "Z")
     hi = (target + _CLOSE_MATCH_WINDOW).isoformat().replace("+00:00", "Z")
-    cur = db["iq_canonical_games"].find({
+    query: dict[str, Any] = {
         "competition": "NHL", "season": season, "season_type": season_type,
         "home_team_id": home_id, "away_team_id": away_id,
         "current.scheduled_iso": {"$gte": lo, "$lte": hi},
-    })
+    }
+    if hint_provider and hint_provider_game_id is not None:
+        # Exclude candidates that already carry a same-provider ID that
+        # differs from the hint. Candidates with no same-provider ID (null
+        # or missing) remain eligible so cross-provider first attachment
+        # keeps working.
+        field = f"provider_ids.{hint_provider}.id"
+        query["$nor"] = [{field: {"$nin": [None, hint_provider_game_id]}}]
+    cur = db["iq_canonical_games"].find(query)
     return [g async for g in cur]
 
 
@@ -154,11 +180,17 @@ async def resolve_game(db, hint: GameHint,
     # Step 3 — natural-key close match. Skipped for POST because playoff
     # series have unique NHL game IDs and back-to-back games between the
     # same two teams fall inside a 72h window, which would collapse
-    # distinct games into one canonical game.
+    # distinct games into one canonical game. Same-provider identity
+    # exclusion inside _find_natural_close further protects REG/PRE from
+    # legitimate distinct-game collisions (e.g., home-and-home stacks).
     close: list[dict] = []
     if hint.season_type != "POST":
-        close = await _find_natural_close(db, home_id, away_id, hint.season,
-                                          hint.season_type, hint.scheduled_iso)
+        close = await _find_natural_close(
+            db, home_id, away_id, hint.season,
+            hint.season_type, hint.scheduled_iso,
+            hint_provider=hint.provider,
+            hint_provider_game_id=hint.provider_game_id,
+        )
     if len(close) == 1:
         await _attach_new_provider_id(db, close[0]["ticker_game_id"], hint)
         return close[0]["ticker_game_id"]
