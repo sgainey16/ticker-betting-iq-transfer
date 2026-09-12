@@ -1,7 +1,7 @@
 """Writer + versioning tests.
 
 Covers:
-  - v1 insertion + coverage row seeded as 'partial'
+  - v1 insertion (single collection: iq_game_finals)
   - Correction v2 with materially different payload
   - Correction #1: an identical-payload re-declaration does NOT create v3
 """
@@ -23,22 +23,21 @@ async def _v1(db, team_map, correction_reason="initial"):
 
 
 @pytest.mark.asyncio
-async def test_v1_insert_and_coverage_seeded_partial(db, team_map):
+async def test_v1_insert_creates_only_game_finals_row(db, team_map):
+    """1B owns exactly ONE collection: iq_game_finals. Confirm no other
+    collection is populated as a side effect of a v1 insert."""
     r = await _v1(db, team_map)
     assert r["write_action"] == "inserted_v1"
     assert r["record_version"] == 1
     assert r["correction_reason"] == "initial"
-    # Coverage rows created and MUST be 'partial'
-    for tid in (team_map["EDM"], team_map["FLA"]):
-        cov = await db["iq_team_season_coverage"].find_one({"ticker_team_id": tid})
-        assert cov is not None, f"coverage row missing for {tid}"
-        assert cov["coverage_state"] == "partial"
-        assert cov["games_recorded"] == 1
-        assert cov["expected_games"] is None
+    # Exactly one row in iq_game_finals.
+    assert await db["iq_game_finals"].count_documents({}) == 1
+    # No coverage collection is written by 1B.
+    assert await db["iq_team_season_coverage"].count_documents({}) == 0
 
 
 @pytest.mark.asyncio
-async def test_material_correction_creates_v2_and_no_double_coverage(db, team_map):
+async def test_material_correction_creates_v2(db, team_map):
     r1 = await _v1(db, team_map)
     assert r1["write_action"] == "inserted_v1"
 
@@ -58,11 +57,9 @@ async def test_material_correction_creates_v2_and_no_double_coverage(db, team_ma
     assert r2["record_version"] == 2
     assert r2["supersedes_record_version"] == 1
     assert r2["correction_reason"] == "goalie_line_correction"
-
-    # Coverage MUST NOT double-count on a correction.
-    for tid in (team_map["EDM"], team_map["FLA"]):
-        cov = await db["iq_team_season_coverage"].find_one({"ticker_team_id": tid})
-        assert cov["games_recorded"] == 1, "corrections must not bump coverage"
+    # Both v1 and v2 exist; v1 is preserved.
+    assert await db["iq_game_finals"].count_documents(
+        {"ticker_game_id": r1["ticker_game_id"]}) == 2
 
 
 @pytest.mark.asyncio

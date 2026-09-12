@@ -188,11 +188,10 @@ async def test_full_backfill_dedup_and_partial_coverage(db, monkeypatch):
     assert stats["unique_nhl_game_ids"] == 3, \
         "3 shared SCF games must collapse to 3 unique ids after dedup"
     assert stats["finals_written_v1"] == 3
-    # coverage remains 'partial' for both teams in every season touched
+    # 1B owns only iq_game_finals — no coverage collection is created.
+    assert await db["iq_team_season_coverage"].count_documents({}) == 0
+    # And also assert no coverage anywhere for the two teams under any name.
     for tid in (edm_id, fla_id):
         rows = [r async for r in db["iq_team_season_coverage"].find(
             {"ticker_team_id": tid})]
-        assert rows, f"expected at least one coverage row for {tid}"
-        for row in rows:
-            assert row["coverage_state"] == "partial"
-            assert row["expected_games"] is None
+        assert rows == []

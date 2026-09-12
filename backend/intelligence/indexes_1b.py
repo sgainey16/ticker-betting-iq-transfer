@@ -1,4 +1,8 @@
-"""Indexes for Foundation 1B — iq_game_finals + iq_team_season_coverage.
+"""Indexes for Foundation 1B — iq_game_finals only.
+
+REV2 discipline: no operational bookkeeping collection alongside
+iq_game_finals. Season completeness is not stored anywhere; it's a
+future explicit decision when Betting IQ actually needs it.
 
 Design rules:
   - Uniqueness on (ticker_game_id, record_version) so no two rows share a
@@ -32,15 +36,8 @@ GAME_FINALS_INDEXES = [
      {"name": "ix_season_played"}),
 ]
 
-TEAM_SEASON_COVERAGE_INDEXES = [
-    ({"id": ASCENDING}, {"unique": True, "name": "ux_id"}),
-    ({"ticker_team_id": ASCENDING, "season": ASCENDING, "season_type": ASCENDING},
-     {"unique": True, "name": "ux_team_season_type"}),
-]
-
 INDEX_MAP_1B = {
-    "iq_game_finals":             GAME_FINALS_INDEXES,
-    "iq_team_season_coverage":    TEAM_SEASON_COVERAGE_INDEXES,
+    "iq_game_finals": GAME_FINALS_INDEXES,
 }
 
 

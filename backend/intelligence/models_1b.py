@@ -29,7 +29,7 @@ from intelligence.models_1a import (
 # Frozen enums specific to 1B
 # --------------------------------------------------------------------------
 FinalOutcome     = Literal["REG", "OT", "SO"]  # regulation / overtime / shootout
-CoverageState    = Literal["partial", "complete"]
+CoverageState    = Literal["partial", "complete"]  # reserved for a later foundation; no coverage collection exists in 1B
 CorrectionReason = Literal[
     "initial",
     "official_stat_correction",
@@ -176,24 +176,3 @@ class GameFinal(BaseModel):
                 "supersedes_record_version must be prior version"
             assert self.correction_reason != "initial", "corrections cannot be 'initial'"
         return self
-
-
-# --------------------------------------------------------------------------
-# Coverage state per (ticker_team_id, season, season_type).
-# --------------------------------------------------------------------------
-class TeamSeasonCoverage(BaseModel):
-    """Baseline coverage marker — 'complete' requires positive evidence
-    (correction #2). Initial backfills are always 'partial'."""
-    model_config = ConfigDict(extra="forbid")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    ticker_team_id: str
-    season: str
-    season_type: SeasonType
-    coverage_state: CoverageState = "partial"
-    games_recorded: int = Field(default=0, ge=0)
-    expected_games: Optional[int] = None   # null until we have positive evidence
-    last_recorded_at: str = Field(default_factory=now_iso)
-
-    @field_validator("ticker_team_id")
-    @classmethod
-    def _v_t(cls, v): assert is_valid_team_id(v); return v

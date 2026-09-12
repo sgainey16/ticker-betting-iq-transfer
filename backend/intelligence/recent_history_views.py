@@ -131,7 +131,14 @@ def _pipeline_latest_versions(match: dict, as_of_iso: Optional[str],
                               limit: Optional[int] = None) -> list[dict]:
     stages: list[dict] = [{"$match": match}]
     if as_of_iso is not None:
-        stages.append({"$match": {"recorded_at": {"$lte": as_of_iso}}})
+        # BOTH temporal gates must hold. recorded_at prevents a correction
+        # that landed after as_of from leaking backward; played_at_iso
+        # prevents a future-dated game whose recorded_at happens to sit
+        # before as_of from appearing in a historical view.
+        stages.append({"$match": {
+            "recorded_at":   {"$lte": as_of_iso},
+            "played_at_iso": {"$lte": as_of_iso},
+        }})
     # Sort by game+version DESC and use $group with $first to pick newest
     # version per game.
     stages.append({"$sort": {"ticker_game_id": 1, "record_version": -1}})
@@ -208,8 +215,11 @@ async def season_baseline_for_team(
     Returns counts, not percentages — projection code computes any ratios
     on the fly. Consistent with correction #3 discipline.
 
-    coverage_state comes from iq_team_season_coverage; it stays 'partial'
-    unless someone has explicitly promoted it.
+    NOTE: no coverage-state field is returned. Coverage completeness is
+    NOT stored anywhere in Foundation 1B. A caller who needs to gate on
+    "complete season" must supply positive evidence explicitly at that
+    call site — 1B stays honest by refusing to synthesize a completeness
+    claim from its own count of ingested games.
     """
     match: dict[str, Any] = {
         "$or": [
@@ -227,27 +237,18 @@ async def season_baseline_for_team(
     gf = sum(p["goals_for"] for p in persps)
     ga = sum(p["goals_against"] for p in persps)
 
-    coverage = await db["iq_team_season_coverage"].find_one({
-        "ticker_team_id": ticker_team_id,
-        "season": season, "season_type": season_type,
-    })
-    coverage_state = (coverage or {}).get("coverage_state", "partial")
-    expected_games = (coverage or {}).get("expected_games")
-
     return {
         "team_id": ticker_team_id,
         "season": season,
         "season_type": season_type,
         "as_of": as_of_iso,
-        "games": len(persps),
+        "games_recorded": len(persps),
         "wins": w,
         "reg_losses": reg_l,
         "ot_losses": otl,
         "so_losses": sol,
         "goals_for": gf,
         "goals_against": ga,
-        "coverage_state": coverage_state,
-        "expected_games": expected_games,
     }
 
 

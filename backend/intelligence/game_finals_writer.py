@@ -8,11 +8,10 @@ Correction #1 — Concurrent identical corrections do not create an extra versio
   and returns the existing record. A new record_version is created only
   when the intent differs from what's already stored.
 
-Correction #2 — coverage_state='complete' requires positive evidence.
-  This writer NEVER promotes coverage to 'complete' as a side effect. It
-  increments games_recorded and stays 'partial'. Promotion to complete
-  is a separate, explicit call that requires expected_games and a
-  reconciled count — see promote_coverage_to_complete().
+REV2 discipline — no coverage-management subsystem.
+  This writer only touches iq_game_finals. Season completeness (partial
+  vs complete) is not stored anywhere in 1B; a caller who needs to gate
+  on that must present positive evidence at its own call site.
 """
 from __future__ import annotations
 from typing import Optional
@@ -21,7 +20,6 @@ from pymongo.errors import DuplicateKeyError
 
 from intelligence.models_1b import (
     GameFinal, FinalScore, TeamGameFacts, GoalieLine,
-    TeamSeasonCoverage,
 )
 from intelligence.models_1a import Provenance, now_iso
 
@@ -126,7 +124,6 @@ async def write_game_final(
             except DuplicateKeyError:
                 # concurrent writer created v1 first — reread and continue loop
                 continue
-            await _bump_coverage(db, doc)
             doc["write_action"] = "inserted_v1"
             return doc
 
@@ -152,77 +149,6 @@ async def write_game_final(
             # Loop and try again with a fresh version number on top of latest.
             continue
         intended["write_action"] = "inserted_new_version"
-        # Corrections don't change coverage counts — the game was already
-        # counted at v1. Only v1 bumps coverage.
         return intended
 
     raise RuntimeError("write_game_final exhausted retries")
-
-
-async def _bump_coverage(db, final_doc: dict) -> None:
-    """v1 of a game means: this game has entered coverage for BOTH teams
-    for that season/season_type. Increment counts on each team's coverage
-    row. Never promotes to 'complete' — that requires positive evidence."""
-    for team_id in (final_doc["home_team_id"], final_doc["away_team_id"]):
-        query = {
-            "ticker_team_id": team_id,
-            "season": final_doc["season"],
-            "season_type": final_doc["season_type"],
-        }
-        existing = await db["iq_team_season_coverage"].find_one(query)
-        if existing:
-            await db["iq_team_season_coverage"].update_one(
-                {"id": existing["id"]},
-                {"$inc": {"games_recorded": 1},
-                 "$set": {"last_recorded_at": now_iso()}},
-            )
-        else:
-            row = TeamSeasonCoverage(
-                ticker_team_id=team_id,
-                season=final_doc["season"],
-                season_type=final_doc["season_type"],  # type: ignore[arg-type]
-                coverage_state="partial",
-                games_recorded=1,
-                expected_games=None,
-                last_recorded_at=now_iso(),
-            )
-            try:
-                await db["iq_team_season_coverage"].insert_one(row.model_dump())
-            except DuplicateKeyError:
-                # concurrent seed — retry as an update
-                await db["iq_team_season_coverage"].update_one(
-                    query,
-                    {"$inc": {"games_recorded": 1},
-                     "$set": {"last_recorded_at": now_iso()}},
-                )
-
-
-async def promote_coverage_to_complete(
-    db, *, ticker_team_id: str, season: str, season_type: str,
-    expected_games: int, evidence_note: str,
-) -> bool:
-    """Explicit, evidence-gated promotion. Refuses to promote unless
-    games_recorded == expected_games. Correction #2 in code form.
-
-    evidence_note is captured for audit. Returns True iff promoted.
-    """
-    if expected_games <= 0:
-        return False
-    row = await db["iq_team_season_coverage"].find_one({
-        "ticker_team_id": ticker_team_id,
-        "season": season, "season_type": season_type,
-    })
-    if not row:
-        return False
-    if row["games_recorded"] != expected_games:
-        return False
-    result = await db["iq_team_season_coverage"].update_one(
-        {"id": row["id"], "coverage_state": "partial"},
-        {"$set": {
-            "coverage_state": "complete",
-            "expected_games": expected_games,
-            "coverage_evidence_note": evidence_note,
-            "coverage_promoted_at": now_iso(),
-        }},
-    )
-    return result.modified_count == 1

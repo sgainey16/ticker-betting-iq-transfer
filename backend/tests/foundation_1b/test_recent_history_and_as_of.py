@@ -141,49 +141,90 @@ async def test_as_of_returns_v1_when_correction_landed_later(db, team_map):
 
 
 @pytest.mark.asyncio
-async def test_season_baseline_stays_partial(db, team_map):
-    """Correction #2 — after a minimum-history seed, coverage_state must
-    remain 'partial'. The writer never promotes to 'complete' on its own."""
+async def test_season_baseline_returns_derived_counts_only(db, team_map):
+    """Baselines never carry a coverage_state field; they're pure
+    aggregations off iq_game_finals. This is the REV2 rule made testable."""
     await _seed_three_edm_games(db, team_map)
     baseline = await season_baseline_for_team(
         db, ticker_team_id=team_map["EDM"],
         season="2024-2025", season_type="REG",
     )
-    # baseline_state carries the coverage row's state
-    assert baseline["coverage_state"] == "partial"
-    assert baseline["expected_games"] is None
+    assert "coverage_state" not in baseline, \
+        "baselines must not synthesize a coverage claim"
+    assert "expected_games" not in baseline
+    # Derived count = 2 REG games seeded (SCF game is POST, excluded)
+    assert baseline["games_recorded"] == 2
+    # W/L breakdown adds up
+    total_records = (baseline["wins"] + baseline["reg_losses"]
+                     + baseline["ot_losses"] + baseline["so_losses"])
+    assert total_records == baseline["games_recorded"]
 
 
 @pytest.mark.asyncio
-async def test_correction_2_promote_requires_positive_evidence(db, team_map):
-    """promote_coverage_to_complete refuses when games_recorded != expected_games."""
-    from intelligence.game_finals_writer import promote_coverage_to_complete
-
+async def test_no_coverage_collection_is_ever_created(db, team_map):
+    """REV2 discipline: 1B owns exactly one collection (iq_game_finals).
+    After a full seed with corrections, no bookkeeping side-collection exists."""
     await _seed_three_edm_games(db, team_map)
-    # EDM's seeded games split 2 REG + 1 POST across the 2024-2025 season.
-    # No: expected_games=10 while games_recorded=2 for REG
-    promoted = await promote_coverage_to_complete(
-        db, ticker_team_id=team_map["EDM"],
-        season="2024-2025", season_type="REG",
-        expected_games=10, evidence_note="wrong count",
-    )
-    assert promoted is False
-    cov = await db["iq_team_season_coverage"].find_one(
-        {"ticker_team_id": team_map["EDM"], "season_type": "REG"})
-    assert cov["coverage_state"] == "partial"
+    # Even after seeding, the collection must be absent/empty.
+    assert await db["iq_team_season_coverage"].count_documents({}) == 0
 
-    # Yes: expected_games=2, matches recorded REG count
-    promoted = await promote_coverage_to_complete(
-        db, ticker_team_id=team_map["EDM"],
-        season="2024-2025", season_type="REG",
-        expected_games=2, evidence_note="verified game universe of 2 REG",
+
+@pytest.mark.asyncio
+async def test_as_of_excludes_row_whose_played_at_iso_is_after_as_of(db, team_map):
+    """Second temporal gate: a row where recorded_at <= as_of BUT
+    played_at_iso > as_of must NOT appear in the historical view.
+
+    This proves both temporal gates are enforced, not just recorded_at.
+    """
+    await _seed_three_edm_games(db, team_map)
+
+    # Manufacture a row with a played_at_iso far in the future but a
+    # recorded_at in the past (a real-world hazard: mis-scheduled ingest,
+    # provider clock skew, or a schedule row treated as final).
+    fake_game = {
+        "id": "fake-future-played",
+        "ticker_game_id": "tg_01H000000000000000000FUT01",
+        "record_version": 1,
+        "supersedes_record_version": None,
+        "correction_reason": "initial",
+        "competition": "NHL",
+        "season": "2024-2025",
+        "season_type": "REG",
+        "home_team_id": team_map["EDM"],
+        "away_team_id": team_map["DET"],
+        "played_at_iso": "2099-01-01T00:00:00Z",   # far in the FUTURE
+        "recorded_at":   "2000-01-01T00:00:00Z",   # far in the PAST
+        "final_score": {"home_goals": 1, "away_goals": 0, "outcome": "REG",
+                         "ot_periods": 0, "reg_periods": 3},
+        "home_team_facts": {"ticker_team_id": team_map["EDM"], "is_home": True,
+                             "shots_on_goal": 20, "power_play_opportunities": None,
+                             "power_play_goals": None, "penalty_minutes": None},
+        "away_team_facts": {"ticker_team_id": team_map["DET"], "is_home": False,
+                             "shots_on_goal": 20, "power_play_opportunities": None,
+                             "power_play_goals": None, "penalty_minutes": None},
+        "home_goalies": [], "away_goalies": [],
+        "provenance": {
+            "sources_consulted": [], "written_at": "2000-01-01T00:00:00Z",
+            "engine_version": "1.0.0",
+        },
+    }
+    await db["iq_game_finals"].insert_one(fake_game)
+
+    # Query as_of that PRE-dates the future played_at_iso.
+    as_of = "2050-01-01T00:00:00Z"
+    view = await history_for_team_as_of(
+        db, ticker_team_id=team_map["EDM"], as_of_iso=as_of, n=20,
     )
-    assert promoted is True
-    cov = await db["iq_team_season_coverage"].find_one(
-        {"ticker_team_id": team_map["EDM"], "season_type": "REG"})
-    assert cov["coverage_state"] == "complete"
-    assert cov["expected_games"] == 2
-    assert cov["coverage_evidence_note"] == "verified game universe of 2 REG"
+    ids = [g["ticker_game_id"] for g in view]
+    assert "tg_01H000000000000000000FUT01" not in ids, \
+        "row with played_at_iso > as_of must be excluded even though recorded_at <= as_of"
+
+    # As of a date AFTER the played_at_iso, it should appear.
+    view_after = await history_for_team_as_of(
+        db, ticker_team_id=team_map["EDM"], as_of_iso="2100-01-01T00:00:00Z", n=20,
+    )
+    ids_after = [g["ticker_game_id"] for g in view_after]
+    assert "tg_01H000000000000000000FUT01" in ids_after
 
 
 @pytest.mark.asyncio

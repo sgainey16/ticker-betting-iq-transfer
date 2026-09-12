@@ -219,6 +219,56 @@ async def test_far_postponement_with_positive_evidence_no_new_mint(db):
     assert tgid1 == tgid2
 
 
+# ---------------------------------------------------------------------------
+# Playoff-series identity — proves the natural-key close-match is skipped for
+# POST season. Two distinct playoff games (Games 1 & 2 of a series) played
+# within 72h between the same two teams must NEVER collapse into one
+# ticker_game_id — playoff games have unique provider IDs and are always
+# distinct games.
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_playoff_series_games_get_distinct_ticker_game_ids(db):
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    thu = tue + timedelta(hours=48)   # inside the 72h natural-key window
+    home = TeamHint("nhl_public", {"tri_code": "FLA"},
+                     display_name="Florida Panthers", market="Florida")
+    away = TeamHint("nhl_public", {"tri_code": "EDM"},
+                     display_name="Edmonton Oilers", market="Edmonton")
+    game1 = GameHint("nhl_public", 2024030411, "2024-2025", "POST",
+                     home, away, _iso_at(tue), declares_new_game=True)
+    tgid1 = await resolve_game(db, game1)
+    # Game 2 of the series — distinct NHL id, same teams, 48h later.
+    game2 = GameHint("nhl_public", 2024030412, "2024-2025", "POST",
+                     home, away, _iso_at(thu), declares_new_game=True)
+    tgid2 = await resolve_game(db, game2)
+    assert tgid1 != tgid2, \
+        "playoff Games 1 and 2 must not collapse into one ticker_game_id"
+    assert await db["iq_canonical_games"].count_documents({}) == 2
+
+
+@pytest.mark.asyncio
+async def test_regular_season_postponement_still_uses_natural_key(db):
+    """Regression: the POST-only skip must not break regular-season
+    postponement handling. A REG game with no provider_game_id match but
+    a natural-key close-match within 72h still returns the same tgid."""
+    tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
+    thu = tue + timedelta(hours=48)
+    home = TeamHint("nhl_public", {"tri_code": "BOS"},
+                     display_name="Boston Bruins", market="Boston")
+    away = TeamHint("nhl_public", {"tri_code": "TOR"},
+                     display_name="Toronto Maple Leafs", market="Toronto")
+    # First provider records the game.
+    hint1 = GameHint("nhl_public", 111111, "2026-2027", "REG",
+                     home, away, _iso_at(tue), declares_new_game=True)
+    tgid1 = await resolve_game(db, hint1)
+    # Second provider (different provider_game_id) — natural-key close-match
+    # applies for REG.
+    hint2 = GameHint("sportsdata_io", 999999, "2026-2027", "REG",
+                     home, away, _iso_at(thu))
+    tgid2 = await resolve_game(db, hint2)
+    assert tgid1 == tgid2, "regular-season natural-key close-match must still work"
+
+
 @pytest.mark.asyncio
 async def test_far_postponement_without_evidence_raises_unresolved(db):
     tue = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=3)
