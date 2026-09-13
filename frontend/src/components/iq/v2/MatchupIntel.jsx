@@ -47,7 +47,7 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
   const deskAccent = deskSide === "home" ? homeAccent : awayAccent;
 
   const roomTotal = game.community?.total || 0;
-  // Room lean = the side the community is on (may be a different side than desk).
+  // Community lean = the side users are on (may be a different side than Ticker IQ).
   const roomHomePct = game.community?.home_pct;
   const roomAwayPct = game.community?.away_pct;
   const roomLeaningHome =
@@ -56,14 +56,6 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
   const roomCode = roomLeaningHome ? game.home : game.away;
   const roomPct = roomLeaningHome ? roomHomePct : roomAwayPct;
   const roomAccent = roomLeaningHome ? homeAccent : awayAccent;
-
-  const deskRoomDisagree =
-    deskPct != null &&
-    roomPct != null &&
-    ((deskSide === "home") !== roomLeaningHome);
-
-  const hostSplit =
-    game.reggie_pick && game.marc_pick && game.reggie_pick !== game.marc_pick;
 
   return (
     <div
@@ -118,76 +110,47 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
         </div>
       </div>
 
-      {/* ---------- Reads on this game (no boxes, typography-driven) ---------- */}
-      <SectionLabel>Reads on this game</SectionLabel>
+      {/* ---------- The read (Ticker IQ vs Community) ---------- */}
+      <SectionLabel>The read</SectionLabel>
       <div className="space-y-3 pb-4">
-        {/* DESK lean */}
+        {/* TICKER IQ — Ticker's single official position on the matchup.
+            Provenance stays visible but demoted from the main language. */}
         <ReadRow
-          leftKicker="Desk lean"
+          leftKicker="Ticker IQ"
           kickerColor="#7fb0ff"
           leftProvenance={{ label: "Editorial · pre-model", tone: "warn" }}
           leftHelp={{
-            label: "Desk",
-            title: "The intelligence desk's editorial call.",
+            label: "Ticker IQ",
+            title: "Ticker's official read on tonight's matchup.",
             body:
-              "A curated read from the desk — Reggie, Marc, and the show team — not the validated Ticker prediction model. That comes online with Foundation 1C. Treat Desk as informed opinion, not math.",
+              "One position, not several. Until a validated Ticker prediction model comes online with Foundation 1C, this is an editorial call from the intelligence desk — informed, but not math. Reggie and Marc explain it in the WHY? and IQ Desk sections; they don't file competing predictions.",
           }}
           side={deskPct != null ? deskSideName : null}
           value={deskPct != null ? `${deskPct}%` : null}
           code={deskCode}
           accent={deskAccent}
         />
-        {/* ROOM lean */}
+        {/* COMMUNITY — real user predictions from db.predictions. */}
         <ReadRow
-          leftKicker="Room lean"
+          leftKicker="Community"
           kickerColor="#c4b5fd"
           leftProvenance={{
             label: roomTotal
-              ? `${roomTotal} call${roomTotal === 1 ? "" : "s"}`
-              : "No calls yet",
+              ? `${roomTotal} prediction${roomTotal === 1 ? "" : "s"}`
+              : "No predictions yet",
             tone: "neutral",
           }}
           leftHelp={{
-            label: "Room",
-            title: "How Ticker's community is calling this game.",
+            label: "Community",
+            title: "How Ticker's community is predicting this game.",
             body:
-              "The live share of community calls. Room is a distinct read from Desk and does not stand in for real sportsbook market data — that becomes a separate MARKET column when it's wired.",
+              "The live share of predictions filed by other Ticker users. A distinct source of intelligence from Ticker IQ. When real sportsbook market data is wired later, MARKET becomes a third column alongside these two.",
           }}
           side={roomPct != null ? roomSideName : null}
           value={roomPct != null ? `${roomPct}%` : null}
           code={roomCode}
           accent={roomAccent}
         />
-        {/* Only surface disagreement when both sides have a real read. No pts delta. */}
-        {deskRoomDisagree && (
-          <div
-            className="flex items-center gap-2 pt-1"
-            data-testid="iq-desk-room-disagree"
-          >
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
-            >
-              <span className="h-1 w-1 rounded-full bg-amber-300" />
-              Desk &amp; Room disagree
-            </span>
-            <WhyChip
-              label="disagreement"
-              title="Desk and Room are on different teams."
-              body="Not a betting edge — a place to look harder. The two reads are apples-to-apples opinion signals, not model vs. market."
-            />
-          </div>
-        )}
-        {hostSplit && (
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
-              data-testid="iq-host-split-tag"
-            >
-              <span className="h-1 w-1 rounded-full bg-amber-300" />
-              Reggie &amp; Marc split
-            </span>
-          </div>
-        )}
       </div>
 
       <Divider />
