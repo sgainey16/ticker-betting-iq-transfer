@@ -1,9 +1,7 @@
-// Tonight V2 game rail — logo-forward horizontal swipe.
-// Each tile leads with real NHL shields (TeamLogo), matchup, tip time,
-// and a small honest live indicator (host-split dot). No fabricated data.
-//
-// Snap-scrolling, selected-state elevation with the HOME team's accent
-// color as the border and a subtle glow. Swipe = more.
+// Tonight V3 game rail — LOGO-FORWARD, team-color energy, minimal chrome.
+// The rail itself supplies most of the top-of-screen color and identity.
+// Real data only: team codes, tip time, host-split flag (when Reggie and
+// Marc actually disagree). Everything else stays quiet.
 
 import { useRef, useEffect } from "react";
 import { TeamLogo } from "@/lib/teamLogos";
@@ -19,11 +17,10 @@ export default function GameRailV2({
 
   const meta = (code) => teams.find((t) => t.code === code) || {};
 
-  // Keep the selected tile visible after auto-select on initial mount.
   useEffect(() => {
     if (!selectedGameId) return;
     const el = tileRefs.current[selectedGameId];
-    if (el && el.scrollIntoView) {
+    if (el?.scrollIntoView) {
       el.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
     }
   }, [selectedGameId]);
@@ -31,22 +28,10 @@ export default function GameRailV2({
   if (!games.length) return null;
 
   return (
-    <div
-      className="relative -mx-3 sm:mx-0"
-      data-testid="iq-tonight-rail"
-    >
-      <div className="px-3 sm:px-0 mb-2 flex items-center justify-between">
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/45">
-          Swipe · Tap to switch
-        </div>
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/25">
-          {games.length} on
-        </div>
-      </div>
-
+    <div className="relative -mx-3 sm:mx-0" data-testid="iq-tonight-rail">
       <div
         ref={scrollRef}
-        className="flex gap-2.5 overflow-x-auto no-scrollbar px-3 sm:px-0 pb-2 snap-x snap-mandatory scroll-smooth"
+        className="flex gap-2 overflow-x-auto no-scrollbar px-3 sm:px-0 pb-2 snap-x snap-mandatory scroll-smooth"
       >
         {games.map((g) => {
           const home = meta(g.home);
@@ -54,93 +39,101 @@ export default function GameRailV2({
           const selected = selectedGameId === g.id;
           const hostSplit =
             g.reggie_pick && g.marc_pick && g.reggie_pick !== g.marc_pick;
-          const accent = home.accent || "#1e5dff";
+          const homeAccent = home.accent || "#1e5dff";
+          const awayAccent = away.accent || "#1e5dff";
           const time = new Date(g.start_iso).toLocaleTimeString(undefined, {
             hour: "numeric",
             minute: "2-digit",
           });
+
           return (
             <button
               key={g.id}
               ref={(el) => (tileRefs.current[g.id] = el)}
               onClick={() => onSelect?.(g.id)}
               data-testid={`iq-tonight-rail-tile-${g.id}`}
-              className={`snap-start flex-shrink-0 relative rounded-2xl w-[196px] sm:w-[212px] px-4 pt-4 pb-3.5 text-left transition-all duration-200 border ${
+              className={`snap-start flex-shrink-0 relative rounded-2xl w-[176px] px-3 pt-3 pb-2.5 text-left transition-all duration-200 overflow-hidden ${
                 selected
-                  ? "bg-gradient-to-b from-[#101a3d] to-[#08081a] border-white/20 -translate-y-[2px]"
-                  : "bg-[#0a0a15] border-white/8 hover:border-white/20 hover:bg-[#0b0b1c]"
+                  ? "ring-2 ring-white/80 -translate-y-[2px]"
+                  : "ring-1 ring-white/8 hover:ring-white/20"
               }`}
-              style={
-                selected
-                  ? {
-                      boxShadow: `0 10px 40px -12px ${accent}, inset 0 0 0 1px ${accent}66`,
-                    }
-                  : undefined
-              }
+              style={{
+                background: selected
+                  ? `linear-gradient(135deg, ${awayAccent}30 0%, #08081a 45%, ${homeAccent}30 100%)`
+                  : `linear-gradient(135deg, ${awayAccent}12 0%, #0a0a15 45%, ${homeAccent}12 100%)`,
+                boxShadow: selected
+                  ? `0 12px 32px -12px ${homeAccent}, 0 12px 32px -12px ${awayAccent}`
+                  : undefined,
+              }}
             >
-              {/* Selected accent bar */}
-              {selected && (
+              {/* Top row: time + split badge */}
+              <div className="flex items-center justify-between mb-2">
                 <span
-                  aria-hidden
-                  className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full"
-                  style={{ background: accent }}
-                />
-              )}
-
-              {/* Time + status row */}
-              <div className="flex items-center justify-between text-[10px] font-accent uppercase tracking-[0.24em] mb-3">
-                <span className={selected ? "text-white/90" : "text-white/50"}>
+                  className={`font-accent text-[10px] uppercase tracking-[0.22em] tabular-nums ${
+                    selected ? "text-white" : "text-white/60"
+                  }`}
+                >
                   {time}
                 </span>
                 {hostSplit && (
                   <span
-                    className="inline-flex items-center gap-1 text-[9px] text-white/80"
+                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 border border-amber-400/40 px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.22em] text-amber-200"
                     title="Reggie and Marc disagree"
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_1px_rgba(251,191,36,0.8)]" />
+                    <span className="h-1 w-1 rounded-full bg-amber-300" />
                     Split
                   </span>
                 )}
               </div>
 
-              {/* Logos */}
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col items-center gap-1.5 flex-1">
-                  <div
-                    className="h-11 w-11 rounded-xl flex items-center justify-center"
-                    style={{
-                      background: `${away.accent || "#1e5dff"}18`,
-                    }}
-                  >
-                    <TeamLogo code={g.away} size={34} />
-                  </div>
-                  <div className="font-headline text-white/80 text-[11px] tracking-wide">
-                    {g.away}
-                  </div>
-                </div>
+              {/* Logo-forward matchup */}
+              <div className="flex items-center justify-between gap-1">
+                <TeamCrest code={g.away} accent={awayAccent} selected={selected} />
                 <div
                   className={`font-accent text-[10px] uppercase tracking-[0.32em] ${
-                    selected ? "text-white/50" : "text-white/25"
+                    selected ? "text-white/60" : "text-white/25"
                   }`}
                 >
-                  at
+                  @
                 </div>
-                <div className="flex flex-col items-center gap-1.5 flex-1">
-                  <div
-                    className="h-11 w-11 rounded-xl flex items-center justify-center"
-                    style={{ background: `${accent}18` }}
-                  >
-                    <TeamLogo code={g.home} size={34} />
-                  </div>
-                  <div className="font-headline text-white/80 text-[11px] tracking-wide">
-                    {g.home}
-                  </div>
-                </div>
+                <TeamCrest code={g.home} accent={homeAccent} selected={selected} />
+              </div>
+
+              {/* Codes row */}
+              <div className="mt-1.5 flex items-center justify-between gap-1">
+                <span
+                  className={`font-headline text-[11px] tracking-wider ${
+                    selected ? "text-white/90" : "text-white/60"
+                  }`}
+                >
+                  {g.away}
+                </span>
+                <span
+                  className={`font-headline text-[11px] tracking-wider ${
+                    selected ? "text-white/90" : "text-white/60"
+                  }`}
+                >
+                  {g.home}
+                </span>
               </div>
             </button>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function TeamCrest({ code, accent, selected }) {
+  return (
+    <div
+      className="relative h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+      style={{
+        background: selected ? `${accent}25` : `${accent}12`,
+        boxShadow: selected ? `inset 0 0 0 1px ${accent}55` : undefined,
+      }}
+    >
+      <TeamLogo code={code} size={44} />
     </div>
   );
 }

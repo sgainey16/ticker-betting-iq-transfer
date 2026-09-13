@@ -1,188 +1,116 @@
-// Tonight V2 selected-matchup intelligence body.
-// Reads real /predictions/games fields ONLY:
-//   - reggie_pick / reggie_take / marc_pick / marc_take
-//   - ai_consensus (0-100) + ai_consensus_side       → DESK read (editorial)
-//   - community.home_pct / away_pct / total          → ROOM read (community)
+// Tonight V3 selected-matchup intelligence.
 //
-// No sportsbook Market until real odds are wired.
-// No F1C signals until F1C ships.
-// The SignalRail is architected to accept a signals[] array so future
-// signal generators plug in cleanly — but ONLY chips with real data render.
+// Design intent (from Step 3 correction):
+//   - Fewer boxes. One canvas, hierarchy from typography + spacing + team color.
+//   - DESK / ROOM are stated separately with sample size, NOT as a green +N pts edge.
+//   - The word "SIGNAL" is reserved for future F1C tactical intel. Present pass
+//     uses the label "READS" for editorial + community reads.
+//   - Reggie + Marc take strip carries an explicit EDITORIAL provenance chip
+//     because reggie_take / marc_take are hand-authored broadcast copy, not
+//     stat-derived reads.
+//   - Comparative hockey stats sit prominently — populated by real live
+//     SportsData.io standings via MatchupStats.
+//   - A "What's Watching" grammar strip is architected but shows an honest
+//     empty state until real events (line moves, lineup news, market moves)
+//     become available. No fabrication today.
+//   - Primary CTA becomes a slim sticky-feel bar, not a giant blue rectangle.
 //
-// Provenance rule: DESK carries an "editorial · pre-model" chip because
-// ai_consensus is hand-authored today. When the real Ticker model earns
-// this number, the label upgrades to "TICKER" and the provenance chip
-// changes accordingly. Visual authority of the number never exceeds the
-// authority of the data behind it.
+// Preserved unchanged: MakeCallPanel event pipeline, IQCoachChat, HostPortrait.
 
-import { useMemo, useState } from "react";
-import { ChevronRight, MessageSquare, TrendingUp, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Eye, MessageSquare, Volume2 } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import HostPortrait from "@/components/HostPortrait";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import MakeCallPanel from "@/components/iq/MakeCallPanel";
 import IQCoachChat from "@/components/iq/IQCoachChat";
 import WhyChip from "./WhyChip";
+import MatchupStats from "./MatchupStats";
 
-// ---------- Helpers ----------
-
-function pickTeamName(teams, code) {
-  return teams.find((t) => t.code === code)?.name || code;
-}
-function pickTeamAccent(teams, code) {
-  return teams.find((t) => t.code === code)?.accent || "#1e5dff";
-}
-
-/**
- * Build the list of REAL signals for this game. Empty array is a valid
- * state — the rail hides itself. Signals that need Foundation 1C are
- * intentionally NOT included; the shape they'll return matches this
- * contract so wiring them later is additive, not a redesign.
- *
- * Contract (future signals must match):
- *   { key, label, strength, direction, headline, body, tone }
- *     strength: "high" | "medium" | "low"
- *     direction: "up" | "down" | "flat"   (visual only)
- *     tone: "positive" | "negative" | "neutral"
- */
-function buildRealSignals(game, teams) {
-  const signals = [];
-  const homeName = pickTeamName(teams, game.home);
-  const awayName = pickTeamName(teams, game.away);
-
-  // HOST SPLIT — only when Reggie and Marc actually disagree.
-  if (game.reggie_pick && game.marc_pick && game.reggie_pick !== game.marc_pick) {
-    const reggieSide = game.reggie_pick === game.home ? homeName : awayName;
-    const marcSide = game.marc_pick === game.home ? homeName : awayName;
-    signals.push({
-      key: "host-split",
-      label: "Host split",
-      strength: "high",
-      direction: "flat",
-      tone: "neutral",
-      headline: `Reggie ${reggieSide} · Marc ${marcSide}`,
-      body:
-        `Reggie is on ${reggieSide}. Marc is on ${marcSide}. When the desk splits, ` +
-        `the game's telling us something — read both takes below before you call it.`,
-    });
-  }
-
-  // DESK CONVICTION — only when the editorial read leans meaningfully.
-  // Threshold of ≥7 pts off 50/50 keeps this from firing on coin flips.
-  if (game.ai_consensus != null && Math.abs(game.ai_consensus - 50) >= 7) {
-    const side = game.ai_consensus_side === game.home ? homeName : awayName;
-    signals.push({
-      key: "desk-conviction",
-      label: "Desk lean",
-      strength: game.ai_consensus >= 60 ? "high" : "medium",
-      direction: "up",
-      tone: "positive",
-      headline: `Desk leans ${side} · ${game.ai_consensus}%`,
-      body:
-        `The intelligence desk's editorial read leans ${side} at ${game.ai_consensus}%. ` +
-        `This is a curated call — not the validated Ticker model. That comes online with ` +
-        `Foundation 1C. Weigh it against Room and your own read.`,
-    });
-  }
-
-  // ROOM MOMENTUM — only when community has actually voted enough to matter.
-  const total = game.community?.total || 0;
-  if (total >= 5) {
-    const homePct = game.community.home_pct;
-    const awayPct = game.community.away_pct;
-    const leadPct = Math.max(homePct || 0, awayPct || 0);
-    if (leadPct >= 60) {
-      const leadSide =
-        (homePct || 0) >= (awayPct || 0) ? homeName : awayName;
-      signals.push({
-        key: "room-momentum",
-        label: "Room lean",
-        strength: leadPct >= 70 ? "high" : "medium",
-        direction: "up",
-        tone: "neutral",
-        headline: `Room on ${leadSide} · ${leadPct}%`,
-        body:
-          `The community is running ${leadPct}% toward ${leadSide} across ${total} call${
-            total === 1 ? "" : "s"
-          }. Room is a distinct read from the desk — track when they diverge.`,
-      });
-    }
-  }
-
-  return signals;
-}
-
-// ---------- Component ----------
+// ---- helpers ----
+const teamName = (teams, code) => teams.find((t) => t.code === code)?.name || code;
+const teamAccent = (teams, code) => teams.find((t) => t.code === code)?.accent || "#1e5dff";
 
 export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
   const [callOpen, setCallOpen] = useState(false);
-  const [talkTo, setTalkTo] = useState(null); // "reggie" | "marc" | null
+  const [talkTo, setTalkTo] = useState(null);
 
-  const homeName = pickTeamName(teams, game.home);
-  const awayName = pickTeamName(teams, game.away);
-  const homeAccent = pickTeamAccent(teams, game.home);
-  const awayAccent = pickTeamAccent(teams, game.away);
+  const awayName = teamName(teams, game.away);
+  const homeName = teamName(teams, game.home);
+  const awayAccent = teamAccent(teams, game.away);
+  const homeAccent = teamAccent(teams, game.home);
 
-  // DESK read — editorial pre-model number, honestly labeled.
   const deskPct = game.ai_consensus;
-  const deskSide = game.ai_consensus_side;
-  const deskSideName = deskSide === game.home ? homeName : awayName;
-  const deskCode = deskSide === game.home ? game.home : game.away;
+  const deskSide = game.ai_consensus_side; // "home" | "away"
+  const deskSideName = deskSide === "home" ? homeName : awayName;
+  const deskCode = deskSide === "home" ? game.home : game.away;
+  const deskAccent = deskSide === "home" ? homeAccent : awayAccent;
 
-  // ROOM read — community %, shown for the SAME side DESK is leaning
-  // so the two numbers are apples-to-apples and Δ is meaningful.
   const roomTotal = game.community?.total || 0;
-  const roomPct =
-    deskSide === "home" ? game.community?.home_pct : game.community?.away_pct;
+  // Room lean = the side the community is on (may be a different side than desk).
+  const roomHomePct = game.community?.home_pct;
+  const roomAwayPct = game.community?.away_pct;
+  const roomLeaningHome =
+    roomHomePct != null && roomAwayPct != null && roomHomePct >= roomAwayPct;
+  const roomSideName = roomLeaningHome ? homeName : awayName;
+  const roomCode = roomLeaningHome ? game.home : game.away;
+  const roomPct = roomLeaningHome ? roomHomePct : roomAwayPct;
+  const roomAccent = roomLeaningHome ? homeAccent : awayAccent;
 
-  const deltaPts =
-    deskPct != null && roomPct != null ? deskPct - roomPct : null;
+  const deskRoomDisagree =
+    deskPct != null &&
+    roomPct != null &&
+    ((deskSide === "home") !== roomLeaningHome);
 
-  const signals = useMemo(() => buildRealSignals(game, teams), [game, teams]);
+  const hostSplit =
+    game.reggie_pick && game.marc_pick && game.reggie_pick !== game.marc_pick;
 
   return (
-    <div className="space-y-4" data-testid={`iq-matchup-${game.id}`}>
-      {/* ---------- Matchup header ---------- */}
-      <div
-        className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0b0b1c] via-[#08081a] to-[#050510]"
-      >
+    <div
+      className="relative pb-24"
+      data-testid={`iq-matchup-${game.id}`}
+    >
+      {/* ---------- Matchup header (single accent stripe, no card) ---------- */}
+      <div className="relative overflow-hidden">
         <span
           aria-hidden
-          className="absolute inset-y-0 left-0 w-1"
-          style={{ background: `linear-gradient(180deg, ${awayAccent}, ${homeAccent})` }}
+          className="absolute left-0 right-0 top-0 h-[3px]"
+          style={{
+            background: `linear-gradient(90deg, ${awayAccent}, transparent 40%, transparent 60%, ${homeAccent})`,
+          }}
         />
-        <div className="px-5 py-4 flex items-center gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="pt-4 pb-3 flex items-center gap-2.5">
+          <div className="flex-1 min-w-0 flex items-center gap-2.5">
             <div
-              className="h-14 w-14 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `${awayAccent}20` }}
+              className="h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `${awayAccent}22`, boxShadow: `inset 0 0 0 1px ${awayAccent}44` }}
             >
               <TeamLogo code={game.away} size={40} />
             </div>
             <div className="min-w-0">
-              <div className="font-accent text-[9px] uppercase tracking-[0.28em] text-white/40">
+              <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/40 leading-none">
                 Away
               </div>
-              <div className="font-headline text-white text-[17px] leading-tight truncate">
+              <div className="font-headline text-white text-[18px] leading-tight truncate mt-0.5">
                 {awayName}
               </div>
             </div>
           </div>
-          <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/30 px-1">
-            at
+          <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/30">
+            @
           </div>
-          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
+          <div className="flex-1 min-w-0 flex items-center gap-2.5 justify-end text-right">
             <div className="min-w-0">
-              <div className="font-accent text-[9px] uppercase tracking-[0.28em] text-white/40">
+              <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/40 leading-none">
                 Home
               </div>
-              <div className="font-headline text-white text-[17px] leading-tight truncate">
+              <div className="font-headline text-white text-[18px] leading-tight truncate mt-0.5">
                 {homeName}
               </div>
             </div>
             <div
-              className="h-14 w-14 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: `${homeAccent}20` }}
+              className="h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: `${homeAccent}22`, boxShadow: `inset 0 0 0 1px ${homeAccent}44` }}
             >
               <TeamLogo code={game.home} size={40} />
             </div>
@@ -190,107 +118,134 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
         </div>
       </div>
 
-      {/* ---------- DESK / ROOM read strip ---------- */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <ReadCard
-          label="Desk"
-          provenance="Editorial · pre-model"
-          provenanceTone="warn"
-          testid="iq-read-desk"
-          value={deskPct != null ? `${deskPct}%` : null}
-          sub={deskPct != null ? `on ${deskSideName}` : "No read"}
-          accent="#1e5dff"
-          code={deskPct != null ? deskCode : null}
-          why={{
+      {/* ---------- Reads on this game (no boxes, typography-driven) ---------- */}
+      <SectionLabel>Reads on this game</SectionLabel>
+      <div className="space-y-3 pb-4">
+        {/* DESK lean */}
+        <ReadRow
+          leftKicker="Desk lean"
+          kickerColor="#7fb0ff"
+          leftProvenance={{ label: "Editorial · pre-model", tone: "warn" }}
+          leftHelp={{
+            label: "Desk",
             title: "The intelligence desk's editorial call.",
             body:
-              "A curated read from the desk — Reggie, Marc, and the show team — not the validated Ticker prediction model. That comes online with Foundation 1C. Until then, treat Desk as informed opinion, not math.",
+              "A curated read from the desk — Reggie, Marc, and the show team — not the validated Ticker prediction model. That comes online with Foundation 1C. Treat Desk as informed opinion, not math.",
           }}
+          side={deskPct != null ? deskSideName : null}
+          value={deskPct != null ? `${deskPct}%` : null}
+          code={deskCode}
+          accent={deskAccent}
         />
-        <ReadCard
-          label="Room"
-          provenance={roomTotal ? `${roomTotal} call${roomTotal === 1 ? "" : "s"}` : "No calls yet"}
-          provenanceTone="neutral"
-          testid="iq-read-room"
-          value={roomPct != null ? `${roomPct}%` : null}
-          sub={roomPct != null ? `on ${deskSideName}` : "Awaiting calls"}
-          accent="#a78bfa"
-          why={{
+        {/* ROOM lean */}
+        <ReadRow
+          leftKicker="Room lean"
+          kickerColor="#c4b5fd"
+          leftProvenance={{
+            label: roomTotal
+              ? `${roomTotal} call${roomTotal === 1 ? "" : "s"}`
+              : "No calls yet",
+            tone: "neutral",
+          }}
+          leftHelp={{
+            label: "Room",
             title: "How Ticker's community is calling this game.",
             body:
-              "The live share of community calls on the same side the desk is leaning. Room is a distinct read from Desk — track when they diverge, that's usually where the interesting games live.",
+              "The live share of community calls. Room is a distinct read from Desk and does not stand in for real sportsbook market data — that becomes a separate MARKET column when it's wired.",
           }}
+          side={roomPct != null ? roomSideName : null}
+          value={roomPct != null ? `${roomPct}%` : null}
+          code={roomCode}
+          accent={roomAccent}
         />
-      </div>
-
-      {/* Δ line — only when both sides have real data */}
-      {deltaPts != null && (
-        <div
-          className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/30 px-4 py-2.5"
-          data-testid="iq-delta-strip"
-        >
-          <div className="flex items-center gap-2">
-            <span className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/50">
-              Desk − Room
+        {/* Only surface disagreement when both sides have a real read. No pts delta. */}
+        {deskRoomDisagree && (
+          <div
+            className="flex items-center gap-2 pt-1"
+            data-testid="iq-desk-room-disagree"
+          >
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
+            >
+              <span className="h-1 w-1 rounded-full bg-amber-300" />
+              Desk &amp; Room disagree
             </span>
             <WhyChip
-              label="Δ"
-              title="How far the desk sits from the room."
-              body="A wide gap means the editorial read and the community disagree. Not automatically an edge — but a place to look harder."
+              label="disagreement"
+              title="Desk and Room are on different teams."
+              body="Not a betting edge — a place to look harder. The two reads are apples-to-apples opinion signals, not model vs. market."
             />
           </div>
-          <span
-            className={`font-headline text-lg tabular-nums ${
-              deltaPts > 0
-                ? "text-emerald-400"
-                : deltaPts < 0
-                ? "text-rose-400"
-                : "text-white/70"
-            }`}
-          >
-            {deltaPts > 0 ? "+" : ""}
-            {deltaPts} pts
-          </span>
-        </div>
-      )}
+        )}
+        {hostSplit && (
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-accent text-[9px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
+              data-testid="iq-host-split-tag"
+            >
+              <span className="h-1 w-1 rounded-full bg-amber-300" />
+              Reggie &amp; Marc split
+            </span>
+          </div>
+        )}
+      </div>
 
-      {/* ---------- Signal rail (real signals only) ---------- */}
-      {signals.length > 0 && (
-        <SignalRail signals={signals} />
-      )}
+      <Divider />
 
-      {/* ---------- Primary CTA ---------- */}
-      <button
-        onClick={() => setCallOpen(true)}
-        data-testid="iq-primary-cta"
-        className="group relative w-full overflow-hidden rounded-2xl border border-[#1e5dff]/50 bg-gradient-to-r from-[#1e5dff] via-[#2e6bff] to-[#1e5dff] px-5 py-4 text-left transition-all hover:shadow-[0_16px_48px_-12px_rgba(30,93,255,0.9)] active:translate-y-[1px]"
+      {/* ---------- Comparative hockey stats (real live) ---------- */}
+      <SectionLabel>Head to head</SectionLabel>
+      <MatchupStats
+        awayCode={game.away}
+        homeCode={game.home}
+        awayAccent={awayAccent}
+        homeAccent={homeAccent}
+      />
+
+      <Divider />
+
+      {/* ---------- What's Watching (empty until F1C) ---------- */}
+      <SectionLabel>
+        What's watching
+        <span className="text-white/25 ml-1.5">·</span>
+        <span className="text-white/40 normal-case tracking-normal text-[10px] ml-1.5">
+          Ticker's eyes on tonight
+        </span>
+      </SectionLabel>
+      <div
+        className="pt-1 pb-4 text-[13px] text-white/50 leading-relaxed"
+        data-testid="iq-watching-empty"
       >
-        <span
-          aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(120%_100%_at_0%_0%,rgba(255,255,255,0.28),transparent_55%)]"
-        />
-        <div className="relative flex items-center justify-between gap-3">
-          <div>
-            <div className="font-accent text-[10px] uppercase tracking-[0.36em] text-white/70 mb-0.5">
-              Your call
-            </div>
-            <div className="font-headline text-white text-[17px] leading-tight">
-              {awayName} at {homeName}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 font-accent text-[11px] uppercase tracking-[0.28em] text-white">
-            Make the call
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </div>
-      </button>
+        No lineup changes, no line moves, no goalie news yet.
+        <span className="text-white/35"> Ticker will surface events here as they happen.</span>
+      </div>
 
-      {/* ---------- Reggie + Marc — What Caught Our Eye ---------- */}
-      <DeskStrip
+      <Divider />
+
+      {/* ---------- Reggie + Marc IQ Desk (larger portraits, editorial) ---------- */}
+      <IQDeskPanel
         game={game}
         teams={teams}
         onTalk={(who) => setTalkTo(who)}
       />
+
+      {/* ---------- Sticky Make Your Call bar ---------- */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none">
+        <div className="max-w-6xl mx-auto px-3 pb-3">
+          <button
+            onClick={() => setCallOpen(true)}
+            data-testid="iq-primary-cta"
+            className="pointer-events-auto group w-full flex items-center justify-between rounded-full pl-5 pr-2 py-2 bg-[#1e5dff] hover:bg-[#3574ff] text-white shadow-[0_16px_48px_-12px_rgba(30,93,255,0.9)] transition-colors backdrop-blur"
+          >
+            <span className="font-accent text-[11px] uppercase tracking-[0.32em]">
+              Make your call
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 font-accent text-[10px] uppercase tracking-[0.28em]">
+              {game.away} @ {game.home}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* ---------- Sheets ---------- */}
       <Sheet open={callOpen} onOpenChange={setCallOpen}>
@@ -345,199 +300,181 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
   );
 }
 
-// ---------- Sub-components ----------
+// ---------- sub-components ----------
 
-function ReadCard({ label, provenance, provenanceTone, value, sub, accent, code, why, testid }) {
+function SectionLabel({ children }) {
+  return (
+    <div className="pt-4 pb-2 font-accent text-[10px] uppercase tracking-[0.34em] text-white/45 flex items-center flex-wrap">
+      {children}
+    </div>
+  );
+}
+
+function Divider() {
+  return <div aria-hidden className="h-px w-full bg-white/8" />;
+}
+
+function ReadRow({
+  leftKicker,
+  kickerColor,
+  leftProvenance,
+  leftHelp,
+  side,
+  value,
+  code,
+  accent,
+}) {
   const empty = value == null;
   return (
     <div
-      data-testid={testid}
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0b0b1c] to-[#050510] px-4 py-3.5"
+      className="flex items-center gap-3"
+      data-testid={`iq-read-${leftKicker.split(" ")[0].toLowerCase()}`}
     >
-      <span
-        aria-hidden
-        className="absolute -top-8 -right-8 h-24 w-24 rounded-full opacity-25 blur-2xl"
-        style={{ background: accent }}
-      />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <span
-              className="font-accent text-[10px] uppercase tracking-[0.32em]"
-              style={{ color: accent }}
-            >
-              {label}
-            </span>
-            <WhyChip label={label} title={why.title} body={why.body} />
-          </div>
-          {code && <TeamLogo code={code} size={16} />}
-        </div>
-        <div className="flex items-baseline gap-1.5">
+      {/* Left: kicker + provenance */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
           <span
-            className={`font-headline leading-none tabular-nums ${
-              empty ? "text-white/30 text-[26px]" : "text-white text-[36px]"
-            }`}
+            className="font-accent text-[10px] uppercase tracking-[0.32em]"
+            style={{ color: kickerColor }}
           >
-            {empty ? "—" : value}
+            {leftKicker}
           </span>
+          <WhyChip label={leftHelp.label} title={leftHelp.title} body={leftHelp.body} />
         </div>
-        <div className="mt-1 text-white/60 text-[12px] leading-tight">{sub}</div>
         <div
-          className={`mt-2 inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-accent text-[8px] uppercase tracking-[0.24em] border ${
-            provenanceTone === "warn"
-              ? "border-amber-400/40 bg-amber-400/10 text-amber-200"
-              : "border-white/10 bg-white/[0.03] text-white/50"
+          className={`mt-1 inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.24em] border ${
+            leftProvenance.tone === "warn"
+              ? "bg-amber-400/10 border-amber-400/35 text-amber-200"
+              : "bg-white/[0.03] border-white/12 text-white/50"
           }`}
         >
           <span className="h-1 w-1 rounded-full bg-current" />
-          {provenance}
+          {leftProvenance.label}
         </div>
+      </div>
+
+      {/* Right: side + value (typography, no box) */}
+      <div className="flex items-center gap-2 shrink-0 text-right">
+        {empty ? (
+          <div className="font-headline text-white/30 text-[24px] tabular-nums leading-none">
+            —
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-col items-end">
+              <span className="font-accent text-[9px] uppercase tracking-[0.28em] text-white/50 leading-none">
+                on
+              </span>
+              <span className="font-headline text-white text-[13px] leading-tight mt-0.5 truncate max-w-[130px]">
+                {side}
+              </span>
+            </div>
+            <div
+              className="h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: `${accent}20` }}
+            >
+              <TeamLogo code={code} size={26} />
+            </div>
+            <span
+              className="font-headline text-white text-[26px] tabular-nums leading-none min-w-[62px] text-right"
+              style={{ textShadow: `0 0 14px ${accent}55` }}
+            >
+              {value}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-function SignalRail({ signals }) {
-  const [open, setOpen] = useState(null); // key
+function IQDeskPanel({ game, teams, onTalk }) {
+  const homeName = teamName(teams, game.home);
+  const awayName = teamName(teams, game.away);
+  const reggieSideName =
+    game.reggie_pick === "home" ? homeName : awayName;
+  const marcSideName = game.marc_pick === "home" ? homeName : awayName;
+
   return (
-    <div data-testid="iq-signal-rail">
+    <div className="pt-3 pb-2" data-testid="iq-desk-panel">
       <div className="flex items-center justify-between mb-2">
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/50 inline-flex items-center gap-1.5">
-          <TrendingUp className="w-3 h-3" /> Signals on this game
+        <div className="font-accent text-[10px] uppercase tracking-[0.34em] text-[#7fb0ff]">
+          Reggie + Marc · IQ Desk
         </div>
-        <span className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/25">
-          Tap to expand
+        <span
+          className="inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
+          title="Editorial takes — hand-authored broadcast copy, not stat-derived"
+        >
+          <span className="h-1 w-1 rounded-full bg-amber-300" />
+          Editorial
         </span>
       </div>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-3 px-3 pb-1">
-        {signals.map((s) => {
-          const active = open === s.key;
-          const toneRing =
-            s.tone === "positive"
-              ? "border-emerald-400/45"
-              : s.tone === "negative"
-              ? "border-rose-400/45"
-              : "border-[#1e5dff]/45";
-          return (
-            <button
-              key={s.key}
-              data-testid={`iq-signal-chip-${s.key}`}
-              onClick={() => setOpen(active ? null : s.key)}
-              className={`snap-start flex-shrink-0 inline-flex items-center gap-2 rounded-full px-3 py-1.5 font-accent text-[10px] uppercase tracking-[0.22em] border transition-colors ${
-                active
-                  ? `bg-white/8 text-white ${toneRing}`
-                  : `bg-black/40 text-white/75 border-white/15 hover:border-white/35`
-              }`}
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  s.strength === "high"
-                    ? "bg-white"
-                    : s.strength === "medium"
-                    ? "bg-white/60"
-                    : "bg-white/30"
-                }`}
-              />
-              {s.label}
-              <ChevronRight
-                className={`w-3 h-3 transition-transform ${active ? "rotate-90" : ""}`}
-              />
-            </button>
-          );
-        })}
-      </div>
-      {signals.map((s) =>
-        open === s.key ? (
-          <div
-            key={s.key}
-            data-testid={`iq-signal-body-${s.key}`}
-            className="mt-2 rounded-xl border border-white/10 bg-black/40 px-4 py-3"
-          >
-            <div className="font-headline text-white text-[14px] mb-1 leading-snug">
-              {s.headline}
-            </div>
-            <div className="text-white/70 text-[12.5px] leading-relaxed">
-              {s.body}
-            </div>
-          </div>
-        ) : null
-      )}
-    </div>
-  );
-}
 
-function DeskStrip({ game, teams, onTalk }) {
-  const homeName = teams.find((t) => t.code === game.home)?.name || game.home;
-  const awayName = teams.find((t) => t.code === game.away)?.name || game.away;
-  const reggieSideName =
-    game.reggie_pick === game.home ? homeName : awayName;
-  const marcSideName = game.marc_pick === game.home ? homeName : awayName;
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0e1030] via-[#08081a] to-[#050510]"
-      data-testid="iq-desk-strip"
-    >
-      <div className="px-4 pt-4 pb-2">
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff]">
-          Reggie + Marc · what caught our eye
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-0 px-4 pb-4">
-        {/* Reggie */}
-        <HostTake
+      <div className="grid grid-cols-[110px_1fr_110px] items-start gap-3">
+        {/* Reggie portrait */}
+        <HostPortrait
           persona="reggie"
-          side={reggieSideName}
-          take={game.reggie_take}
-          onTalk={() => onTalk("reggie")}
+          size={110}
+          showName={false}
+          className="rounded-xl"
         />
-        {/* Marc — mirrored to look inward */}
-        <HostTake
+
+        {/* Center takes */}
+        <div className="min-w-0 space-y-2.5">
+          <TakeLine
+            who="Reggie"
+            side={reggieSideName}
+            take={game.reggie_take}
+            testid="iq-desk-reggie-take"
+          />
+          <TakeLine
+            who="Marc"
+            side={marcSideName}
+            take={game.marc_take}
+            testid="iq-desk-marc-take"
+          />
+          <div className="flex items-center gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={() => onTalk("reggie")}
+              data-testid="iq-desk-talk-reggie"
+              className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] hover:bg-[#1e5dff]/25 border border-white/15 hover:border-[#1e5dff]/60 px-2 py-1 font-accent text-[9px] uppercase tracking-[0.24em] text-white/85 transition-colors"
+            >
+              <MessageSquare className="w-3 h-3" /> Talk
+            </button>
+            <button
+              type="button"
+              onClick={() => onTalk("reggie")}
+              data-testid="iq-desk-hear-read"
+              className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] hover:bg-[#1e5dff]/25 border border-white/15 hover:border-[#1e5dff]/60 px-2 py-1 font-accent text-[9px] uppercase tracking-[0.24em] text-white/85 transition-colors"
+            >
+              <Volume2 className="w-3 h-3" /> Hear the read
+            </button>
+          </div>
+        </div>
+
+        {/* Marc portrait mirrored inward */}
+        <HostPortrait
           persona="marc"
-          side={marcSideName}
-          take={game.marc_take}
+          size={110}
+          showName={false}
           mirror
-          onTalk={() => onTalk("marc")}
-          align="right"
+          className="rounded-xl"
         />
       </div>
     </div>
   );
 }
 
-function HostTake({ persona, side, take, mirror = false, onTalk, align = "left" }) {
-  const isRight = align === "right";
+function TakeLine({ who, side, take, testid }) {
   return (
-    <div
-      className={`flex flex-col gap-2 ${
-        isRight ? "items-end text-right" : "items-start text-left"
-      }`}
-      data-testid={`iq-desk-take-${persona}`}
-    >
-      <HostPortrait
-        persona={persona}
-        size={92}
-        showName={false}
-        mirror={mirror}
-        className="rounded-xl"
-      />
-      <div className="min-w-0">
-        <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/45 mb-0.5">
-          {persona === "marc" ? "Marc" : "Reggie"} · {side}
-        </div>
-        <div className="text-white/85 text-[13px] leading-snug">
-          {take || "No take yet."}
-        </div>
+    <div data-testid={testid}>
+      <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/45 mb-0.5">
+        {who} · {side}
       </div>
-      <button
-        type="button"
-        onClick={onTalk}
-        data-testid={`iq-desk-talk-${persona}`}
-        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-[#1e5dff]/30 border border-white/15 hover:border-[#1e5dff]/60 text-white/85 font-accent text-[9px] uppercase tracking-[0.28em] transition-colors"
-      >
-        <MessageSquare className="w-3 h-3" /> Talk to {persona === "marc" ? "Marc" : "Reggie"}
-      </button>
+      <div className="text-white/85 text-[13px] leading-snug">
+        {take || <span className="text-white/40">No take yet.</span>}
+      </div>
     </div>
   );
 }
