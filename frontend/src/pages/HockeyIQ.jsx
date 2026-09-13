@@ -17,6 +17,9 @@ import GamePickerStrip from "@/components/GamePickerStrip";
 import HostPortrait from "@/components/HostPortrait";
 import IQCoachDock from "@/components/iq/IQCoachDock";
 import MakeCallPanel from "@/components/iq/MakeCallPanel";
+import TonightHero from "@/components/iq/v2/TonightHero";
+import GameRailV2 from "@/components/iq/v2/GameRailV2";
+import MatchupIntel from "@/components/iq/v2/MatchupIntel";
 
 const TABS = [
   { id: "tonight",   label: "Tonight",   icon: Radio },
@@ -130,27 +133,9 @@ function TonightTab({ deviceId, onGoto }) {
 
   const gameCount = games.length;
   const selectedGame = games.find((g) => g.id === selectedGameId);
-  const teamMeta = (code) => teams.find((t) => t.code === code) || {};
-
-  const coachLine = selectedGame
-    ? (() => {
-        const away = teamMeta(selectedGame.away).name || selectedGame.away;
-        const home = teamMeta(selectedGame.home).name || selectedGame.home;
-        return `${away} at ${home}. Give me your read.`;
-      })()
-    : gameCount === 0
-      ? "Quiet night on the card. I'll grab you when puck drops."
-      : "Tap a game — I'll help you shape the call.";
 
   return (
-    <div className="space-y-4" data-testid="iq-tonight">
-      <IQCoachDock
-        mode="tonight"
-        deviceId={deviceId}
-        line={coachLine}
-        suggestions={["Read tonight's card", "What's my angle?"]}
-      />
-
+    <div className="space-y-5" data-testid="iq-tonight">
       {loading ? (
         <SkeletonCard label="Loading tonight's card…" />
       ) : gameCount === 0 ? (
@@ -160,25 +145,27 @@ function TonightTab({ deviceId, onGoto }) {
         />
       ) : (
         <>
-          <GamePickerStrip
+          {/* Broadcast hero — real derived intel, no CTAs, no explainer copy */}
+          <TonightHero games={games} />
+
+          {/* Logo-forward horizontal rail. Swipe / tap to switch. */}
+          <GameRailV2
             games={games}
             teams={teams}
             selectedGameId={selectedGameId}
             onSelect={setSelectedGameId}
-            playAllLabel="All Games"
-            testids={{
-              root: "iq-tonight-picker",
-              all: "iq-tonight-picker-all",
-              game: (id) => `iq-tonight-picker-game-${id}`,
-            }}
           />
 
+          {/* Selected matchup intelligence — updates in place on rail select.
+              Real signals only. DESK is editorial pre-model, honestly labeled.
+              ROOM stays distinct from a future sportsbook MARKET.
+              Primary CTA opens existing MakeCallPanel in a sheet. */}
           {selectedGame && (
-            <MakeCallPanel
-              deviceId={deviceId}
+            <MatchupIntel
               game={selectedGame}
               teams={teams}
-              onDone={() => onGoto?.("my-iq")}
+              deviceId={deviceId}
+              onCallLocked={() => onGoto?.("my-iq")}
             />
           )}
         </>
