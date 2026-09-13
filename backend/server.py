@@ -48,12 +48,58 @@ import httpx
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-MONGO_URL = os.environ["MONGO_URL"]
-DB_NAME = os.environ["DB_NAME"]
+MONGO_URL = os.environ.get("MONGO_URL", "").strip()
+DB_NAME = os.environ.get("DB_NAME", "").strip()
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
-client = AsyncIOMotorClient(MONGO_URL)
-db = client[DB_NAME]
+
+class _DBUnavailable:
+    """Sentinel returned when MONGO_URL is missing or malformed.
+
+    The container must still boot so the deployment health check on
+    /health succeeds and the operator has time to fix the URI in the
+    Secrets panel without eating a k8s rollout timeout. Any real DB
+    access raises loudly so callers surface a clear error instead of
+    hanging or corrupting state.
+    """
+    def __init__(self, reason: str) -> None:
+        self._reason = reason
+
+    def _raise(self, *_a, **_kw):
+        raise RuntimeError(
+            "MongoDB unavailable: "
+            + self._reason
+            + ". Update MONGO_URL in the deployment Secrets panel and re-publish."
+        )
+
+    def __getattr__(self, _name):  # any attribute access → clear error
+        self._raise()
+
+    def __getitem__(self, _name):  # db["collection"] → clear error
+        self._raise()
+
+
+try:
+    if not MONGO_URL:
+        raise ValueError("MONGO_URL is empty")
+    if not DB_NAME:
+        raise ValueError("DB_NAME is empty")
+    client = AsyncIOMotorClient(MONGO_URL)
+    db = client[DB_NAME]
+    _DB_STATUS = "configured"
+    _DB_ERROR: Optional[str] = None
+except Exception as _db_init_err:  # noqa: BLE001 — booting is the goal
+    client = None  # type: ignore[assignment]
+    _DB_ERROR = f"{type(_db_init_err).__name__}: {_db_init_err}"
+    db = _DBUnavailable(_DB_ERROR)  # type: ignore[assignment]
+    _DB_STATUS = "unavailable"
+    logging.error(
+        "MongoDB client failed to initialize: %s. "
+        "Backend will boot so /health responds 200; DB-backed endpoints "
+        "will error at request time. Fix MONGO_URL in the deployment "
+        "Secrets panel and re-publish.",
+        _DB_ERROR,
+    )
 
 STATIC_DIR = ROOT_DIR / "static"
 STATIC_DIR.mkdir(exist_ok=True)
@@ -63,6 +109,21 @@ api = APIRouter(prefix="/api")
 
 logger = logging.getLogger("ticker")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+
+
+# ---------- Health probe ----------
+# nginx in production hits /health directly on port 8001. Must always
+# return 200 as long as the FastAPI worker is alive, even when the
+# MongoDB URI in the deployment Secrets panel is malformed — otherwise
+# the k8s rollout times out before the operator can fix the URI.
+@app.get("/health")
+async def _root_health():
+    return {"status": "ok", "db": _DB_STATUS, "db_error": _DB_ERROR}
+
+
+@api.get("/health")
+async def _api_health():
+    return {"status": "ok", "db": _DB_STATUS, "db_error": _DB_ERROR}
 
 
 # ---------- Models ----------
