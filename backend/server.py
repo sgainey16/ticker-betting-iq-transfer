@@ -2813,6 +2813,308 @@ async def iq_dev_simulate_resolve(device_id: str):
     return {"resolved": resolved_count, "user_id": user["id"]}
 
 
+# ====================================================================
+# Tonight's 10 — daily prediction board (new)
+#
+# Design (per phone-review corrections):
+#   - Board of up-to-10 real "who_wins" questions per user, per day.
+#   - Only real games from tonight's schedule are surfaced. If the slate
+#     has fewer than 10 games, we DO NOT manufacture questions — we ship
+#     the honest number. "Architected for up to 10; only populate what
+#     can be deterministically resolved."
+#   - Reuses iq_calls / iq_events (call_kind = pick10_entry). No new
+#     prediction engine, no duplicate history.
+#   - Fast loop: tap → lock → advance. Confidence / reasoning / per-pick
+#     visibility are NOT captured in this loop — the underlying event
+#     capability remains preserved for later "Go Deeper" opt-in.
+#   - Resolution: /resolve endpoint is dev-mode only in this slice.
+# ====================================================================
+
+def _today_board_date() -> str:
+    return datetime.now(timezone.utc).date().isoformat()
+
+
+def _generate_board_questions(games_slate: list[dict]) -> list[dict]:
+    """Turn tonight's real games into up-to-10 resolvable questions.
+    Only 'who_wins' template in this slice. One question per game. Cap 10.
+    Honest total — no fillers."""
+    questions = []
+    for g in games_slate[:10]:
+        questions.append({
+            "q_id": f"q_{g['id']}_who_wins",
+            "template": "who_wins",
+            "prompt": "Who wins tonight?",
+            "subject": {
+                "game_id": g["id"],
+                "home": g["home"],
+                "away": g["away"],
+                "start_iso": g.get("start_iso"),
+            },
+            "options": [
+                {"key": "away", "code": g["away"]},
+                {"key": "home", "code": g["home"]},
+            ],
+            "grading_rule": "final_score_winner_v1",
+        })
+    return questions
+
+
+async def _hydrate_board_with_calls(board: dict, user_id: str) -> dict:
+    """Attach the user's existing pick10_entry calls to each board question
+    so the frontend can show 'locked' state on returning users."""
+    game_ids = [q["subject"]["game_id"] for q in board.get("questions", [])]
+    if not game_ids:
+        return board
+    calls_cur = db.iq_calls.find({
+        "user_id": user_id,
+        "kind": "pick10_entry",
+        "subject.game_id": {"$in": game_ids},
+        "subject.board_id": board["id"],
+    })
+    calls_by_game = {}
+    async for c in calls_cur:
+        calls_by_game[c["subject"]["game_id"]] = c
+
+    resolutions_by_call = {}
+    call_ids = [c["id"] for c in calls_by_game.values()]
+    if call_ids:
+        rcur = db.iq_resolutions.find({"call_id": {"$in": call_ids}})
+        async for r in rcur:
+            resolutions_by_call[r["call_id"]] = r
+
+    locked = 0
+    graded = 0
+    correct = 0
+    for q in board["questions"]:
+        c = calls_by_game.get(q["subject"]["game_id"])
+        if c:
+            q["locked_pick"] = c.get("subject", {}).get("pick")
+            q["locked_call_id"] = c["id"]
+            q["state"] = c.get("state")
+            if c.get("state") in ("locked", "resolved"):
+                locked += 1
+            res = resolutions_by_call.get(c["id"])
+            if res:
+                q["outcome"] = {
+                    "status": res.get("outcome_status"),
+                    "correct": res.get("correct"),
+                    "actual": res.get("actual"),
+                }
+                if res.get("correct") is not None:
+                    graded += 1
+                    if res.get("correct") is True:
+                        correct += 1
+        else:
+            q["locked_pick"] = None
+            q["locked_call_id"] = None
+            q["state"] = None
+            q["outcome"] = None
+    board["progress"] = {
+        "locked": locked,
+        "total": len(board["questions"]),
+        "graded": graded,
+        "correct": correct,
+    }
+    return board
+
+
+@api.get("/iq/board")
+async def iq_get_board(device_id: str, board_date: Optional[str] = None):
+    """Get-or-create a Tonight's 10 board for this user + date.
+    board_date defaults to today (UTC). Past-date boards do NOT auto-create."""
+    user = await _ensure_user_by_device(device_id)
+    date_key = board_date or _today_board_date()
+    existing = await db.iq_boards.find_one({"user_id": user["id"], "board_date": date_key})
+    if existing:
+        board = _strip_mongo_id(existing)
+        return await _hydrate_board_with_calls(board, user["id"])
+
+    # No board for a past date — do not fabricate one.
+    if date_key != _today_board_date():
+        raise HTTPException(status_code=404, detail=f"no board for {date_key}")
+
+    # Create today's board from the real slate.
+    questions = _generate_board_questions(GAMES)
+    board = {
+        "id": str(uuid.uuid4()),
+        "user_id": user["id"],
+        "device_id": device_id,
+        "board_date": date_key,
+        "questions": questions,
+        "created_at": _iq.now_iso(),
+    }
+    await db.iq_boards.insert_one(dict(board))
+    board.pop("_id", None)
+    return await _hydrate_board_with_calls(board, user["id"])
+
+
+class BoardLockReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    q_id: str = Field(min_length=1, max_length=128)
+    pick: str  # "home" | "away"
+
+
+@api.post("/iq/board/{board_id}/lock")
+async def iq_board_lock(board_id: str, payload: BoardLockReq):
+    """Lock a Tonight's 10 answer. Reuses iq_calls (pick10_entry) + iq_events
+    (locked). Idempotent per question — a re-lock on a locked question is a
+    no-op that returns the existing call."""
+    if payload.pick not in ("home", "away"):
+        raise HTTPException(status_code=400, detail="pick must be 'home' or 'away'")
+    user = await _ensure_user_by_device(payload.device_id)
+    board = await db.iq_boards.find_one({"id": board_id, "user_id": user["id"]})
+    if not board:
+        raise HTTPException(status_code=404, detail="board not found")
+    q = next((q for q in board["questions"] if q["q_id"] == payload.q_id), None)
+    if not q:
+        raise HTTPException(status_code=404, detail="question not found on this board")
+
+    # Idempotent: if user already locked this question, return the existing call.
+    existing = await db.iq_calls.find_one({
+        "user_id": user["id"],
+        "kind": "pick10_entry",
+        "subject.game_id": q["subject"]["game_id"],
+        "subject.board_id": board_id,
+    })
+    if existing:
+        # Already locked — silent no-op, return refreshed board.
+        return await _hydrate_board_with_calls(_strip_mongo_id(board), user["id"])
+
+    subject = {
+        "board_id": board_id,
+        "q_id": q["q_id"],
+        "template": q["template"],
+        "game_id": q["subject"]["game_id"],
+        "home": q["subject"]["home"],
+        "away": q["subject"]["away"],
+        "pick": payload.pick,
+        "pick_code": q["subject"]["home"] if payload.pick == "home" else q["subject"]["away"],
+    }
+    # Read default visibility once from user prefs — no per-pick prompt.
+    default_vis = (user.get("prefs") or {}).get("default_visibility") or "private"
+    call = _iq.UserCall(
+        user_id=user["id"],
+        kind="pick10_entry",
+        subject=subject,
+        visibility=default_vis if default_vis in ("private", "public", "anonymous_aggregate") else "private",
+    ).model_dump()
+    await db.iq_calls.insert_one(call)
+
+    # Draft event first, then explicit lock event.
+    draft_evt = _iq.CallEvent(
+        call_id=call["id"],
+        user_id=user["id"],
+        source="tap",
+        kind="instinct_captured",
+        payload={"pick": payload.pick, "subject": subject},
+    ).model_dump()
+    await db.iq_events.insert_one(draft_evt)
+
+    lock_evt = _iq.CallEvent(
+        call_id=call["id"],
+        user_id=user["id"],
+        source="tap",
+        kind="locked",
+        payload={
+            "explicit": True,
+            "ui_action": "tonights_10_tap_lock",
+            "pick": payload.pick,
+        },
+    ).model_dump()
+    await db.iq_events.insert_one(lock_evt)
+    await _reproject_call(call["id"])
+
+    # Foundation 1A lock-time attachment (best-effort, non-fatal).
+    try:
+        from intelligence.lock_time_attachment import attach as _iq1a_attach
+        await _iq1a_attach(db, call["id"])
+    except Exception as _e:
+        logger.warning("iq1a attach hook failed for %s: %s", call["id"], _e)
+
+    refreshed = await db.iq_boards.find_one({"id": board_id})
+    return await _hydrate_board_with_calls(_strip_mongo_id(refreshed), user["id"])
+
+
+@api.post("/iq/board/{board_id}/resolve")
+async def iq_board_resolve(board_id: str, device_id: str):
+    """Dev-mode resolver for a Tonight's 10 board.
+
+    Deterministic outcome per question (home wins on even index, away on
+    odd) — this is ONLY a dev demo path so the return loop is visible on
+    the phone before real resolution runs against iq_game_finals.
+    Real resolution against 1B lands in the next slice.
+    """
+    if os.environ.get("IQ_DEV_MODE", "0") != "1":
+        raise HTTPException(status_code=403, detail="dev mode disabled")
+    user = await _ensure_user_by_device(device_id)
+    board = await db.iq_boards.find_one({"id": board_id, "user_id": user["id"]})
+    if not board:
+        raise HTTPException(status_code=404, detail="board not found")
+
+    resolved = 0
+    for idx, q in enumerate(board["questions"]):
+        call = await db.iq_calls.find_one({
+            "user_id": user["id"],
+            "kind": "pick10_entry",
+            "subject.board_id": board_id,
+            "subject.game_id": q["subject"]["game_id"],
+            "state": "locked",
+        })
+        if not call:
+            continue
+        winner = "home" if idx % 2 == 0 else "away"
+        user_pick = call["subject"].get("pick")
+        correct = user_pick == winner
+        resolution = _iq.Resolution(
+            call_id=call["id"],
+            outcome_status="correct" if correct else "incorrect",
+            correct=correct,
+            actual={"winner": winner, "simulated": True},
+            grading_rule="dev_who_wins_v1",
+            grading_version="dev-v1",
+            source="dev_simulate",
+            raw_evidence={"reason": "board dev-resolve", "template": q["template"]},
+        ).model_dump()
+        await db.iq_resolutions.insert_one(resolution)
+        event = _iq.CallEvent(
+            call_id=call["id"],
+            user_id=user["id"],
+            source="system",
+            kind="resolution_delivered",
+            payload={"resolution_id": resolution["id"], "outcome_status": resolution["outcome_status"]},
+        ).model_dump()
+        await db.iq_events.insert_one(event)
+        await _reproject_call(call["id"])
+        resolved += 1
+
+    refreshed = await db.iq_boards.find_one({"id": board_id})
+    hydrated = await _hydrate_board_with_calls(_strip_mongo_id(refreshed), user["id"])
+    return {"resolved": resolved, "board": hydrated}
+
+
+class UserPrefsReq(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    device_id: str = Field(min_length=1, max_length=128)
+    default_visibility: Optional[str] = None  # "private" | "public" | "anonymous_aggregate"
+
+
+@api.patch("/iq/user/prefs")
+async def iq_patch_user_prefs(payload: UserPrefsReq):
+    """One-time (or later-adjustable) preference save. Removes per-pick
+    visibility friction on the fast loop."""
+    user = await _ensure_user_by_device(payload.device_id)
+    updates = {}
+    if payload.default_visibility is not None:
+        if payload.default_visibility not in ("private", "public", "anonymous_aggregate"):
+            raise HTTPException(status_code=400, detail="invalid default_visibility")
+        updates["prefs.default_visibility"] = payload.default_visibility
+    if updates:
+        await db.iq_users.update_one({"id": user["id"]}, {"$set": updates})
+    refreshed = await db.iq_users.find_one({"id": user["id"]})
+    return _strip_mongo_id(refreshed)
+
+
 app.include_router(api)
 
 # Foundation 1A — mount the dev-gated QA endpoints and bootstrap indexes.

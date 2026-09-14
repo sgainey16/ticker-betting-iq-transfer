@@ -138,20 +138,20 @@ export default function MatchupStats({ awayCode, homeCode, awayAccent, homeAccen
 
       {/* Column headers with team logos */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-2 border-b border-white/8">
-        <div className="flex items-center gap-2 min-w-0">
-          <TeamLogo code={awayCode} size={24} />
-          <span className="font-headline text-white text-[14px] tracking-wide truncate">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <TeamLogo code={awayCode} size={40} />
+          <span className="font-headline text-white text-[16px] tracking-wide truncate">
             {awayCode}
           </span>
         </div>
         <span className="font-accent text-[9px] uppercase tracking-[0.32em] text-white/30">
           vs
         </span>
-        <div className="flex items-center gap-2 min-w-0 justify-end">
-          <span className="font-headline text-white text-[14px] tracking-wide truncate">
+        <div className="flex items-center gap-2.5 min-w-0 justify-end">
+          <span className="font-headline text-white text-[16px] tracking-wide truncate">
             {homeCode}
           </span>
-          <TeamLogo code={homeCode} size={24} />
+          <TeamLogo code={homeCode} size={40} />
         </div>
       </div>
 

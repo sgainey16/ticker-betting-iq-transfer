@@ -332,7 +332,7 @@ function CrestSlot({ code, accent, align }) {
     >
       <TeamLogo
         code={code}
-        size={132}
+        size={104}
         className="relative z-10 drop-shadow-[0_10px_32px_rgba(0,0,0,0.85)]"
       />
       <div className="relative z-10 font-headline text-white/85 text-[12px] tracking-[0.28em]">
@@ -368,8 +368,8 @@ function ReadRow({
           <WhyChip label={kicker} title={help.title} body={help.body} />
         </div>
         <div
-          className={`mt-1 text-[9px] uppercase tracking-[0.22em] ${
-            provenanceTone === "warn" ? "text-amber-200/85" : "text-white/45"
+          className={`mt-1 text-[8px] uppercase tracking-[0.22em] ${
+            provenanceTone === "warn" ? "text-white/40" : "text-white/45"
           }`}
         >
           {provenance}
@@ -389,7 +389,7 @@ function ReadRow({
                 className="absolute inset-0 rounded-full blur-lg opacity-40"
                 style={{ background: accent }}
               />
-              <TeamLogo code={code} size={40} className="relative z-10" />
+              <TeamLogo code={code} size={64} className="relative z-10" />
             </div>
             <span
               className="font-headline text-white text-[38px] tabular-nums leading-none min-w-[72px] text-right"
@@ -452,7 +452,7 @@ function IQDeskPanel({ game, teams, onTalk, onReadTakes }) {
           Reggie + Marc · IQ Desk
         </div>
         <span
-          className="text-[9px] uppercase tracking-[0.24em] text-amber-200/80"
+          className="text-[8px] uppercase tracking-[0.22em] text-white/35"
           title="Editorial — hand-authored broadcast copy, not stat-derived"
         >
           Editorial

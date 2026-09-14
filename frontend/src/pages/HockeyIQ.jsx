@@ -20,6 +20,7 @@ import MakeCallPanel from "@/components/iq/MakeCallPanel";
 import TonightHero from "@/components/iq/v2/TonightHero";
 import GameRailV2 from "@/components/iq/v2/GameRailV2";
 import MatchupIntel from "@/components/iq/v2/MatchupIntel";
+import MyIQCommandCenter from "@/components/iq/v2/MyIQCommandCenter";
 
 const TABS = [
   { id: "tonight",   label: "Tonight",   icon: Radio },
@@ -96,7 +97,7 @@ export default function HockeyIQ() {
 
       <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         {active === "tonight"   && <TonightTab   deviceId={deviceId} onGoto={setActive} />}
-        {active === "my-iq"     && <MyIQTab      deviceId={deviceId} user={user} onUserChange={refreshUser} onGoto={setActive} />}
+        {active === "my-iq"     && <MyIQCommandCenter deviceId={deviceId} />}
         {active === "fantasy"   && <FantasyTab   deviceId={deviceId} />}
         {active === "community" && <CommunityTab deviceId={deviceId} />}
       </main>
