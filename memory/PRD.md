@@ -39,12 +39,12 @@ Backend (all additive, no changes to frozen 1A/1B):
 - `PATCH /api/iq/user/prefs` — one-time `default_visibility` save.
 - 6/6 pytest regression tests green (`tests/test_boards.py`).
 
-Frontend (Phase 3 phone-review corrections applied):
+Frontend (Phase 3 phone-review corrections applied — visual redesign 2026-02-14 pm):
 - New `TonightsTenLoop` — full-viewport question card, two large tappable crests, auto-advance after ~550ms lock flash. No confidence, no "Why?" tags, no per-pick visibility chooser in the default loop.
-- New `MyIQCommandCenter` — activity-first layout: Tonight's 10 hero tile → Last Night grading → "Your IQ is building" warm empty state → low-emphasis My Bets tile → Go Deeper concept card.
-- New `LastNight` — resolved board renders per-question row (your pick vs winner, right/miss pill). Honest empty state when nothing has resolved.
+- **My IQ redesigned to "LOGOS. REGGIE. MARC. FUN."**: Reggie + Marc two-voice banter at top drives the tone (state-aware — before / during / after / graded). Tonight's 10 hero is a horizontal-scrolling matchup rail of real team crests with team-color radial glow. Primary CTA is a pill ("Play tonight's 10" → "Continue" → "Review my card") with 0/N chip, not a giant Play button. Last Night surfaces as a compact accuracy strip with team-color result pips (✓/✕). My IQ accuracy strip only appears once ≥10 grades. My Bets is a small link, no card. Removed: "Your IQ is building" explainer, "Coming soon" cards, four-empty-analytics-cards, Go Deeper card, blanket 18+ gate.
 - Tonight logo hierarchy corrected: main matchup crests shrunk to 104px, THE READ row crests enlarged to 64px, Season Comparison team logos enlarged to 40px. `EDITORIAL · PRE-MODEL` demoted to small neutral disclosure.
-- Removed from the general Hockey IQ experience: blanket 18+ `BETTING · LOCKED` unlock panel; four-empty-analytics-card wall; Fantasy as a My IQ performance metric. Capabilities preserved in code for future regulated features.
+- New `LastNight` component remains available (previous long-form card) but the redesign uses the compact result-pip strip inside `MyIQCommandCenter` instead.
+- New `/app/frontend/src/lib/teamColors.js` — 32-team primary-color palette for atmosphere.
 
 ## Prioritized backlog
 

@@ -1,49 +1,55 @@
-// My IQ command-center — Phase 0 phone-first slice.
+// My IQ — LOGOS. REGGIE. MARC. FUN.
 //
-// Governing UX principle: activity leads, analytics follow.
-// Layout order (per phone-review corrections):
-//   1) TONIGHT'S 10 hero tile (0/N → PLAY)
-//   2) LAST NIGHT / MY RESULTS grading strip
-//   3) "YOUR IQ IS BUILDING" warm empty state (until sample-size gates open)
-//   4) MY BETS — low-emphasis link tile only
-//   5) "GO DEEPER WITH MY IQ" concept card (not functional yet — just a
-//      concept placeholder so we can judge visual placement)
-//   6) Dev grade button (only when IQ_DEV_MODE=1)
+// Design brief:
+//   - Not a dashboard. A daily hockey game.
+//   - Team crests, team-color atmosphere, host banter, movement.
+//   - Tonight's 10 is the hero — no generic Play-circle, real matchups.
+//   - Reggie + Marc host the page. Two-voice, state-aware, playful.
+//   - After the hero, everything is visually secondary and compact.
+//   - No "Your IQ is building" explainer paragraphs. No "Coming soon" cards.
 //
-// Explicitly NOT here:
-//   - The old 4-empty-card analytics grid (Hockey IQ / Accuracy / Community
-//     / Fantasy showing "—  0 graded · 10 to unlock"). Replaced by one
-//     honest empty state.
-//   - The blanket 18+ BETTING · LOCKED unlock panel. Removed from the
-//     general Hockey IQ / My IQ experience. Age/jurisdiction gating stays
-//     modular for regulated features later, but the general prediction
-//     experience is not gated.
-//   - Fantasy as a My IQ performance metric.
+// Backend contract untouched. All fetches identical to the previous slice.
 
-import { useEffect, useState } from "react";
-import { ArrowRight, Brain, ListChecks, Sparkles, Play } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight, ArrowUpRight, CheckCircle2, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { TeamLogo } from "@/lib/teamLogos";
+import { teamGlow } from "@/lib/teamColors";
+import HostPortrait from "@/components/HostPortrait";
 import TonightsTenLoop from "./TonightsTenLoop";
-import LastNight from "./LastNight";
 
 export default function MyIQCommandCenter({ deviceId }) {
   const [board, setBoard] = useState(null);
+  const [lastNight, setLastNight] = useState(null);
   const [brief, setBrief] = useState(null);
   const [devMode, setDevMode] = useState(false);
   const [inLoop, setInLoop] = useState(false);
   const [devBusy, setDevBusy] = useState(false);
-  const [devMsg, setDevMsg] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = () => {
+    setRefreshKey((k) => k + 1);
     api.get(`/iq/board?device_id=${encodeURIComponent(deviceId)}`)
        .then((r) => setBoard(r.data))
        .catch(() => setBoard(null));
     api.get(`/iq/user/brief?device_id=${encodeURIComponent(deviceId)}`)
        .then((r) => setBrief(r.data))
        .catch(() => {});
-    setRefreshKey((k) => k + 1);
+    // Last night — try yesterday, fall back to today
+    const y = new Date(); y.setUTCDate(y.getUTCDate() - 1);
+    const yd = y.toISOString().slice(0, 10);
+    const td = new Date().toISOString().slice(0, 10);
+    (async () => {
+      for (const d of [yd, td]) {
+        try {
+          const r = await api.get(`/iq/board?device_id=${encodeURIComponent(deviceId)}&board_date=${d}`);
+          const graded = (r.data.questions || []).some((q) => q.outcome != null);
+          if (graded) { setLastNight(r.data); return; }
+        } catch (_) {}
+      }
+      setLastNight(null);
+    })();
   };
 
   useEffect(() => {
@@ -61,202 +67,396 @@ export default function MyIQCommandCenter({ deviceId }) {
     );
   }
 
-  const total = board?.questions?.length || 0;
+  const questions = board?.questions || [];
+  const total = questions.length;
   const locked = board?.progress?.locked || 0;
   const graded = board?.progress?.graded || 0;
   const totalResolved = brief?.accuracy_summary?.total_resolved || 0;
-  const openCalls = brief?.open_calls?.length || 0;
+
+  // State drives host banter + hero label
+  const state = (() => {
+    if (total === 0) return "empty";
+    if (locked === 0) return "before";
+    if (locked < total) return "during";
+    if (locked === total && graded === 0) return "after";
+    return "graded";
+  })();
 
   const runDevResolve = async () => {
     if (!board?.id) return;
-    setDevBusy(true); setDevMsg("");
+    setDevBusy(true);
     try {
-      const r = await api.post(`/iq/board/${board.id}/resolve?device_id=${encodeURIComponent(deviceId)}`);
-      setDevMsg(`Graded ${r.data.resolved} call(s).`);
+      await api.post(`/iq/board/${board.id}/resolve?device_id=${encodeURIComponent(deviceId)}`);
       refresh();
-    } catch (e) {
-      setDevMsg(e?.response?.data?.detail || "Couldn't run dev grade.");
     } finally {
       setDevBusy(false);
     }
   };
 
   return (
-    <div className="space-y-4" data-testid="iq-my-iq">
-      {/* 1) TONIGHT'S 10 — the primary activity */}
-      <TonightsTenTile
-        total={total}
+    <div className="space-y-5" data-testid="iq-my-iq" key={refreshKey}>
+      {/* HOSTS — Reggie & Marc set the tone. Two voices, playful. */}
+      <HostBanter state={state} locked={locked} total={total} graded={graded} lastNight={lastNight} />
+
+      {/* HERO — Tonight's 10. Real matchups, real crests, team-color energy. */}
+      <TonightsTenHero
+        questions={questions}
         locked={locked}
+        total={total}
+        state={state}
         onPlay={() => setInLoop(true)}
       />
 
-      {/* 2) LAST NIGHT — grading surface */}
-      <LastNight key={refreshKey} deviceId={deviceId} />
+      {/* SECONDARY — Last Night result strip. Only if we actually have grades. */}
+      {lastNight && <LastNightStrip board={lastNight} />}
 
-      {/* 3) YOUR IQ IS BUILDING — one warm state, not a wall of empties */}
-      <YourIQBuilding totalResolved={totalResolved} openCalls={openCalls} />
+      {/* SECONDARY — My IQ accuracy strip. Only surfaces once sample ≥ 10. */}
+      {totalResolved >= 10 && (
+        <MyIQProgressStrip total={totalResolved} pct={brief?.accuracy_summary?.accuracy_pct} />
+      )}
 
-      {/* 4) MY BETS — low-emphasis */}
-      <MyBetsTile />
+      {/* SECONDARY — My Bets. Tiny nav, not a card. */}
+      <MyBetsLink />
 
-      {/* 5) GO DEEPER — concept placeholder */}
-      <GoDeeperCard />
-
-      {/* 6) DEV — only in dev mode */}
+      {/* DEV — only in dev mode */}
       {devMode && (
-        <div className="rounded-xl bg-black/40 border border-dashed border-white/15 p-3 text-white/60 text-xs"
-             data-testid="iq-dev-resolve">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div>
-              <div className="font-accent text-[9px] uppercase tracking-widest text-white/40">Dev · demo</div>
-              <div className="text-white/70">Grade tonight's locked picks to preview the return loop.</div>
-            </div>
-            <button onClick={runDevResolve} disabled={devBusy || !board?.id}
-              data-testid="iq-dev-resolve-run"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white font-accent text-[10px] uppercase tracking-widest transition-colors">
-              <Sparkles className="w-3 h-3" /> {devBusy ? "Grading…" : "Grade"}
-            </button>
-          </div>
-          {devMsg && <div className="mt-1.5 text-emerald-300">{devMsg}</div>}
-        </div>
+        <button
+          onClick={runDevResolve}
+          disabled={devBusy || !board?.id}
+          data-testid="iq-dev-resolve-run"
+          className="w-full text-white/40 hover:text-white/70 disabled:opacity-30 font-accent text-[9px] uppercase tracking-[0.32em] py-2 border-t border-white/8 transition-colors"
+        >
+          {devBusy ? "Grading tonight…" : "· dev · grade tonight's card"}
+        </button>
       )}
     </div>
   );
 }
 
-function TonightsTenTile({ total, locked, onPlay }) {
-  const complete = total > 0 && locked >= total;
+// ============================================================
+// HOSTS
+// ============================================================
+function HostBanter({ state, locked, total, graded, lastNight }) {
+  // Two-voice hockey banter. Short. Playful. No paragraphs.
+  const lines = useMemo(() => {
+    // If Last Night was graded, lead with a react.
+    if (lastNight && lastNight.progress?.graded > 0) {
+      const c = lastNight.progress.correct;
+      const g = lastNight.progress.graded;
+      if (c === g) {
+        return {
+          reggie: `Perfect card last night. ${c}/${g}.`,
+          marc:   "Lucky. Do it again.",
+        };
+      }
+      if (c === 0) {
+        return {
+          reggie: `Rough night — 0/${g}.`,
+          marc:   "Sample of one. Shake it off, play tonight.",
+        };
+      }
+      const pct = Math.round((c / g) * 100);
+      return {
+        reggie: `${c}/${g} last night. ${pct}%.`,
+        marc:   pct >= 60 ? "That's a read. Keep going." : "Middle of the pack. Let's see tonight.",
+      };
+    }
+    if (state === "empty") {
+      return {
+        reggie: "No slate tonight.",
+        marc:   "Rest day. Come back when the puck drops.",
+      };
+    }
+    if (state === "before") {
+      return {
+        reggie: `${total} on the board tonight. You ready?`,
+        marc:   "Let's see if you actually know what you're talking about.",
+      };
+    }
+    if (state === "during") {
+      return {
+        reggie: `${locked}/${total} down. Finish it.`,
+        marc:   "Don't overthink the last few.",
+      };
+    }
+    if (state === "after") {
+      return {
+        reggie: "Card locked. Nice work.",
+        marc:   "Come back when the games finish. That's when we find out.",
+      };
+    }
+    return {
+      reggie: "Card in. Games rolling.",
+      marc:   "Grading as they finish.",
+    };
+  }, [state, locked, total, graded, lastNight]);
+
+  return (
+    <div
+      className="rounded-2xl bg-gradient-to-br from-[#0a1230] via-[#050a1a] to-[#050510] border border-white/10 px-3 py-3.5"
+      data-testid="iq-host-banter"
+    >
+      <div className="grid grid-cols-[52px_1fr] gap-3 items-start">
+        <HostPortrait persona="reggie" size={52} showName={false} className="rounded-lg" />
+        <div className="pt-0.5">
+          <div className="font-accent text-[9px] uppercase tracking-[0.32em] text-[#7fb0ff]">Reggie</div>
+          <div className="font-headline text-white text-[16px] leading-snug">{lines.reggie}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-[1fr_52px] gap-3 items-start mt-2.5">
+        <div className="pt-0.5 text-right">
+          <div className="font-accent text-[9px] uppercase tracking-[0.32em] text-[#7de9ff]">Marc</div>
+          <div className="font-headline text-white text-[16px] leading-snug">{lines.marc}</div>
+        </div>
+        <HostPortrait persona="marc" size={52} showName={false} mirror className="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// HERO — Tonight's 10
+// ============================================================
+function TonightsTenHero({ questions, locked, total, state, onPlay }) {
   const empty = total === 0;
+  const complete = !empty && locked === total;
+
+  return (
+    <div className="space-y-3" data-testid="iq-tonights10-tile">
+      {/* Chip counter + label */}
+      <div className="flex items-baseline justify-between px-1">
+        <div className="font-accent text-[10px] uppercase tracking-[0.36em] text-[#7fb0ff]">
+          Tonight's 10
+        </div>
+        {!empty && (
+          <div className="font-headline text-white text-[13px] tabular-nums">
+            <span className="text-white">{locked}</span>
+            <span className="text-white/40"> / {total}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Horizontal matchup rail — real crests, real team-color atmosphere */}
+      {empty ? (
+        <EmptySlate />
+      ) : (
+        <div
+          className="-mx-3 sm:mx-0 overflow-x-auto no-scrollbar snap-x snap-mandatory"
+          data-testid="iq-tonights10-rail"
+        >
+          <div className="flex gap-2.5 px-3 sm:px-0 pb-1">
+            {questions.map((q) => (
+              <MatchupChip key={q.q_id} q={q} onTap={onPlay} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Primary CTA — a pill, not a giant Play button */}
+      {!empty && (
+        <button
+          type="button"
+          onClick={onPlay}
+          data-testid="iq-tonights10-play"
+          className="w-full inline-flex items-center justify-between rounded-full pl-5 pr-2 py-2.5 bg-[#1e5dff] hover:bg-[#3574ff] text-white shadow-[0_16px_44px_-16px_rgba(30,93,255,0.9)] transition-colors"
+        >
+          <span className="font-accent text-[11px] uppercase tracking-[0.36em]">
+            {complete ? "Review my card" : locked > 0 ? "Continue" : "Play tonight's 10"}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 font-accent text-[10px] uppercase tracking-[0.28em]">
+            {locked}/{total}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MatchupChip({ q, onTap }) {
+  const away = q.subject.away;
+  const home = q.subject.home;
+  const awayGlow = teamGlow(away);
+  const homeGlow = teamGlow(home);
+  const pickedSide = q.locked_pick;   // "home" | "away" | null
+  const locked = !!q.locked_call_id;
+  const outcome = q.outcome;
+
   return (
     <button
       type="button"
-      onClick={onPlay}
-      disabled={empty}
-      data-testid="iq-tonights10-tile"
-      className={`w-full text-left rounded-2xl border p-4 transition-colors ${
-        empty
-          ? "bg-black/25 border-white/10 cursor-default"
-          : complete
-            ? "bg-[#0a1a3d]/50 border-[#1e5dff]/40 hover:border-[#1e5dff]/70"
-            : "bg-gradient-to-br from-[#0e1a3f] via-[#0a1230] to-[#050510] border-[#1e5dff]/50 hover:border-[#1e5dff] shadow-[0_18px_50px_-24px_rgba(30,93,255,0.9)]"
+      onClick={onTap}
+      data-testid={`iq-matchup-chip-${q.q_id}`}
+      className={`snap-start shrink-0 relative rounded-2xl border overflow-hidden transition-all ${
+        locked ? "border-[#1e5dff]/60" : "border-white/12 hover:border-white/25"
       }`}
+      style={{ width: "244px", height: "146px" }}
     >
-      <div className="flex items-center gap-3">
-        <div className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center ${
-          empty ? "bg-white/8" : "bg-[#1e5dff]"
+      {/* Team-color atmosphere — real hockey glow */}
+      <span
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: `linear-gradient(90deg, ${awayGlow}33 0%, transparent 45%, transparent 55%, ${homeGlow}33 100%)`,
+        }}
+      />
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-24 blur-2xl opacity-70 pointer-events-none"
+        style={{ background: `radial-gradient(60% 100% at 0% 50%, ${awayGlow}, transparent 70%)` }}
+      />
+      <span
+        aria-hidden
+        className="absolute inset-y-0 right-0 w-24 blur-2xl opacity-70 pointer-events-none"
+        style={{ background: `radial-gradient(60% 100% at 100% 50%, ${homeGlow}, transparent 70%)` }}
+      />
+      <span aria-hidden className="absolute inset-0 bg-black/55 pointer-events-none" />
+
+      {/* Foreground — two big crests, small VS, status pip */}
+      <div className="relative h-full flex items-center justify-between px-4">
+        <div className={`flex flex-col items-center gap-1 transition-opacity ${
+          pickedSide === "home" ? "opacity-40" : "opacity-100"
         }`}>
-          <Play className={`w-5 h-5 ${empty ? "text-white/30" : "text-white"}`} fill="currentColor" />
+          <TeamLogo code={away} size={64} className="drop-shadow-[0_6px_20px_rgba(0,0,0,0.7)]" />
+          <div className="font-headline text-white/85 text-[11px] tracking-[0.22em]">{away}</div>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff]">
-            Tonight's 10
-          </div>
-          <div className="font-headline text-white text-[19px] leading-tight mt-0.5">
-            {empty
-              ? "No card tonight"
-              : complete
-                ? `${locked} / ${total} locked — see you tomorrow`
-                : `${locked} / ${total} locked · Play`}
-          </div>
-          <div className="text-white/55 text-[12px] mt-0.5">
-            {empty
-              ? "Puck drop is quiet. Come back when the slate loads."
-              : complete
-                ? "Ticker will grade each call as its game finishes."
-                : "Tap through tonight's calls. Answer, lock, next."}
-          </div>
+        <div className="font-accent text-[10px] uppercase tracking-[0.36em] text-white/45">vs</div>
+        <div className={`flex flex-col items-center gap-1 transition-opacity ${
+          pickedSide === "away" ? "opacity-40" : "opacity-100"
+        }`}>
+          <TeamLogo code={home} size={64} className="drop-shadow-[0_6px_20px_rgba(0,0,0,0.7)]" />
+          <div className="font-headline text-white/85 text-[11px] tracking-[0.22em]">{home}</div>
         </div>
-        {!empty && !complete && (
-          <ArrowRight className="w-4 h-4 text-white/60 shrink-0" />
+      </div>
+
+      {/* Status pip — top-right */}
+      <div className="absolute top-2 right-2">
+        {outcome?.correct === true && (
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 px-1.5 py-0.5 font-accent text-[8px] uppercase tracking-widest text-emerald-200">
+            <CheckCircle2 className="w-2.5 h-2.5" /> right
+          </span>
+        )}
+        {outcome?.correct === false && (
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-rose-500/20 border border-rose-400/60 px-1.5 py-0.5 font-accent text-[8px] uppercase tracking-widest text-rose-200">
+            <XCircle className="w-2.5 h-2.5" /> miss
+          </span>
+        )}
+        {!outcome && locked && (
+          <span className="inline-flex items-center rounded-full bg-[#1e5dff]/25 border border-[#1e5dff]/70 px-1.5 py-0.5 font-accent text-[8px] uppercase tracking-widest text-[#9fb7ff]">
+            locked
+          </span>
         )}
       </div>
     </button>
   );
 }
 
-function YourIQBuilding({ totalResolved, openCalls }) {
-  if (totalResolved >= 10) {
-    // Sample size gate opens — a future slice populates real personal analytics
-    // here. Until then, a light acknowledgment instead of an empty grid.
-    return (
-      <div className="rounded-xl bg-black/25 border border-white/10 p-4" data-testid="iq-your-iq-building-ready">
-        <div className="flex items-center gap-2 mb-1">
-          <Brain className="w-3.5 h-3.5 text-[#7fb0ff]" />
-          <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/60">
-            Your IQ
-          </div>
-        </div>
-        <div className="font-headline text-white text-[16px] leading-tight">
-          {totalResolved} graded calls in the book.
-        </div>
-        <div className="text-white/55 text-[12px] mt-1">
-          Personal reads unlock as Ticker learns your patterns. Deeper analytics land in the next slice.
-        </div>
-      </div>
-    );
-  }
+function EmptySlate() {
   return (
-    <div
-      className="rounded-xl bg-gradient-to-br from-[#0e1533]/50 to-[#050510]/60 border border-white/12 p-4"
-      data-testid="iq-your-iq-building"
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <Brain className="w-3.5 h-3.5 text-[#7fb0ff]" />
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff]">
-          Your IQ is building
+    <div className="rounded-2xl bg-black/25 border border-white/10 p-5 text-center" data-testid="iq-empty-slate">
+      <div className="font-headline text-white/70 text-[15px]">No games tonight.</div>
+      <div className="text-white/45 text-[12px] mt-1">Card lands automatically when the puck drops.</div>
+    </div>
+  );
+}
+
+// ============================================================
+// SECONDARY STRIPS
+// ============================================================
+function LastNightStrip({ board }) {
+  const c = board.progress?.correct || 0;
+  const g = board.progress?.graded || 0;
+  const pct = g > 0 ? Math.round((c / g) * 100) : null;
+
+  return (
+    <div className="space-y-2" data-testid="iq-last-night-strip">
+      <div className="flex items-baseline justify-between px-1">
+        <div className="font-accent text-[10px] uppercase tracking-[0.36em] text-white/55">
+          Last night
+        </div>
+        <div className="font-headline text-white text-[13px] tabular-nums">
+          <span className="text-white">{c}</span>
+          <span className="text-white/40"> / {g}</span>
+          {pct != null && <span className="text-white/50 text-[12px] ml-1.5">· {pct}%</span>}
         </div>
       </div>
-      <div className="font-headline text-white text-[17px] leading-tight">
-        {totalResolved === 0
-          ? `${openCalls > 0 ? `${openCalls} call${openCalls === 1 ? "" : "s"} locked. ` : ""}0 graded so far.`
-          : `${totalResolved} graded so far.`}
-      </div>
-      <div className="text-white/60 text-[12px] mt-1">
-        Make tonight's calls. Your first personal insights appear as they resolve.
+      <div
+        className="-mx-3 sm:mx-0 overflow-x-auto no-scrollbar"
+        data-testid="iq-last-night-pips"
+      >
+        <div className="flex gap-2 px-3 sm:px-0 pb-0.5 pt-0.5">
+          {board.questions.map((q) => (
+            <ResultPip key={q.q_id} q={q} />
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-function MyBetsTile() {
+function ResultPip({ q }) {
+  const pick = q.locked_pick;
+  const pickedCode = pick === "home" ? q.subject.home : pick === "away" ? q.subject.away : null;
+  const correct = q.outcome?.correct;
+  const glow = pickedCode ? teamGlow(pickedCode) : "#4b5563";
+
+  return (
+    <div
+      data-testid={`iq-last-night-pip-${q.q_id}`}
+      className={`relative shrink-0 rounded-full border w-[54px] h-[54px] flex items-center justify-center ${
+        correct === true
+          ? "border-emerald-400/70"
+          : correct === false
+            ? "border-rose-400/70"
+            : "border-white/15"
+      }`}
+      style={{
+        background: pickedCode
+          ? `radial-gradient(50% 50% at 50% 50%, ${glow}66, transparent 70%)`
+          : "transparent",
+      }}
+    >
+      {pickedCode ? (
+        <TeamLogo code={pickedCode} size={34} />
+      ) : (
+        <span className="font-accent text-[8px] uppercase tracking-widest text-white/35">skip</span>
+      )}
+      {correct === true && (
+        <CheckCircle2 className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-emerald-300 bg-[#050510] rounded-full" />
+      )}
+      {correct === false && (
+        <XCircle className="absolute -bottom-1 -right-1 w-3.5 h-3.5 text-rose-300 bg-[#050510] rounded-full" />
+      )}
+    </div>
+  );
+}
+
+function MyIQProgressStrip({ total, pct }) {
+  return (
+    <div
+      className="flex items-baseline justify-between rounded-xl bg-black/25 border border-white/10 px-3 py-2"
+      data-testid="iq-progress-strip"
+    >
+      <div className="font-accent text-[10px] uppercase tracking-[0.36em] text-white/55">
+        My IQ
+      </div>
+      <div className="font-headline text-white text-[15px] tabular-nums">
+        {pct != null ? `${pct}%` : "—"}
+        <span className="text-white/45 text-[11px] ml-1.5">· {total} graded</span>
+      </div>
+    </div>
+  );
+}
+
+function MyBetsLink() {
   return (
     <Link
       to="/back-office"
       data-testid="iq-my-bets-tile"
-      className="block rounded-xl bg-black/25 border border-white/10 hover:border-white/25 hover:bg-white/[0.03] p-3 transition-colors"
+      className="flex items-center justify-between px-3 py-2 rounded-lg text-white/50 hover:text-white/85 hover:bg-white/[0.03] transition-colors"
     >
-      <div className="flex items-center gap-2">
-        <ListChecks className="w-3.5 h-3.5 text-white/50" />
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/60 flex-1">
-          My bets · optional
-        </div>
-        <ArrowRight className="w-3.5 h-3.5 text-white/40" />
-      </div>
-      <div className="text-white/55 text-[12px] mt-1 leading-snug">
-        Record what you actually wagered — separate from your predictions. Ticker never places bets.
-      </div>
+      <span className="font-accent text-[10px] uppercase tracking-[0.32em]">My bets</span>
+      <ArrowUpRight className="w-3.5 h-3.5" />
     </Link>
-  );
-}
-
-function GoDeeperCard() {
-  return (
-    <div
-      className="rounded-xl bg-black/20 border border-dashed border-white/12 p-4"
-      data-testid="iq-go-deeper-card"
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-3.5 h-3.5 text-white/45" />
-        <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/55">
-          Go deeper with My IQ · soon
-        </div>
-      </div>
-      <div className="text-white/70 text-[13px] leading-relaxed">
-        Want Ticker to learn <span className="text-white">how</span> you make hockey decisions — not just whether you're right?
-      </div>
-      <div className="text-white/45 text-[11px] mt-1.5">
-        Confidence, first instinct vs revision, category strengths. Optional. Coming after the first loop lands.
-      </div>
-    </div>
   );
 }
