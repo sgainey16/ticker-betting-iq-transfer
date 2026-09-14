@@ -38,6 +38,7 @@ import TeamPage from "@/pages/plus/TeamPage";
 import ProspectPage from "@/pages/plus/ProspectPage";
 import Upgrade from "@/pages/plus/Upgrade";
 import TeamStatPage from "@/pages/TeamStatPage";
+import TickerProGame from "@/pages/TickerProGame";
 import { Toaster } from "sonner";
 
 function App() {
@@ -93,6 +94,7 @@ function App() {
             <Route path="/scoreboard" element={<Scoreboard />} />
             <Route path="/fantasy" element={<Fantasy />} />
             <Route path="/iq" element={<HockeyIQ />} />
+            <Route path="/iq/game/:gameId" element={<TickerProGame />} />
             <Route path="/back-office" element={<BackOffice />} />
             <Route path="/matchup/:matchupId" element={<MatchupDeepDive />} />
             <Route path="/demo/greatest-goal" element={<GreatestGoalDemo />} />

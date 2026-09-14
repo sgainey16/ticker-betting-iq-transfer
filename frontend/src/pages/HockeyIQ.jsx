@@ -162,12 +162,39 @@ function TonightTab({ deviceId, onGoto }) {
               ROOM stays distinct from a future sportsbook MARKET.
               Primary CTA opens existing MakeCallPanel in a sheet. */}
           {selectedGame && (
-            <MatchupIntel
-              game={selectedGame}
-              teams={teams}
-              deviceId={deviceId}
-              onCallLocked={() => onGoto?.("my-iq")}
-            />
+            <>
+              {/* Convergence proof preview — one-tap into the augmented
+                  Best Ticker game surface. Additive; the existing
+                  MatchupIntel below is preserved until the proof is
+                  approved. */}
+              <Link
+                to={`/iq/game/${selectedGame.id}`}
+                data-testid="iq-open-ticker-pro-preview"
+                className="block rounded-xl bg-gradient-to-r from-[#0a1230] via-[#0a1a3d]/60 to-[#050510] border border-[#1e5dff]/50 hover:border-[#1e5dff] px-4 py-3 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-[#7fb0ff]" />
+                  <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff]">
+                    Ticker Pro · preview
+                  </div>
+                  <span className="ml-auto text-[9px] font-accent uppercase tracking-[0.24em] text-white/40">
+                    Convergence proof
+                  </span>
+                </div>
+                <div className="font-headline text-white text-[15px] mt-1">
+                  Open {selectedGame.away} @ {selectedGame.home} with Betting IQ on
+                </div>
+                <div className="text-white/55 text-[12px] mt-0.5">
+                  Same Ticker game — augmented with The Read triangle + Hockey Intelligence rail.
+                </div>
+              </Link>
+              <MatchupIntel
+                game={selectedGame}
+                teams={teams}
+                deviceId={deviceId}
+                onCallLocked={() => onGoto?.("my-iq")}
+              />
+            </>
           )}
         </>
       )}
