@@ -37,8 +37,6 @@ export default function GameRailV2({
           const home = meta(g.home);
           const away = meta(g.away);
           const selected = selectedGameId === g.id;
-          const hostSplit =
-            g.reggie_pick && g.marc_pick && g.reggie_pick !== g.marc_pick;
           const homeAccent = home.accent || "#1e5dff";
           const awayAccent = away.accent || "#1e5dff";
           const time = new Date(g.start_iso).toLocaleTimeString(undefined, {
@@ -66,8 +64,8 @@ export default function GameRailV2({
                   : undefined,
               }}
             >
-              {/* Top row: time + split badge */}
-              <div className="flex items-center justify-between mb-2">
+              {/* Tip time — one honest metric per tile */}
+              <div className="mb-2">
                 <span
                   className={`font-accent text-[10px] uppercase tracking-[0.22em] tabular-nums ${
                     selected ? "text-white" : "text-white/60"
@@ -75,15 +73,6 @@ export default function GameRailV2({
                 >
                   {time}
                 </span>
-                {hostSplit && (
-                  <span
-                    className="inline-flex items-center gap-1 rounded-full bg-amber-400/15 border border-amber-400/40 px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.22em] text-amber-200"
-                    title="Reggie and Marc disagree"
-                  >
-                    <span className="h-1 w-1 rounded-full bg-amber-300" />
-                    Split
-                  </span>
-                )}
               </div>
 
               {/* Logo-forward matchup */}

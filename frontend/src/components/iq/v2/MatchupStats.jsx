@@ -118,7 +118,7 @@ export default function MatchupStats({ awayCode, homeCode, awayAccent, homeAccen
       {/* Header row: logos + tiny provenance */}
       <div className="flex items-center justify-between mb-2.5">
         <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-white/50">
-          Season · head to head
+          Season comparison
         </div>
         <span
           className={`inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.24em] border ${
@@ -138,20 +138,20 @@ export default function MatchupStats({ awayCode, homeCode, awayAccent, homeAccen
 
       {/* Column headers with team logos */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-2 border-b border-white/8">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <TeamLogo code={awayCode} size={18} />
-          <span className="font-headline text-white text-[13px] tracking-wide truncate">
+        <div className="flex items-center gap-2 min-w-0">
+          <TeamLogo code={awayCode} size={24} />
+          <span className="font-headline text-white text-[14px] tracking-wide truncate">
             {awayCode}
           </span>
         </div>
         <span className="font-accent text-[9px] uppercase tracking-[0.32em] text-white/30">
           vs
         </span>
-        <div className="flex items-center gap-1.5 min-w-0 justify-end">
-          <span className="font-headline text-white text-[13px] tracking-wide truncate">
+        <div className="flex items-center gap-2 min-w-0 justify-end">
+          <span className="font-headline text-white text-[14px] tracking-wide truncate">
             {homeCode}
           </span>
-          <TeamLogo code={homeCode} size={18} />
+          <TeamLogo code={homeCode} size={24} />
         </div>
       </div>
 

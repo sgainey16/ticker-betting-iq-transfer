@@ -19,7 +19,7 @@
 // Preserved unchanged: MakeCallPanel event pipeline, IQCoachChat, HostPortrait.
 
 import { useState } from "react";
-import { ArrowRight, MessageSquare, Volume2, Lock } from "lucide-react";
+import { ArrowRight, MessageSquare, Volume2, BookOpen } from "lucide-react";
 import { TeamLogo } from "@/lib/teamLogos";
 import HostPortrait from "@/components/HostPortrait";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,22 +31,22 @@ import MatchupStats from "./MatchupStats";
 const teamName = (teams, code) => teams.find((t) => t.code === code)?.name || code;
 const teamAccent = (teams, code) => teams.find((t) => t.code === code)?.accent || "#1e5dff";
 
-// Intelligence-lens tabs. OVERVIEW is the only lens with live content today.
-// Future lenses render as disabled navigation tabs so the architecture is
-// visible without misleading the user about present data availability.
-const LENSES = [
-  { key: "overview",       label: "Overview",       active: true  },
-  { key: "special-teams",  label: "Special Teams",  active: false },
-  { key: "transition",     label: "Transition",     active: false },
-  { key: "five-on-five",   label: "5v5",            active: false },
-  { key: "net-front",      label: "Net Front",      active: false },
-  { key: "goaltending",    label: "Goaltending",    active: false },
-  { key: "discipline",     label: "Discipline",     active: false },
+// Intelligence-lens tabs. Only lenses with legitimate live data are shown to
+// the user; the "coming" list keeps the plug-in architecture visible in code
+// so future engines slot in without redesign, but the UI never advertises
+// padlocked/unfinished modules to a paying customer.
+const LENSES_ACTIVE = [
+  { key: "overview", label: "Overview" },
+];
+const LENSES_COMING = [
+  // Reserved keys. Do NOT render these to the user until real. Order preserved.
+  "special-teams", "transition", "five-on-five", "net-front", "goaltending", "discipline",
 ];
 
 export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
   const [callOpen, setCallOpen] = useState(false);
   const [talkTo, setTalkTo] = useState(null);
+  const [readOpen, setReadOpen] = useState(false);
   const [lens, setLens] = useState("overview");
 
   const awayName = teamName(teams, game.away);
@@ -77,6 +77,7 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
         game={game}
         teams={teams}
         onTalk={(who) => setTalkTo(who)}
+        onReadTakes={() => setReadOpen(true)}
       />
 
       {/* 2) Selected matchup — huge crests, no containers, no full names */}
@@ -128,11 +129,15 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
 
       <Divider />
 
-      {/* 4) Intelligence lens rail — swipe sideways to change lens. Only
-             OVERVIEW is live today; future lenses render as dimmed nav
-             tabs so the architecture is visible without pretending. */}
+      {/* 4) Intelligence lens rail — only lenses with real data are shown.
+             The plug-in architecture is kept in code so future engines slot
+             in without redesign, but customers never see padlocked/unfinished
+             modules. When Special Teams (or another) becomes real, it appears
+             here beside Overview automatically. */}
       <SectionLabel>Matchup intelligence</SectionLabel>
-      <LensTabStrip lenses={LENSES} active={lens} onSelect={setLens} />
+      {LENSES_ACTIVE.length > 1 && (
+        <LensTabStrip lenses={LENSES_ACTIVE} active={lens} onSelect={setLens} />
+      )}
       <div className="pt-2 pb-1" data-testid={`iq-lens-body-${lens}`}>
         {lens === "overview" && (
           <>
@@ -151,20 +156,14 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
 
       <Divider />
 
-      {/* 5) What's Watching — honest empty state, ready for real events */}
-      <SectionLabel>
-        What's watching
-        <span className="text-white/25 ml-1.5">·</span>
-        <span className="text-white/40 normal-case tracking-normal text-[10px] ml-1.5">
-          Ticker's eyes on tonight
-        </span>
-      </SectionLabel>
+      {/* 5) What Changed — chronological intelligence/change feed. Real
+             events only; honest one-line empty state when nothing has moved. */}
+      <SectionLabel>What changed</SectionLabel>
       <div
-        className="pt-1 pb-4 text-[13px] text-white/50 leading-relaxed"
-        data-testid="iq-watching-empty"
+        className="pt-1 pb-4 text-[13px] text-white/55 leading-relaxed"
+        data-testid="iq-what-changed"
       >
-        No lineup changes, no line moves, no goalie news yet.
-        <span className="text-white/35"> Ticker will surface events here as they happen.</span>
+        No significant changes yet.
       </div>
 
       {/* Sticky Make Your Call bar */}
@@ -235,6 +234,38 @@ export default function MatchupIntel({ game, teams, deviceId, onCallLocked }) {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Optional written transcript — verified takes only. Any host claim
+          not supported by our current data feeds is suppressed here. */}
+      <Sheet open={readOpen} onOpenChange={setReadOpen}>
+        <SheetContent
+          side="bottom"
+          className="bg-[#050510] border-t border-white/15 text-white p-0 max-h-[86dvh] overflow-y-auto"
+          data-testid="iq-read-sheet"
+        >
+          <SheetHeader className="px-5 pt-5 pb-2">
+            <SheetTitle className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff]">
+              Reggie + Marc · Read
+            </SheetTitle>
+          </SheetHeader>
+          <div className="px-5 pb-6 pt-1">
+            <div className="text-[9px] uppercase tracking-[0.28em] text-amber-200/80 mb-3">
+              Editorial · hand-authored broadcast copy
+            </div>
+            <ReadTake
+              who="Reggie"
+              side={game.reggie_pick === "home" ? homeName : awayName}
+              take={game.reggie_take}
+            />
+            <div className="h-px w-full bg-white/8 my-4" />
+            <ReadTake
+              who="Marc"
+              side={game.marc_pick === "home" ? homeName : awayName}
+              take={game.marc_take}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -255,7 +286,25 @@ function Divider() {
 
 function MatchupHeader({ awayCode, homeCode, awayAccent, homeAccent }) {
   return (
-    <div className="relative">
+    <div className="relative -mx-3 sm:mx-0">
+      {/* Side-to-side team-color atmosphere. Colorado left, Edmonton right. */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-90 pointer-events-none"
+        style={{
+          background: `linear-gradient(90deg, ${awayAccent}22 0%, transparent 35%, transparent 65%, ${homeAccent}22 100%)`,
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-24 blur-3xl opacity-70 pointer-events-none"
+        style={{ background: `radial-gradient(60% 100% at 0% 50%, ${awayAccent}, transparent 70%)` }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-y-0 right-0 w-24 blur-3xl opacity-70 pointer-events-none"
+        style={{ background: `radial-gradient(60% 100% at 100% 50%, ${homeAccent}, transparent 70%)` }}
+      />
       <span
         aria-hidden
         className="absolute left-0 right-0 top-0 h-[3px]"
@@ -263,10 +312,9 @@ function MatchupHeader({ awayCode, homeCode, awayAccent, homeAccent }) {
           background: `linear-gradient(90deg, ${awayAccent}, transparent 40%, transparent 60%, ${homeAccent})`,
         }}
       />
-      {/* Radial glows behind each crest carry team color without needing a container */}
-      <div className="relative pt-6 pb-5 flex items-center justify-center gap-2">
+      <div className="relative pt-8 pb-6 flex items-center justify-between gap-2 px-3">
         <CrestSlot code={awayCode} accent={awayAccent} align="left" />
-        <div className="font-accent text-[13px] uppercase tracking-[0.4em] text-white/35 pb-2">
+        <div className="font-accent text-[14px] uppercase tracking-[0.4em] text-white/40 pb-2 shrink-0">
           @
         </div>
         <CrestSlot code={homeCode} accent={homeAccent} align="right" />
@@ -278,19 +326,16 @@ function MatchupHeader({ awayCode, homeCode, awayAccent, homeAccent }) {
 function CrestSlot({ code, accent, align }) {
   return (
     <div
-      className={`relative flex flex-col items-center gap-1.5 flex-1 ${
-        align === "left" ? "items-end pr-1" : "items-start pl-1"
+      className={`relative flex flex-col items-center gap-1.5 ${
+        align === "left" ? "items-end" : "items-start"
       }`}
     >
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-0 opacity-40 blur-2xl"
-        style={{
-          background: `radial-gradient(60% 60% at 50% 50%, ${accent}, transparent 70%)`,
-        }}
+      <TeamLogo
+        code={code}
+        size={132}
+        className="relative z-10 drop-shadow-[0_10px_32px_rgba(0,0,0,0.85)]"
       />
-      <TeamLogo code={code} size={88} className="relative z-10 drop-shadow-[0_6px_24px_rgba(0,0,0,0.9)]" />
-      <div className="relative z-10 font-headline text-white text-[13px] tracking-[0.14em]">
+      <div className="relative z-10 font-headline text-white/85 text-[12px] tracking-[0.28em]">
         {code}
       </div>
     </div>
@@ -361,31 +406,21 @@ function ReadRow({
 
 function LensTabStrip({ lenses, active, onSelect }) {
   return (
-    <div
-      className="-mx-3 sm:mx-0 relative"
-      data-testid="iq-lens-tabstrip"
-    >
+    <div className="-mx-3 sm:mx-0 relative" data-testid="iq-lens-tabstrip">
       <div className="flex gap-1 overflow-x-auto no-scrollbar px-3 sm:px-0 pb-1.5 snap-x">
         {lenses.map((lens) => {
           const isActive = lens.key === active;
-          const isDisabled = !lens.active;
           return (
             <button
               key={lens.key}
               type="button"
-              onClick={() => !isDisabled && onSelect(lens.key)}
-              disabled={isDisabled}
+              onClick={() => onSelect(lens.key)}
               data-testid={`iq-lens-tab-${lens.key}`}
               aria-selected={isActive}
               className={`snap-start relative flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 font-accent text-[10px] uppercase tracking-[0.28em] transition-colors ${
-                isActive
-                  ? "text-white"
-                  : isDisabled
-                    ? "text-white/25 cursor-not-allowed"
-                    : "text-white/60 hover:text-white/90"
+                isActive ? "text-white" : "text-white/60 hover:text-white/90"
               }`}
             >
-              {isDisabled && <Lock className="w-2.5 h-2.5" strokeWidth={2.4} />}
               {lens.label}
               {isActive && (
                 <span
@@ -402,55 +437,50 @@ function LensTabStrip({ lenses, active, onSelect }) {
   );
 }
 
-function IQDeskPanel({ game, teams, onTalk }) {
+function IQDeskPanel({ game, teams, onTalk, onReadTakes }) {
   const homeName = teamName(teams, game.home);
   const awayName = teamName(teams, game.away);
-  const reggieSideName =
-    game.reggie_pick === "home" ? homeName : awayName;
-  const marcSideName = game.marc_pick === "home" ? homeName : awayName;
+  // Ticker IQ's single official lean drives the headline — derived from
+  // ai_consensus_side (still editorial pre-model, provenance visible).
+  const leanSide =
+    game.ai_consensus_side === "home" ? homeName : awayName;
 
   return (
-    <div className="pt-1 pb-3" data-testid="iq-desk-panel">
-      <div className="flex items-center justify-between mb-2">
+    <div className="pt-2 pb-3" data-testid="iq-desk-panel">
+      <div className="flex items-center justify-between mb-2.5">
         <div className="font-accent text-[10px] uppercase tracking-[0.34em] text-[#7fb0ff]">
           Reggie + Marc · IQ Desk
         </div>
         <span
-          className="inline-flex items-center gap-1 rounded-full px-1.5 py-[1px] font-accent text-[8px] uppercase tracking-[0.24em] bg-amber-400/10 border border-amber-400/35 text-amber-200"
-          title="Editorial takes — hand-authored broadcast copy, not stat-derived"
+          className="text-[9px] uppercase tracking-[0.24em] text-amber-200/80"
+          title="Editorial — hand-authored broadcast copy, not stat-derived"
         >
-          <span className="h-1 w-1 rounded-full bg-amber-300" />
           Editorial
         </span>
       </div>
 
-      <div className="grid grid-cols-[100px_1fr_100px] items-start gap-3">
+      <div className="grid grid-cols-[84px_1fr_84px] items-center gap-3">
         <HostPortrait
           persona="reggie"
-          size={100}
+          size={84}
           showName={false}
           className="rounded-xl"
         />
 
-        <div className="min-w-0 space-y-2.5">
-          <TakeLine
-            who="Reggie"
-            side={reggieSideName}
-            take={game.reggie_take}
-            testid="iq-desk-reggie-take"
-          />
-          <TakeLine
-            who="Marc"
-            side={marcSideName}
-            take={game.marc_take}
-            testid="iq-desk-marc-take"
-          />
-          <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+        {/* Center: short headline + controls. No default paragraph. */}
+        <div className="min-w-0 flex flex-col items-center text-center">
+          <div
+            className="font-headline text-white text-[15px] leading-tight"
+            data-testid="iq-desk-headline"
+          >
+            {leanSide} gets the Ticker lean
+          </div>
+          <div className="mt-2.5 flex items-center justify-center gap-1.5 flex-wrap">
             <button
               type="button"
               onClick={() => onTalk("reggie")}
-              data-testid="iq-desk-talk-reggie"
-              className="inline-flex items-center gap-1 rounded-full bg-[#1e5dff]/15 hover:bg-[#1e5dff]/35 border border-[#1e5dff]/45 hover:border-[#1e5dff] px-2 py-1 font-accent text-[9px] uppercase tracking-[0.24em] text-white transition-colors"
+              data-testid="iq-desk-talk"
+              className="inline-flex items-center gap-1 rounded-full bg-[#1e5dff] hover:bg-[#3574ff] px-3 py-1.5 font-accent text-[10px] uppercase tracking-[0.26em] text-white transition-colors shadow-[0_8px_20px_-8px_rgba(30,93,255,0.9)]"
             >
               <MessageSquare className="w-3 h-3" /> Talk
             </button>
@@ -458,16 +488,24 @@ function IQDeskPanel({ game, teams, onTalk }) {
               type="button"
               onClick={() => onTalk("reggie")}
               data-testid="iq-desk-hear-read"
-              className="inline-flex items-center gap-1 rounded-full bg-white/[0.06] hover:bg-white/[0.14] border border-white/15 hover:border-white/30 px-2 py-1 font-accent text-[9px] uppercase tracking-[0.24em] text-white/85 transition-colors"
+              className="inline-flex items-center gap-1 rounded-full bg-white/[0.08] hover:bg-white/[0.18] border border-white/15 hover:border-white/30 px-3 py-1.5 font-accent text-[10px] uppercase tracking-[0.26em] text-white/85 transition-colors"
             >
               <Volume2 className="w-3 h-3" /> Hear the read
             </button>
           </div>
+          <button
+            type="button"
+            onClick={onReadTakes}
+            data-testid="iq-desk-read-transcript"
+            className="mt-2 inline-flex items-center gap-1 text-white/50 hover:text-white/85 font-accent text-[9px] uppercase tracking-[0.28em] transition-colors"
+          >
+            <BookOpen className="w-2.5 h-2.5" /> Read
+          </button>
         </div>
 
         <HostPortrait
           persona="marc"
-          size={100}
+          size={84}
           showName={false}
           mirror
           className="rounded-xl"
@@ -477,15 +515,43 @@ function IQDeskPanel({ game, teams, onTalk }) {
   );
 }
 
-function TakeLine({ who, side, take, testid }) {
+// Suppress host takes that contain claims we cannot substantiate against the
+// currently wired data feeds. Conservative: matches only patterns explicitly
+// flagged in phone review (no xG / PDO / Corsi / Fenwick feeds are wired).
+// If a take is scrubbed, we show an honest placeholder instead of repeating
+// the unverified copy.
+const UNVERIFIED_PATTERNS = [
+  /\bxg\b/i,
+  /\bpdo\b/i,
+  /\bcorsi\b/i,
+  /\bfenwick\b/i,
+];
+
+function scrubTake(take) {
+  if (!take) return { ok: false, text: null };
+  for (const rx of UNVERIFIED_PATTERNS) {
+    if (rx.test(take)) return { ok: false, text: null };
+  }
+  return { ok: true, text: take };
+}
+
+function ReadTake({ who, side, take }) {
+  const scrubbed = scrubTake(take);
   return (
-    <div data-testid={testid}>
-      <div className="font-accent text-[9px] uppercase tracking-[0.3em] text-white/45 mb-0.5">
-        {who} · {side}
+    <div data-testid={`iq-read-sheet-${who.toLowerCase()}`}>
+      <div className="font-accent text-[10px] uppercase tracking-[0.32em] text-[#7fb0ff] mb-1.5">
+        {who} · <span className="text-white/70">{side}</span>
       </div>
-      <div className="text-white/85 text-[13px] leading-snug">
-        {take || <span className="text-white/40">No take yet.</span>}
-      </div>
+      {scrubbed.ok ? (
+        <div className="text-white/85 text-[14px] leading-relaxed">
+          {scrubbed.text}
+        </div>
+      ) : (
+        <div className="text-white/45 text-[13px] leading-relaxed italic">
+          Take withheld — the underlying claim isn't supported by our current data. {who} will speak to it live via Talk or Hear the read.
+        </div>
+      )}
     </div>
   );
 }
+
