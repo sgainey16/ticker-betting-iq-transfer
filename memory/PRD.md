@@ -46,6 +46,18 @@ Frontend (Phase 3 phone-review corrections applied — visual redesign 2026-02-1
 - New `LastNight` component remains available (previous long-form card) but the redesign uses the compact result-pip strip inside `MyIQCommandCenter` instead.
 - New `/app/frontend/src/lib/teamColors.js` — 32-team primary-color palette for atmosphere.
 
+### Rolling-form intelligence layer  ✅ BUILT 2026-02-14
+Preserved inside the shared Ticker analytics layer per user directive. NOT wired into user-facing Team/Player pages. Available to the prediction/accuracy engine, Reggie + Marc context builders, and future Premium Hockey IQ.
+
+- `backend/intelligence/rolling_form.py` — SEASON / L10 / L5 / L2 / L1 windows for team + goalie rolling form.
+- Every window carries a confidence tier: `baseline` (SEASON) / `strong` (L10) / `moderate` (L5) / `indicative_only` (L2) / `single_game_context` (L1) / `insufficient_sample` when below WINDOW_MIN_SAMPLE. L1 / L2 can never be treated as equivalent to L5 / L10 / SEASON.
+- Reserved metrics (`pp_pct`, `pk_pct`, `hits_per_game`, `pim_per_game`, `faceoff_win_pct`, `high_danger_*`, `expected_goals_*`) are declared with `null_reason` — architecture visible, never fabricated. They slot in without a schema change when SportsData-tier / Sportradar / Sportlogiq providers come online.
+- Direction vs season baseline: `up` / `down` / `improving` / `worsening` / `flat` / `insufficient_sample`. Correctly flips semantics on lower-is-better metrics (goals_against, shots_against). Noise-filtered at ≥5% delta.
+- Acceleration: L5 vs L10 movement per metric, surfaces only when both windows qualify.
+- Foundation 1B contracts preserved: correction #3 (goals from FinalScore only), correction #4 (team + goalie save% derived from counts), dual temporal gate (recorded_at + played_at_iso).
+- Two new internal endpoints (NOT for direct UI rendering): `GET /api/iq/intel/team-rolling-form`, `GET /api/iq/intel/goalie-rolling-form`.
+- 10/10 pytest regression tests green (`tests/test_rolling_form.py`).
+
 ## Prioritized backlog
 
 ### P0 (up next)

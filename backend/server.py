@@ -3115,6 +3115,57 @@ async def iq_patch_user_prefs(payload: UserPrefsReq):
     return _strip_mongo_id(refreshed)
 
 
+# ====================================================================
+# Rolling-form intelligence — internal analytics endpoint.
+#
+# Reads SEASON / L10 / L5 / L2 / L1 rolling form from Foundation 1B.
+# This endpoint is INTERNAL: it feeds the prediction/accuracy engine,
+# Reggie + Marc context builders, and future Premium Hockey IQ. It is
+# NOT intended for direct rendering on normal Team/Player pages — the
+# convergence direction is that surface-level pages stay simple; the
+# full trend layer surfaces in Premium IQ later.
+#
+# Every window carries a confidence tier so downstream consumers never
+# treat L1 / L2 as equivalent to L5 / L10 / SEASON. Reserved metrics
+# (pp_pct, pk_pct, hits, pim, faceoff_win_pct, high-danger, xG) return
+# null with a null_reason until their upstream providers are wired.
+# ====================================================================
+@api.get("/iq/intel/team-rolling-form")
+async def iq_intel_team_rolling_form(
+    ticker_team_id: str,
+    season: str,
+    season_type: str = "REG",
+    as_of_iso: Optional[str] = None,
+):
+    from intelligence.rolling_form import team_rolling_form
+    return await team_rolling_form(
+        db,
+        ticker_team_id=ticker_team_id,
+        season=season,
+        season_type=season_type,
+        as_of_iso=as_of_iso,
+    )
+
+
+@api.get("/iq/intel/goalie-rolling-form")
+async def iq_intel_goalie_rolling_form(
+    ticker_team_id: str,
+    ticker_player_id: str,
+    season: str,
+    season_type: str = "REG",
+    as_of_iso: Optional[str] = None,
+):
+    from intelligence.rolling_form import goalie_rolling_form
+    return await goalie_rolling_form(
+        db,
+        ticker_team_id=ticker_team_id,
+        ticker_player_id=ticker_player_id,
+        season=season,
+        season_type=season_type,
+        as_of_iso=as_of_iso,
+    )
+
+
 app.include_router(api)
 
 # Foundation 1A — mount the dev-gated QA endpoints and bootstrap indexes.
