@@ -3192,6 +3192,9 @@ async def _iq1a_startup():
 app.mount("/api/audio", StaticFiles(directory=str(STATIC_DIR / "audio")), name="api_audio")
 app.mount("/api/sprites", StaticFiles(directory=str(STATIC_DIR / "sprites")), name="api_sprites")
 app.mount("/api/hosts", StaticFiles(directory=str(STATIC_DIR / "hosts")), name="api_hosts")
+_DOWNLOADS_DIR = STATIC_DIR / "downloads"
+if _DOWNLOADS_DIR.is_dir():
+    app.mount("/api/downloads", StaticFiles(directory=str(_DOWNLOADS_DIR)), name="api_downloads")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 app.add_middleware(
